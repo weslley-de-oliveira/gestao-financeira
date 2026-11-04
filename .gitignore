@@ -43,3 +43,6 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
+
+# Dados locais da API simulada (gerados a partir de db/db.seed.json)
+/db/db.json

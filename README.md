@@ -52,12 +52,15 @@ npm run start:dev
 - Aplicação: `http://localhost:4200`
 - API simulada: `http://localhost:3000`
 
+Na primeira execução, `db/db.json` é criado a partir de `db/db.seed.json`. Ele guarda apenas os dados do seu ambiente local e não é versionado; use `npm run db:reset` para voltar ao estado inicial.
+
 ## Scripts
 
 | Script                 | Descrição                                         |
 | ---------------------- | ------------------------------------------------- |
 | `npm start`            | Inicia o servidor de desenvolvimento do Angular   |
 | `npm run start:api`    | Inicia a API simulada (JSON Server) na porta 3000 |
+| `npm run db:reset`     | Restaura os dados locais da API a partir do seed  |
 | `npm run start:dev`    | Inicia o Angular e a API simulada juntos          |
 | `npm run build`        | Gera o build de produção em `dist/`               |
 | `npm test`             | Executa os testes unitários com Vitest            |
@@ -69,7 +72,9 @@ npm run start:dev
 
 ```text
 db/
-  db.json        # Dados da API simulada
+  db.seed.json   # Dados iniciais da API simulada (versionado)
+  db.json        # Dados locais, criados a partir do seed (não versionado)
+scripts/         # Scripts de apoio (ex.: ensure-db.mjs)
 src/
   app/           # Código da aplicação
   styles.scss    # Tema do Angular Material e estilos globais
