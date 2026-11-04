@@ -6,8 +6,10 @@ import { MatIcon } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSelectModule } from '@angular/material/select';
 import { MatToolbar } from '@angular/material/toolbar';
-import { RouterLink } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router, RouterLink } from '@angular/router';
 import { PERIOD_OPTIONS, PeriodPreset } from '../../../shared/models/period';
+import { AuthService } from '../../auth/auth.service';
 import { PeriodService } from '../../services/period.service';
 import { AppTitleStrategy } from '../app-title-strategy';
 
@@ -28,14 +30,24 @@ import { AppTitleStrategy } from '../app-title-strategy';
 })
 export class Topbar {
   private readonly periodService = inject(PeriodService);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
 
   readonly menuToggle = output<void>();
 
+  protected readonly currentUser = this.auth.currentUser;
   protected readonly pageTitle = inject(AppTitleStrategy).pageTitle;
   protected readonly selectedPeriod = this.periodService.selected;
   protected readonly periodOptions = PERIOD_OPTIONS;
 
   protected onPeriodChange(period: PeriodPreset): void {
     this.periodService.select(period);
+  }
+
+  protected async logout(): Promise<void> {
+    await this.auth.logout();
+    await this.router.navigateByUrl('/login');
+    this.snackBar.open('Sessão encerrada.', 'Fechar', { duration: 4000 });
   }
 }

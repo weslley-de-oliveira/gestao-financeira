@@ -1,0 +1,59 @@
+<h1 class="auth-form__title">Criar conta</h1>
+<p class="auth-form__subtitle">
+  Conta demonstrativa para testar o aplicativo. Não use dados ou senhas reais.
+</p>
+
+<form class="auth-form" novalidate (submit)="onSubmit($event)">
+  <mat-form-field appearance="outline">
+    <mat-label>Nome</mat-label>
+    <input matInput autocomplete="name" [formField]="registerForm.name" />
+    @if (registerForm.name().errors()[0]; as error) {
+      <mat-error>{{ error.message }}</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>E-mail</mat-label>
+    <input matInput type="email" autocomplete="email" [formField]="registerForm.email" />
+    @if (registerForm.email().errors()[0]; as error) {
+      <mat-error>{{ error.message }}</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Senha</mat-label>
+    <input
+      matInput
+      type="password"
+      autocomplete="new-password"
+      [formField]="registerForm.password"
+    />
+    <mat-hint>Mínimo de {{ passwordMinLength }} caracteres, com letras e números.</mat-hint>
+    @if (registerForm.password().errors()[0]; as error) {
+      <mat-error>{{ error.message }}</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Confirmar senha</mat-label>
+    <input
+      matInput
+      type="password"
+      autocomplete="new-password"
+      [formField]="registerForm.confirmPassword"
+    />
+    @if (registerForm.confirmPassword().errors()[0]; as error) {
+      <mat-error>{{ error.message }}</mat-error>
+    }
+  </mat-form-field>
+
+  @if (errorMessage(); as message) {
+    <p class="auth-form__alert" role="alert">{{ message }}</p>
+  }
+
+  <button matButton="filled" type="submit" [disabled]="registerForm().submitting()">
+    {{ registerForm().submitting() ? 'Criando conta…' : 'Criar conta' }}
+  </button>
+</form>
+
+<p class="auth-form__footer">Já tem conta? <a routerLink="/login">Entrar</a></p>

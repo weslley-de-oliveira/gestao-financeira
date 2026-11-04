@@ -26,7 +26,12 @@
 </mat-toolbar>
 
 <mat-menu #userMenu="matMenu" xPosition="before">
-  <p class="topbar__menu-label">Conta demonstrativa</p>
+  @if (currentUser(); as user) {
+    <div class="topbar__menu-label">
+      <span class="topbar__user-name">{{ user.name }}</span>
+      <span class="topbar__user-email">{{ user.email }}</span>
+    </div>
+  }
   <mat-divider />
   <a mat-menu-item routerLink="/settings">
     <mat-icon>settings</mat-icon>
@@ -37,9 +42,8 @@
     <span>Segurança</span>
   </a>
   <mat-divider />
-  <!-- Até existir a autenticação demonstrativa, "Sair" apenas volta para o login. -->
-  <a mat-menu-item routerLink="/login">
+  <button mat-menu-item type="button" (click)="logout()">
     <mat-icon>logout</mat-icon>
     <span>Sair</span>
-  </a>
+  </button>
 </mat-menu>

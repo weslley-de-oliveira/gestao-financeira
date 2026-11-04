@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard, guestGuard } from './core/guards/auth.guards';
 
 // Página provisória: cada rota passa a carregar a tela real da sua feature quando ela for implementada.
 const loadPlaceholder = () =>
@@ -8,15 +9,26 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
   {
     path: '',
+    canActivate: [guestGuard],
     loadComponent: () =>
       import('./core/layout/public-layout/public-layout').then((m) => m.PublicLayout),
     children: [
-      { path: 'login', title: 'Entrar', loadComponent: loadPlaceholder },
-      { path: 'register', title: 'Criar conta', loadComponent: loadPlaceholder },
+      {
+        path: 'login',
+        title: 'Entrar',
+        loadComponent: () => import('./core/auth/login-page/login-page').then((m) => m.LoginPage),
+      },
+      {
+        path: 'register',
+        title: 'Criar conta',
+        loadComponent: () =>
+          import('./core/auth/register-page/register-page').then((m) => m.RegisterPage),
+      },
     ],
   },
   {
     path: '',
+    canActivate: [authGuard],
     loadComponent: () => import('./core/layout/app-shell/app-shell').then((m) => m.AppShell),
     children: [
       { path: 'dashboard', title: 'Dashboard', loadComponent: loadPlaceholder },

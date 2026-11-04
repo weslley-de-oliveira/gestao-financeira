@@ -1,0 +1,47 @@
+<h1 class="auth-form__title">Entrar</h1>
+<p class="auth-form__subtitle">Acesse sua conta demonstrativa.</p>
+
+<form class="auth-form" novalidate (submit)="onSubmit($event)">
+  <mat-form-field appearance="outline">
+    <mat-label>E-mail</mat-label>
+    <input matInput type="email" autocomplete="email" [formField]="loginForm.email" />
+    @if (loginForm.email().errors()[0]; as error) {
+      <mat-error>{{ error.message }}</mat-error>
+    }
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Senha</mat-label>
+    <input
+      matInput
+      [type]="showPassword() ? 'text' : 'password'"
+      autocomplete="current-password"
+      [formField]="loginForm.password"
+    />
+    <button
+      matIconButton
+      matSuffix
+      type="button"
+      [attr.aria-label]="showPassword() ? 'Ocultar senha' : 'Mostrar senha'"
+      [attr.aria-pressed]="showPassword()"
+      (click)="showPassword.set(!showPassword())"
+    >
+      <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+    </button>
+    @if (loginForm.password().errors()[0]; as error) {
+      <mat-error>{{ error.message }}</mat-error>
+    }
+  </mat-form-field>
+
+  @if (errorMessage(); as message) {
+    <p class="auth-form__alert" role="alert">{{ message }}</p>
+  }
+
+  <button matButton="filled" type="submit" [disabled]="loginForm().submitting()">
+    {{ loginForm().submitting() ? 'Entrando…' : 'Entrar' }}
+  </button>
+</form>
+
+<p class="auth-form__footer">
+  Ainda não tem conta? <a routerLink="/register">Criar conta demonstrativa</a>
+</p>

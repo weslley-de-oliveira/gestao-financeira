@@ -1,0 +1,40 @@
+// Estilos compartilhados pelas telas de login e cadastro.
+
+.auth-form__title {
+  margin: 0;
+  font: var(--mat-sys-headline-small);
+}
+
+.auth-form__subtitle {
+  margin: 0.25rem 0 1.5rem;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  button[type='submit'] {
+    margin-top: 0.5rem;
+  }
+}
+
+.auth-form__alert {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--mat-sys-corner-small);
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  font: var(--mat-sys-body-medium);
+}
+
+.auth-form__footer {
+  margin: 1.5rem 0 0;
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+
+  a {
+    color: var(--mat-sys-primary);
+  }
+}
