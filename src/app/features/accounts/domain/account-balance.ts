@@ -1,0 +1,55 @@
+import { Account } from '../../../shared/models/account';
+import { Cents, assertValidCents } from '../../../shared/utils/money';
+
+/**
+ * Movimentação que altera o saldo de uma conta. As transações (etapa de Transações) seguem
+ * este formato: `amount` é sempre positivo e o tipo define se ele entra ou sai da conta.
+ */
+export interface BalanceMovement {
+  type: 'income' | 'expense' | 'transfer';
+  amount: Cents;
+  accountId: string;
+  /** Conta que recebe o valor; apenas em transferências. */
+  destinationAccountId?: string | null;
+}
+
+/** Efeito de uma movimentação no saldo de uma conta: positivo credita, negativo debita. */
+export function movementEffect(movement: BalanceMovement, accountId: string): Cents {
+  assertValidCents(movement.amount, 'amount');
+  if (movement.amount < 0) {
+    throw new RangeError('amount must not be negative');
+  }
+
+  switch (movement.type) {
+    case 'income':
+      return movement.accountId === accountId ? movement.amount : 0;
+    case 'expense':
+      return movement.accountId === accountId ? -movement.amount : 0;
+    case 'transfer': {
+      // Debita a origem e credita o destino: o patrimônio consolidado não muda.
+      const debit = movement.accountId === accountId ? -movement.amount : 0;
+      const credit = movement.destinationAccountId === accountId ? movement.amount : 0;
+      return debit + credit;
+    }
+  }
+}
+
+/** Regra única do saldo atual: saldo inicial + efeito de todas as movimentações da conta. */
+export function calculateBalance(
+  account: Pick<Account, 'id' | 'initialBalance'>,
+  movements: readonly BalanceMovement[],
+): Cents {
+  assertValidCents(account.initialBalance, 'initialBalance');
+  return movements.reduce(
+    (balance, movement) => balance + movementEffect(movement, account.id),
+    account.initialBalance,
+  );
+}
+
+/** Patrimônio consolidado: soma dos saldos atuais das contas informadas. */
+export function calculateTotalBalance(
+  accounts: readonly Pick<Account, 'id' | 'initialBalance'>[],
+  movements: readonly BalanceMovement[],
+): Cents {
+  return accounts.reduce((total, account) => total + calculateBalance(account, movements), 0);
+}

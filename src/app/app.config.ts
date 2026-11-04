@@ -10,10 +10,12 @@ import {
   provideBrowserGlobalErrorListeners,
 } from '@angular/core';
 import { MAT_ICON_DEFAULT_OPTIONS } from '@angular/material/icon';
-import { provideRouter, TitleStrategy } from '@angular/router';
+import { provideRouter, TitleStrategy, withComponentInputBinding } from '@angular/router';
 import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
 import { AppTitleStrategy } from './core/layout/app-title-strategy';
+import { AccountRepository } from './data-access/repositories/account.repository';
+import { HttpAccountRepository } from './data-access/repositories/http-account.repository';
 import { HttpUserRepository } from './data-access/repositories/http-user.repository';
 import { UserRepository } from './data-access/repositories/user.repository';
 
@@ -22,11 +24,12 @@ registerLocaleData(localePt, 'pt-BR');
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
+    provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(withFetch()),
     // Restaura a sessão antes da primeira navegação, para os guards já conhecerem o usuário.
     provideAppInitializer(() => inject(AuthService).restoreSession()),
     { provide: UserRepository, useClass: HttpUserRepository },
+    { provide: AccountRepository, useClass: HttpAccountRepository },
     { provide: TitleStrategy, useExisting: AppTitleStrategy },
     { provide: LOCALE_ID, useValue: 'pt-BR' },
     { provide: DEFAULT_CURRENCY_CODE, useValue: 'BRL' },

@@ -1,0 +1,77 @@
+<a class="account-detail__back" matButton routerLink="/accounts">
+  <mat-icon>arrow_back</mat-icon>
+  Contas
+</a>
+
+@switch (loadState()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando conta" />
+  }
+  @case ('not-found') {
+    <div class="account-detail__state" role="alert">
+      <p>Conta não encontrada.</p>
+      <a matButton="outlined" routerLink="/accounts">Ver contas</a>
+    </div>
+  }
+  @case ('error') {
+    <div class="account-detail__state" role="alert">
+      <p>Não foi possível carregar a conta.</p>
+      <button matButton="outlined" type="button" (click)="load()">Tentar novamente</button>
+    </div>
+  }
+  @case ('ready') {
+    @if (account(); as account) {
+      <header class="account-detail__header">
+        <app-account-avatar [icon]="account.icon" [color]="account.color" />
+        <div class="account-detail__heading">
+          <h1 class="account-detail__title">{{ account.name }}</h1>
+          <p class="account-detail__meta">
+            {{ typeLabels[account.type] }}
+            @if (account.institution) {
+              · {{ account.institution }}
+            }
+            @if (account.isArchived) {
+              <span class="account-detail__badge">Arquivada</span>
+            }
+          </p>
+        </div>
+        <div class="account-detail__actions">
+          <a matButton="outlined" [routerLink]="['/accounts', account.id, 'edit']">
+            <mat-icon>edit</mat-icon>
+            Editar
+          </a>
+          <button matButton="outlined" type="button" (click)="toggleArchived(account)">
+            <mat-icon>{{ account.isArchived ? 'unarchive' : 'archive' }}</mat-icon>
+            {{ account.isArchived ? 'Reativar' : 'Arquivar' }}
+          </button>
+        </div>
+      </header>
+
+      <div class="account-detail__balances">
+        <mat-card appearance="outlined" class="account-detail__balance">
+          <span class="account-detail__label">Saldo atual</span>
+          <strong
+            class="account-detail__amount"
+            [class.account-detail__amount--negative]="account.currentBalance < 0"
+          >
+            {{ account.currentBalance | money }}
+          </strong>
+        </mat-card>
+        <mat-card appearance="outlined" class="account-detail__balance">
+          <span class="account-detail__label">Saldo inicial</span>
+          <strong class="account-detail__amount">{{ account.initialBalance | money }}</strong>
+        </mat-card>
+      </div>
+
+      <section class="account-detail__section" aria-labelledby="account-transactions-title">
+        <h2 id="account-transactions-title" class="account-detail__section-title">
+          Transações vinculadas
+        </h2>
+        <div class="account-detail__state">
+          <mat-icon aria-hidden="true">receipt_long</mat-icon>
+          <p>Nenhuma transação vinculada a esta conta.</p>
+        </div>
+      </section>
+    }
+  }
+}

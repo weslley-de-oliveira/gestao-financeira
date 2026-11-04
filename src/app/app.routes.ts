@@ -32,7 +32,12 @@ export const routes: Routes = [
     loadComponent: () => import('./core/layout/app-shell/app-shell').then((m) => m.AppShell),
     children: [
       { path: 'dashboard', title: 'Dashboard', loadComponent: loadPlaceholder },
-      { path: 'accounts', title: 'Contas', loadComponent: loadPlaceholder },
+      {
+        path: 'accounts',
+        title: 'Contas',
+        loadChildren: () =>
+          import('./features/accounts/accounts.routes').then((m) => m.ACCOUNTS_ROUTES),
+      },
       { path: 'transactions', title: 'Transações', loadComponent: loadPlaceholder },
       { path: 'categories', title: 'Categorias', loadComponent: loadPlaceholder },
       { path: 'budgets', title: 'Orçamentos', loadComponent: loadPlaceholder },

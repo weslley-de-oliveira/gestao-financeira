@@ -4,7 +4,7 @@ Aplicação web de gestão financeira pessoal, desenvolvida como projeto de port
 
 O sistema permitirá organizar contas, receitas, despesas, cartões de crédito, faturas, orçamentos e metas financeiras.
 
-> **Status:** em desenvolvimento. O workspace e o ferramental base estão configurados; as funcionalidades ainda não foram implementadas.
+> **Status:** em desenvolvimento. Implementados: fundação (tema, layout, navegação, CI), autenticação demonstrativa e contas (listagem com busca e filtros, cadastro, edição, detalhe e arquivamento). Próximas etapas: categorias, transações e dashboard.
 
 > **Aviso:** este é um projeto demonstrativo. Utilize apenas dados fictícios — nunca credenciais, contas ou cartões reais. A API utilizada no desenvolvimento é simulada e não oferece segurança de produção.
 

@@ -1,0 +1,140 @@
+<a class="account-form__back" matButton [routerLink]="cancelLink()">
+  <mat-icon>arrow_back</mat-icon>
+  Voltar
+</a>
+
+<h1 class="account-form__title">{{ isEdit() ? 'Editar conta' : 'Nova conta' }}</h1>
+
+@switch (loadState()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando conta" />
+  }
+  @case ('not-found') {
+    <p class="account-form__message" role="alert">Conta não encontrada.</p>
+    <a matButton="outlined" routerLink="/accounts">Ver contas</a>
+  }
+  @case ('error') {
+    <p class="account-form__message" role="alert">
+      Não foi possível carregar a conta. Tente novamente em instantes.
+    </p>
+  }
+  @case ('ready') {
+    <form class="account-form" novalidate (submit)="onSubmit($event)">
+      <mat-form-field appearance="outline">
+        <mat-label>Nome da conta</mat-label>
+        <input matInput [formField]="accountForm.name" />
+        @if (accountForm.name().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Tipo</mat-label>
+        <mat-select [formField]="accountForm.type">
+          @for (option of typeOptions; track option.value) {
+            <mat-option [value]="option.value">{{ option.label }}</mat-option>
+          }
+        </mat-select>
+        @if (accountForm.type().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Instituição (opcional)</mat-label>
+        <input matInput autocomplete="off" [formField]="accountForm.institution" />
+        @if (accountForm.institution().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Saldo inicial</mat-label>
+        <span matTextPrefix>R$&nbsp;</span>
+        <input
+          matInput
+          appMoneyMask
+          inputmode="decimal"
+          autocomplete="off"
+          [formField]="accountForm.initialBalance"
+        />
+        <mat-hint
+          >Digite só os números; os centavos são preenchidos automaticamente. Use "-" para saldo
+          devedor.</mat-hint
+        >
+        @if (accountForm.initialBalance().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="account-form__row">
+        <mat-form-field appearance="outline">
+          <mat-label>Cor</mat-label>
+          <mat-select [formField]="accountForm.color">
+            <mat-select-trigger>
+              <span class="account-form__option">
+                <span
+                  class="account-form__swatch"
+                  aria-hidden="true"
+                  [style.background]="selectedColor()?.value"
+                ></span>
+                {{ selectedColor()?.label }}
+              </span>
+            </mat-select-trigger>
+            @for (option of colorOptions; track option.value) {
+              <mat-option [value]="option.value">
+                <span class="account-form__option">
+                  <span
+                    class="account-form__swatch"
+                    aria-hidden="true"
+                    [style.background]="option.value"
+                  ></span>
+                  {{ option.label }}
+                </span>
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Ícone</mat-label>
+          <mat-select [formField]="accountForm.icon">
+            <mat-select-trigger>
+              <span class="account-form__option">
+                <mat-icon aria-hidden="true">{{ selectedIcon()?.value }}</mat-icon>
+                {{ selectedIcon()?.label }}
+              </span>
+            </mat-select-trigger>
+            @for (option of iconOptions; track option.value) {
+              <mat-option [value]="option.value">
+                <mat-icon aria-hidden="true">{{ option.value }}</mat-icon>
+                {{ option.label }}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      @if (isEdit()) {
+        <mat-slide-toggle class="account-form__toggle" [formField]="accountForm.isArchived">
+          Conta arquivada
+        </mat-slide-toggle>
+        <p class="account-form__hint">
+          Contas arquivadas não aparecem entre as ativas nem entram no saldo total. O histórico é
+          preservado.
+        </p>
+      }
+
+      @if (errorMessage(); as message) {
+        <p class="account-form__message" role="alert">{{ message }}</p>
+      }
+
+      <div class="account-form__actions">
+        <a matButton [routerLink]="cancelLink()">Cancelar</a>
+        <button matButton="filled" type="submit" [disabled]="accountForm().submitting()">
+          {{ accountForm().submitting() ? 'Salvando…' : 'Salvar' }}
+        </button>
+      </div>
+    </form>
+  }
+}

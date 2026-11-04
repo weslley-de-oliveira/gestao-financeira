@@ -1,0 +1,150 @@
+<header class="accounts__header">
+  <div>
+    <h1 class="accounts__title">Contas</h1>
+    @if (status() === 'ready' && hasAccounts()) {
+      <p class="accounts__summary">
+        {{ activeCount() }} {{ activeCount() === 1 ? 'conta ativa' : 'contas ativas' }} · Saldo
+        total <strong>{{ totalActiveBalance() | money }}</strong>
+      </p>
+    }
+  </div>
+  <a matButton="filled" routerLink="new">
+    <mat-icon>add</mat-icon>
+    Nova conta
+  </a>
+</header>
+
+@switch (status()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando contas" />
+  }
+  @case ('error') {
+    <div class="accounts__state" role="alert">
+      <mat-icon aria-hidden="true">cloud_off</mat-icon>
+      <p>Não foi possível carregar as contas. Verifique se a API está em execução.</p>
+      <button matButton="outlined" type="button" (click)="reload()">Tentar novamente</button>
+    </div>
+  }
+  @case ('ready') {
+    @if (!hasAccounts()) {
+      <div class="accounts__state">
+        <mat-icon aria-hidden="true">account_balance_wallet</mat-icon>
+        <p>Você ainda não cadastrou nenhuma conta.</p>
+        <a matButton="filled" routerLink="new">Cadastrar a primeira conta</a>
+      </div>
+    } @else {
+      <form class="accounts__filters" role="search" aria-label="Filtrar contas" novalidate>
+        <mat-form-field class="accounts__search" appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Buscar por nome ou instituição</mat-label>
+          <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+          <input matInput type="search" [formField]="filterForm.search" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Tipo</mat-label>
+          <mat-select [formField]="filterForm.type">
+            <mat-option value="all">Todos</mat-option>
+            @for (option of typeOptions; track option.value) {
+              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Status</mat-label>
+          <mat-select [formField]="filterForm.status">
+            @for (option of statusOptions; track option.value) {
+              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Ordenar por</mat-label>
+          <mat-select [formField]="filterForm.sort">
+            @for (option of sortOptions; track option.value) {
+              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </form>
+
+      <p class="visually-hidden" aria-live="polite">
+        {{ visibleAccounts().length }}
+        {{ visibleAccounts().length === 1 ? 'conta encontrada' : 'contas encontradas' }}
+      </p>
+
+      @if (visibleAccounts().length === 0) {
+        <div class="accounts__state">
+          <mat-icon aria-hidden="true">search_off</mat-icon>
+          <p>Nenhuma conta corresponde aos filtros.</p>
+          <button matButton="outlined" type="button" (click)="clearFilters()">
+            Limpar filtros
+          </button>
+        </div>
+      } @else {
+        <ul class="accounts__list">
+          @for (account of visibleAccounts(); track account.id) {
+            <li>
+              <mat-card
+                class="account-card"
+                appearance="outlined"
+                [class.account-card--archived]="account.isArchived"
+              >
+                <div class="account-card__header">
+                  <app-account-avatar [icon]="account.icon" [color]="account.color" />
+                  <div class="account-card__heading">
+                    <h2 class="account-card__name">
+                      <a [routerLink]="account.id">{{ account.name }}</a>
+                    </h2>
+                    <p class="account-card__meta">
+                      {{ typeLabels[account.type] }}
+                      @if (account.institution) {
+                        · {{ account.institution }}
+                      }
+                    </p>
+                  </div>
+                  <button
+                    matIconButton
+                    type="button"
+                    [attr.aria-label]="'Ações da conta ' + account.name"
+                    [matMenuTriggerFor]="actions"
+                  >
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #actions="matMenu" xPosition="before">
+                    <a mat-menu-item [routerLink]="account.id">
+                      <mat-icon>visibility</mat-icon>
+                      <span>Visualizar</span>
+                    </a>
+                    <a mat-menu-item [routerLink]="[account.id, 'edit']">
+                      <mat-icon>edit</mat-icon>
+                      <span>Editar</span>
+                    </a>
+                    <button mat-menu-item type="button" (click)="toggleArchived(account)">
+                      <mat-icon>{{ account.isArchived ? 'unarchive' : 'archive' }}</mat-icon>
+                      <span>{{ account.isArchived ? 'Reativar' : 'Arquivar' }}</span>
+                    </button>
+                  </mat-menu>
+                </div>
+
+                <div class="account-card__footer">
+                  <span class="account-card__label">Saldo atual</span>
+                  @if (account.isArchived) {
+                    <span class="account-card__badge">Arquivada</span>
+                  }
+                </div>
+                <p
+                  class="account-card__balance"
+                  [class.account-card__balance--negative]="account.currentBalance < 0"
+                >
+                  {{ account.currentBalance | money }}
+                </p>
+              </mat-card>
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+}
