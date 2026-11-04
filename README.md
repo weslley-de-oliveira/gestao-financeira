@@ -38,7 +38,7 @@ Outras ferramentas, como Playwright, gráficos e geração de dados fictícios, 
 
 ## Requisitos
 
-- Node.js 26 LTS (ou outra versão compatível com Angular 22: `^22.22.3`, `^24.15.0` ou `>=26.0.0`)
+- Node.js 26 LTS, definido em `.nvmrc` (ou outra versão compatível com Angular 22: `^22.22.3`, `^24.15.0` ou `>=26.0.0`)
 - npm 11
 - Git
 
