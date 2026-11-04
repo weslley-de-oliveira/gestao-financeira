@@ -1,59 +1,94 @@
-# GestaoFinanceira
+# Gestão Financeira
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.5.
+Aplicação web de gestão financeira pessoal, desenvolvida como projeto de portfólio para demonstrar domínio de Angular, TypeScript, arquitetura front-end, integração com APIs, UX, qualidade de código e fundamentos de segurança.
 
-## Development server
+O sistema permitirá organizar contas, receitas, despesas, cartões de crédito, faturas, orçamentos e metas financeiras.
 
-To start a local development server, run:
+> **Status:** em desenvolvimento. O workspace e o ferramental base estão configurados; as funcionalidades ainda não foram implementadas.
 
-```bash
-ng serve
-```
+> **Aviso:** este é um projeto demonstrativo. Utilize apenas dados fictícios — nunca credenciais, contas ou cartões reais. A API utilizada no desenvolvimento é simulada e não oferece segurança de produção.
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Funcionalidades previstas
 
-## Code scaffolding
+| Prioridade    | Telas                                                                     |
+| ------------- | ------------------------------------------------------------------------- |
+| MVP           | Login, cadastro, dashboard, contas, transações e categorias               |
+| Segunda etapa | Orçamentos, cartões de crédito, faturas, metas, configurações e segurança |
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Stack atual
 
-```bash
-ng generate component component-name
-```
+| Tecnologia                                                  | Uso                                                   |
+| ----------------------------------------------------------- | ----------------------------------------------------- |
+| [Angular 22](https://angular.dev)                           | Framework (standalone, zoneless, Signals)             |
+| TypeScript 6                                                | Linguagem, em strict mode                             |
+| RxJS 7                                                      | Fluxos assíncronos e HTTP                             |
+| [Tailwind CSS 4](https://tailwindcss.com)                   | Estilização utilitária e layout                       |
+| [PrimeNG 22](https://primeng.org) + `@primeuix/themes`      | Componentes de interface e temas                      |
+| `tailwindcss-primeui`                                       | Integração dos tokens do PrimeNG com o Tailwind       |
+| Angular CDK 22                                              | Primitivas de interface                               |
+| [JSON Server 0.17](https://github.com/typicode/json-server) | API REST simulada para desenvolvimento                |
+| concurrently                                                | Execução paralela do Angular e da API simulada        |
+| [Vitest](https://vitest.dev)                                | Testes unitários                                      |
+| angular-eslint + ESLint                                     | Análise estática                                      |
+| Prettier + `prettier-plugin-tailwindcss`                    | Formatação e ordenação de classes do Tailwind         |
+| Husky + lint-staged                                         | Validação dos arquivos alterados antes do commit      |
+| commitlint                                                  | Validação de mensagens no padrão Conventional Commits |
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Outras ferramentas, como Playwright, gráficos e geração de dados fictícios, serão adicionadas conforme as funcionalidades forem implementadas.
 
-```bash
-ng generate --help
-```
+## Requisitos
 
-## Building
+- Node.js 26 LTS (ou outra versão compatível com Angular 22: `^22.22.3`, `^24.15.0` ou `>=26.0.0`)
+- npm 11
+- Git
 
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+## Como executar
 
 ```bash
-ng e2e
+npm install
+npm run start:dev
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+- Aplicação: `http://localhost:4200`
+- API simulada: `http://localhost:3000`
 
-## Additional Resources
+## Scripts
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+| Script                 | Descrição                                         |
+| ---------------------- | ------------------------------------------------- |
+| `npm start`            | Inicia o servidor de desenvolvimento do Angular   |
+| `npm run start:api`    | Inicia a API simulada (JSON Server) na porta 3000 |
+| `npm run start:dev`    | Inicia o Angular e a API simulada juntos          |
+| `npm run build`        | Gera o build de produção em `dist/`               |
+| `npm test`             | Executa os testes unitários com Vitest            |
+| `npm run lint`         | Executa o ESLint                                  |
+| `npm run format`       | Formata o código com Prettier                     |
+| `npm run format:check` | Verifica a formatação sem alterar arquivos        |
+
+## Estrutura
+
+```text
+db/
+  db.json        # Dados da API simulada
+src/
+  app/           # Código da aplicação
+  styles.css     # Estilos globais e Tailwind
+public/          # Arquivos estáticos
+```
+
+A aplicação seguirá uma arquitetura orientada a funcionalidades (`core`, `shared`, `features` e `data-access`), na qual os componentes consomem facades e repositórios em vez de chamar a API diretamente. Assim, a API simulada poderá ser substituída por um backend real sem reescrever as telas.
+
+## Padrão de commits
+
+Os commits seguem o padrão [Conventional Commits](https://www.conventionalcommits.org/pt-br/):
+
+```text
+<type>(<scope>): <description>
+```
+
+Exemplos: `feat(accounts): add account form`, `fix(transactions): validate transfer accounts`, `chore: update dependencies`.
+
+Os hooks de Git validam automaticamente:
+
+- **pre-commit:** ESLint e Prettier nos arquivos alterados.
+- **commit-msg:** formato da mensagem de commit.
