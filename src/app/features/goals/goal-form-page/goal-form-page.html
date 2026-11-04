@@ -1,0 +1,113 @@
+<a class="goal-form__back" matButton [routerLink]="cancelLink()">
+  <mat-icon>arrow_back</mat-icon>
+  Voltar
+</a>
+
+<h1 class="goal-form__title">{{ isEdit() ? 'Editar meta' : 'Nova meta' }}</h1>
+
+@switch (loadState()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando meta" />
+  }
+  @case ('not-found') {
+    <p class="goal-form__message" role="alert">Meta não encontrada.</p>
+    <a matButton="outlined" routerLink="/goals">Ver metas</a>
+  }
+  @case ('error') {
+    <p class="goal-form__message" role="alert">
+      Não foi possível carregar a meta. Tente novamente em instantes.
+    </p>
+  }
+  @case ('ready') {
+    <form class="goal-form" novalidate (submit)="onSubmit($event)">
+      <mat-form-field appearance="outline">
+        <mat-label>Nome da meta</mat-label>
+        <input matInput autocomplete="off" [formField]="goalForm.name" />
+        @if (goalForm.name().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="goal-form__row">
+        <mat-form-field appearance="outline">
+          <mat-label>Valor-alvo</mat-label>
+          <span matTextPrefix>R$&nbsp;</span>
+          <input
+            matInput
+            appMoneyMask
+            [allowNegative]="false"
+            inputmode="numeric"
+            autocomplete="off"
+            [formField]="goalForm.targetAmount"
+          />
+          @if (goalForm.targetAmount().errors()[0]; as error) {
+            <mat-error>{{ error.message }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Valor inicial acumulado</mat-label>
+          <span matTextPrefix>R$&nbsp;</span>
+          <input
+            matInput
+            appMoneyMask
+            [allowNegative]="false"
+            inputmode="numeric"
+            autocomplete="off"
+            [formField]="goalForm.initialAmount"
+          />
+          <mat-hint>Quanto já está guardado. Os aportes são registrados no detalhe.</mat-hint>
+          @if (goalForm.initialAmount().errors()[0]; as error) {
+            <mat-error>{{ error.message }}</mat-error>
+          }
+        </mat-form-field>
+      </div>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Data-limite (opcional)</mat-label>
+        <input matInput [matDatepicker]="picker" [formField]="goalForm.deadline" />
+        <mat-hint>dd/mm/aaaa</mat-hint>
+        @if (goalForm.deadline().value()) {
+          <button
+            matIconSuffix
+            matIconButton
+            type="button"
+            aria-label="Remover data-limite"
+            (click)="clearDeadline()"
+          >
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+        <mat-datepicker-toggle matIconSuffix [for]="picker" />
+        <mat-datepicker #picker />
+        @if (errorText(goalForm.deadline().errors(), 'Informe uma data válida.'); as error) {
+          <mat-error>{{ error }}</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="goal-form__row">
+        <app-color-select [formField]="goalForm.color" />
+        <app-icon-select [formField]="goalForm.icon" [options]="iconOptions" />
+      </div>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Descrição (opcional)</mat-label>
+        <textarea matInput rows="3" [formField]="goalForm.description"></textarea>
+        @if (goalForm.description().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+
+      @if (errorMessage(); as message) {
+        <p class="goal-form__message" role="alert">{{ message }}</p>
+      }
+
+      <div class="goal-form__actions">
+        <a matButton [routerLink]="cancelLink()">Cancelar</a>
+        <button matButton="filled" type="submit" [disabled]="goalForm().submitting()">
+          {{ goalForm().submitting() ? 'Salvando…' : 'Salvar' }}
+        </button>
+      </div>
+    </form>
+  }
+}

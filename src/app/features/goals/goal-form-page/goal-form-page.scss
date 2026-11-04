@@ -1,0 +1,47 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: block;
+  max-width: 40rem;
+}
+
+.goal-form__back {
+  margin: 0 0 0.5rem -0.75rem;
+}
+
+.goal-form__title {
+  margin: 0 0 1.5rem;
+  font: var(--mat-sys-headline-small);
+}
+
+.goal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.goal-form__row {
+  display: grid;
+  grid-template-columns: 1fr;
+  column-gap: 1rem;
+  row-gap: 0.25rem;
+
+  @include bp.md-up {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.goal-form__message {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--mat-sys-corner-small);
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+
+.goal-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}

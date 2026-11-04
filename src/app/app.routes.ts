@@ -73,7 +73,11 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/invoices/invoices-page/invoices-page').then((m) => m.InvoicesPage),
       },
-      { path: 'goals', title: 'Metas', loadComponent: loadPlaceholder },
+      {
+        path: 'goals',
+        title: 'Metas',
+        loadChildren: () => import('./features/goals/goals.routes').then((m) => m.GOALS_ROUTES),
+      },
       { path: 'settings', title: 'Configurações', loadComponent: loadPlaceholder },
       { path: 'security', title: 'Segurança', loadComponent: loadPlaceholder },
     ],

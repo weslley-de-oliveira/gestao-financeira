@@ -26,6 +26,9 @@ import { formatMonth, toIsoMonth } from '../../../shared/utils/month';
 import { AccountsFacade, LoadStatus } from '../../accounts/accounts.facade';
 import { BudgetHighlights } from '../../budgets/budget-highlights/budget-highlights';
 import { BudgetsFacade } from '../../budgets/budgets.facade';
+import { queryGoals } from '../../goals/domain/goal-query';
+import { GoalHighlights } from '../../goals/goal-highlights/goal-highlights';
+import { GoalsFacade } from '../../goals/goals.facade';
 import { budgetProgress } from '../../budgets/domain/budget-rules';
 import { CategoriesFacade } from '../../categories/categories.facade';
 import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
@@ -45,6 +48,9 @@ const RECENT_LIMIT = 5;
 
 /** Quantidade de orçamentos exibidos: os mais consumidos do mês atual. */
 const BUDGET_HIGHLIGHTS = 3;
+
+/** Quantidade de metas exibidas: as que pedem atenção primeiro. */
+const GOAL_HIGHLIGHTS = 3;
 
 interface Shortcut {
   label: string;
@@ -78,6 +84,7 @@ function combineStatus(...statuses: LoadStatus[]): LoadStatus {
     MatProgressBar,
     ChartView,
     BudgetHighlights,
+    GoalHighlights,
     IsoDatePipe,
     MoneyPipe,
   ],
@@ -90,6 +97,7 @@ export class DashboardPage implements OnInit {
   private readonly transactionsFacade = inject(TransactionsFacade);
   private readonly creditCardsFacade = inject(CreditCardsFacade);
   private readonly budgetsFacade = inject(BudgetsFacade);
+  private readonly goalsFacade = inject(GoalsFacade);
   private readonly categoriesFacade = inject(CategoriesFacade);
   private readonly period = inject(PeriodService);
   private readonly today = inject(TODAY);
@@ -213,6 +221,13 @@ export class DashboardPage implements OnInit {
       this.categoriesFacade.status(),
     ),
   );
+  protected readonly goalsStatus = this.goalsFacade.status;
+  /** Metas ativas ainda não concluídas: atrasadas primeiro, depois o prazo mais próximo. */
+  protected readonly goalHighlights = computed(() =>
+    queryGoals(this.goalsFacade.goals(), 'active')
+      .filter((goal) => goal.status !== 'completed')
+      .slice(0, GOAL_HIGHLIGHTS),
+  );
   protected readonly budgetHighlights = computed(() => {
     const transactions = this.transactionsFacade.transactions();
     return this.budgetsFacade
@@ -234,6 +249,11 @@ export class DashboardPage implements OnInit {
     this.reloadAccounts();
     this.reloadTransactions();
     this.reloadBudgets();
+    this.reloadGoals();
+  }
+
+  protected reloadGoals(): void {
+    void this.goalsFacade.load();
   }
 
   protected reloadBudgets(): void {

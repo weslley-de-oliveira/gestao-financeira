@@ -1,0 +1,149 @@
+<header class="goals__header">
+  <div>
+    <h1 class="goals__title">Metas</h1>
+    @if (status() === 'ready' && totals().count > 0) {
+      <p class="goals__summary">
+        {{ totals().count }} {{ totals().count === 1 ? 'meta ativa' : 'metas ativas' }} · Guardado
+        <strong>{{ totals().saved | money }}</strong> de {{ totals().target | money }}
+      </p>
+    }
+  </div>
+  <a matButton="filled" routerLink="new">
+    <mat-icon>add</mat-icon>
+    Nova meta
+  </a>
+</header>
+
+@switch (status()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando metas" />
+  }
+  @case ('error') {
+    <div class="goals__state" role="alert">
+      <mat-icon aria-hidden="true">cloud_off</mat-icon>
+      <p>Não foi possível carregar as metas. Verifique se a API está em execução.</p>
+      <button matButton="outlined" type="button" (click)="reload()">Tentar novamente</button>
+    </div>
+  }
+  @case ('ready') {
+    @if (!hasGoals()) {
+      <div class="goals__state">
+        <mat-icon aria-hidden="true">savings</mat-icon>
+        <p>
+          Defina um objetivo, como uma viagem ou uma reserva de emergência, e acompanhe o progresso.
+        </p>
+        <a matButton="filled" routerLink="new">Criar a primeira meta</a>
+      </div>
+    } @else {
+      <form class="goals__filters" aria-label="Filtrar metas" novalidate>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Status</mat-label>
+          <mat-select [formField]="filterForm.status">
+            @for (option of filterOptions; track option.value) {
+              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </form>
+
+      <p class="visually-hidden" aria-live="polite">
+        {{ visibleGoals().length }}
+        {{ visibleGoals().length === 1 ? 'meta encontrada' : 'metas encontradas' }}
+      </p>
+
+      @if (visibleGoals().length === 0) {
+        <div class="goals__state">
+          <mat-icon aria-hidden="true">search_off</mat-icon>
+          <p>Nenhuma meta com esse status.</p>
+          <button matButton="outlined" type="button" (click)="showAll()">Ver todas</button>
+        </div>
+      } @else {
+        <ul class="goals__list">
+          @for (goal of visibleGoals(); track goal.id) {
+            <li>
+              <mat-card
+                appearance="outlined"
+                class="goal"
+                [class]="'goal--' + goal.status"
+                [class.goal--archived]="goal.isArchived"
+              >
+                <div class="goal__header">
+                  <app-icon-avatar [icon]="goal.icon" [color]="goal.color" />
+                  <div class="goal__heading">
+                    <h2 class="goal__name">
+                      <a [routerLink]="goal.id">{{ goal.name }}</a>
+                    </h2>
+                    <p class="goal__status">
+                      <mat-icon aria-hidden="true">{{ statusIcons[goal.status] }}</mat-icon>
+                      {{ statusLabels[goal.status] }}
+                      @if (goal.isArchived) {
+                        <span class="goal__badge">Arquivada</span>
+                      }
+                    </p>
+                  </div>
+                  <button
+                    matIconButton
+                    type="button"
+                    [attr.aria-label]="'Ações da meta ' + goal.name"
+                    [matMenuTriggerFor]="actions"
+                  >
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #actions="matMenu" xPosition="before">
+                    <a mat-menu-item [routerLink]="goal.id">
+                      <mat-icon>visibility</mat-icon>
+                      <span>Visualizar</span>
+                    </a>
+                    <a mat-menu-item [routerLink]="[goal.id, 'edit']">
+                      <mat-icon>edit</mat-icon>
+                      <span>Editar</span>
+                    </a>
+                    @if (goal.status !== 'completed') {
+                      <button mat-menu-item type="button" (click)="togglePaused(goal)">
+                        <mat-icon>{{ goal.isPaused ? 'play_circle' : 'pause_circle' }}</mat-icon>
+                        <span>{{ goal.isPaused ? 'Retomar' : 'Pausar' }}</span>
+                      </button>
+                    }
+                    <button mat-menu-item type="button" (click)="toggleArchived(goal)">
+                      <mat-icon>{{ goal.isArchived ? 'unarchive' : 'archive' }}</mat-icon>
+                      <span>{{ goal.isArchived ? 'Reativar' : 'Arquivar' }}</span>
+                    </button>
+                  </mat-menu>
+                </div>
+
+                <mat-progress-bar
+                  class="goal__bar"
+                  mode="determinate"
+                  [value]="progressBarValue(goal)"
+                  [attr.aria-label]="'Progresso da meta ' + goal.name"
+                />
+                <p class="goal__figures">
+                  <span
+                    >{{ goal.currentAmount | money }} de {{ goal.targetAmount | money }} ({{
+                      goal.percent.toFixed(0)
+                    }}%)</span
+                  >
+                  @if (goal.excessAmount > 0) {
+                    <span>Excedeu {{ goal.excessAmount | money }}</span>
+                  } @else if (goal.remainingAmount > 0) {
+                    <span>Faltam {{ goal.remainingAmount | money }}</span>
+                  }
+                </p>
+                <p class="goal__deadline">
+                  @if (goal.deadline) {
+                    Prazo: {{ goal.deadline | isoDate }}
+                    @if (goal.monthlyPace !== null) {
+                      · {{ goal.monthlyPace | money }}/mês
+                    }
+                  } @else {
+                    Sem prazo
+                  }
+                </p>
+              </mat-card>
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+}

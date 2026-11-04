@@ -1,0 +1,218 @@
+<a class="goal-detail__back" matButton routerLink="/goals">
+  <mat-icon>arrow_back</mat-icon>
+  Metas
+</a>
+
+@switch (loadState()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando meta" />
+  }
+  @case ('not-found') {
+    <div class="goal-detail__state" role="alert">
+      <p>Meta não encontrada.</p>
+      <a matButton="outlined" routerLink="/goals">Ver metas</a>
+    </div>
+  }
+  @case ('error') {
+    <div class="goal-detail__state" role="alert">
+      <p>Não foi possível carregar a meta.</p>
+      <button matButton="outlined" type="button" (click)="load()">Tentar novamente</button>
+    </div>
+  }
+  @case ('ready') {
+    @if (goal(); as goal) {
+      <header class="goal-detail__header">
+        <app-icon-avatar [icon]="goal.icon" [color]="goal.color" />
+        <div class="goal-detail__heading">
+          <h1 class="goal-detail__title">{{ goal.name }}</h1>
+          <p class="goal-detail__status" [class]="'goal-detail__status--' + goal.status">
+            <mat-icon aria-hidden="true">{{ statusIcons[goal.status] }}</mat-icon>
+            {{ statusLabels[goal.status] }}
+            @if (goal.isArchived) {
+              <span class="goal-detail__badge">Arquivada</span>
+            }
+          </p>
+        </div>
+        <div class="goal-detail__actions">
+          <a matButton="outlined" [routerLink]="['/goals', goal.id, 'edit']">
+            <mat-icon>edit</mat-icon>
+            Editar
+          </a>
+          @if (goal.status !== 'completed') {
+            <button matButton="outlined" type="button" (click)="togglePaused(goal)">
+              <mat-icon>{{ goal.isPaused ? 'play_circle' : 'pause_circle' }}</mat-icon>
+              {{ goal.isPaused ? 'Retomar' : 'Pausar' }}
+            </button>
+          }
+          <button matButton="outlined" type="button" (click)="toggleArchived(goal)">
+            <mat-icon>{{ goal.isArchived ? 'unarchive' : 'archive' }}</mat-icon>
+            {{ goal.isArchived ? 'Reativar' : 'Arquivar' }}
+          </button>
+        </div>
+      </header>
+
+      @if (goal.description) {
+        <p class="goal-detail__description">{{ goal.description }}</p>
+      }
+
+      <div class="goal-detail__panels">
+        <mat-card appearance="outlined" class="goal-detail__panel">
+          <span class="goal-detail__label">Acumulado</span>
+          <strong class="goal-detail__amount">{{ goal.currentAmount | money }}</strong>
+          <mat-progress-bar
+            mode="determinate"
+            [value]="progressBarValue(goal)"
+            aria-label="Progresso da meta"
+          />
+          <dl class="goal-detail__figures">
+            <div>
+              <dt>Valor-alvo</dt>
+              <dd>{{ goal.targetAmount | money }} ({{ goal.percent.toFixed(0) }}%)</dd>
+            </div>
+            <div>
+              @if (goal.excessAmount > 0) {
+                <dt>Excedente</dt>
+                <dd>{{ goal.excessAmount | money }}</dd>
+              } @else {
+                <dt>Falta</dt>
+                <dd>{{ goal.remainingAmount | money }}</dd>
+              }
+            </div>
+          </dl>
+        </mat-card>
+
+        <mat-card appearance="outlined" class="goal-detail__panel">
+          <span class="goal-detail__label">Prazo e ritmo</span>
+          @if (goal.deadline) {
+            <strong class="goal-detail__amount">{{ goal.deadline | isoDate }}</strong>
+          } @else {
+            <strong class="goal-detail__amount">Sem prazo</strong>
+          }
+          <p class="goal-detail__pace">
+            @switch (goal.status) {
+              @case ('completed') {
+                Meta atingida. Parabéns!
+              }
+              @case ('overdue') {
+                O prazo passou e faltam {{ goal.remainingAmount | money }}. Edite a meta para
+                definir um novo prazo.
+              }
+              @default {
+                @if (goal.monthlyPace !== null && goal.monthsLeft !== null) {
+                  Para chegar lá, guarde {{ goal.monthlyPace | money }} por mês durante
+                  {{ goal.monthsLeft }} {{ goal.monthsLeft === 1 ? 'mês' : 'meses' }} (contando o
+                  atual).
+                } @else if (goal.deadline) {
+                  O prazo passou; retome e edite a meta para definir um novo prazo.
+                } @else {
+                  Defina uma data-limite para ver quanto guardar por mês.
+                }
+              }
+            }
+          </p>
+        </mat-card>
+      </div>
+
+      <section class="goal-detail__section" aria-labelledby="goal-history-title">
+        <h2 id="goal-history-title" class="goal-detail__section-title">Aportes e retiradas</h2>
+
+        <form
+          class="contribution-form"
+          aria-label="Registrar aporte ou retirada"
+          novalidate
+          (submit)="addContribution($event)"
+        >
+          <mat-button-toggle-group
+            aria-label="Tipo de movimentação"
+            [formField]="contributionForm.type"
+          >
+            <mat-button-toggle value="deposit">Aporte</mat-button-toggle>
+            <mat-button-toggle value="withdrawal">Retirada</mat-button-toggle>
+          </mat-button-toggle-group>
+
+          <div class="contribution-form__fields">
+            <mat-form-field appearance="outline">
+              <mat-label>Valor</mat-label>
+              <span matTextPrefix>R$&nbsp;</span>
+              <input
+                matInput
+                appMoneyMask
+                [allowNegative]="false"
+                inputmode="numeric"
+                autocomplete="off"
+                [formField]="contributionForm.amount"
+              />
+              @if (contributionForm.amount().errors()[0]; as error) {
+                <mat-error>{{ error.message }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Data</mat-label>
+              <input matInput [matDatepicker]="picker" [formField]="contributionForm.date" />
+              <mat-datepicker-toggle matIconSuffix [for]="picker" />
+              <mat-datepicker #picker />
+              @if (
+                errorText(contributionForm.date().errors(), 'Informe uma data válida.');
+                as error
+              ) {
+                <mat-error>{{ error }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Observação (opcional)</mat-label>
+              <input matInput autocomplete="off" [formField]="contributionForm.note" />
+              @if (contributionForm.note().errors()[0]; as error) {
+                <mat-error>{{ error.message }}</mat-error>
+              }
+            </mat-form-field>
+          </div>
+
+          <button matButton="filled" type="submit" [disabled]="contributionForm().submitting()">
+            Registrar
+          </button>
+          <p class="contribution-form__hint">
+            Movimentações manuais: não alteram o saldo das contas.
+          </p>
+        </form>
+
+        <mat-card appearance="outlined">
+          <ul class="goal-detail__history">
+            @for (item of history(); track item.id) {
+              <li class="goal-detail__entry">
+                <span class="goal-detail__entry-date">{{ item.date | isoDate }}</span>
+                <span class="goal-detail__entry-main">
+                  {{ typeLabels[item.type] }}
+                  @if (item.note) {
+                    <span class="goal-detail__entry-note">· {{ item.note }}</span>
+                  }
+                </span>
+                <span class="goal-detail__entry-amount">
+                  {{ item.type === 'deposit' ? '+' : '−' }}{{ item.amount | money }}
+                </span>
+                <button
+                  matIconButton
+                  type="button"
+                  [attr.aria-label]="
+                    'Excluir ' +
+                    typeLabels[item.type].toLowerCase() +
+                    ' de ' +
+                    (item.date | isoDate)
+                  "
+                  (click)="removeContribution(item)"
+                >
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </li>
+            }
+            <li class="goal-detail__entry">
+              <span class="goal-detail__entry-main">Valor inicial</span>
+              <span class="goal-detail__entry-amount">{{ goal.initialAmount | money }}</span>
+            </li>
+          </ul>
+        </mat-card>
+      </section>
+    }
+  }
+}

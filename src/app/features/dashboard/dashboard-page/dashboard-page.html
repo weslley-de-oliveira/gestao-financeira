@@ -225,6 +225,37 @@
 
     <mat-card appearance="outlined" class="widget">
       <div class="widget__header">
+        <h2 class="widget__title">Metas</h2>
+        <a matButton routerLink="/goals">Ver todas</a>
+      </div>
+      @switch (goalsStatus()) {
+        @case ('loading') {
+          <mat-progress-bar mode="indeterminate" aria-label="Carregando metas" />
+        }
+        @case ('error') {
+          <div class="widget__state" role="alert">
+            <p>Não foi possível carregar as metas.</p>
+            <button matButton="outlined" type="button" (click)="reloadGoals()">
+              Tentar novamente
+            </button>
+          </div>
+        }
+        @case ('ready') {
+          @if (goalHighlights().length === 0) {
+            <div class="widget__state">
+              <mat-icon aria-hidden="true">savings</mat-icon>
+              <p>Nenhuma meta em andamento.</p>
+              <a matButton="outlined" routerLink="/goals/new">Criar meta</a>
+            </div>
+          } @else {
+            <app-goal-highlights [items]="goalHighlights()" />
+          }
+        }
+      }
+    </mat-card>
+
+    <mat-card appearance="outlined" class="widget">
+      <div class="widget__header">
         <h2 class="widget__title">Orçamentos de {{ budgetMonthLabel }}</h2>
         <a matButton routerLink="/budgets">Ver todos</a>
       </div>

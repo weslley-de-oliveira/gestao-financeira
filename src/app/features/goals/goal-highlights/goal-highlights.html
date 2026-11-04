@@ -1,0 +1,24 @@
+<ul class="highlights">
+  @for (goal of items(); track goal.id) {
+    <li class="highlights__item">
+      <div class="highlights__row">
+        <a class="highlights__name" [routerLink]="['/goals', goal.id]">{{ goal.name }}</a>
+        <span class="highlights__status" [class]="'highlights__status--' + goal.status">
+          <mat-icon aria-hidden="true">{{ statusIcons[goal.status] }}</mat-icon>
+          {{ statusLabels[goal.status] }}
+        </span>
+      </div>
+      <mat-progress-bar
+        mode="determinate"
+        [value]="progressBarValue(goal)"
+        [attr.aria-label]="'Progresso da meta ' + goal.name"
+      />
+      <span class="highlights__figures">
+        {{ goal.currentAmount | money }} de {{ goal.targetAmount | money }}
+        @if (goal.deadline) {
+          · prazo {{ goal.deadline | isoDate }}
+        }
+      </span>
+    </li>
+  }
+</ul>
