@@ -1,0 +1,155 @@
+<header class="budgets__header">
+  <h1 class="budgets__title">Orçamentos</h1>
+  <a matButton="filled" routerLink="new">
+    <mat-icon>add</mat-icon>
+    Novo orçamento
+  </a>
+</header>
+
+<nav class="budgets__month" aria-label="Mês dos orçamentos">
+  <button matIconButton type="button" aria-label="Mês anterior" (click)="goToMonth(-1)">
+    <mat-icon>chevron_left</mat-icon>
+  </button>
+  <h2 class="budgets__month-label" aria-live="polite">{{ monthLabel() }}</h2>
+  <button matIconButton type="button" aria-label="Próximo mês" (click)="goToMonth(1)">
+    <mat-icon>chevron_right</mat-icon>
+  </button>
+  @if (selectedMonth() !== currentMonth) {
+    <button matButton type="button" (click)="goToCurrentMonth()">Mês atual</button>
+  }
+</nav>
+
+@switch (status()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando orçamentos" />
+  }
+  @case ('error') {
+    <div class="budgets__state" role="alert">
+      <mat-icon aria-hidden="true">cloud_off</mat-icon>
+      <p>Não foi possível carregar os orçamentos. Verifique se a API está em execução.</p>
+      <button matButton="outlined" type="button" (click)="reload()">Tentar novamente</button>
+    </div>
+  }
+  @case ('ready') {
+    @if (!hasBudgets()) {
+      <div class="budgets__state">
+        <mat-icon aria-hidden="true">pie_chart</mat-icon>
+        <p>Defina limites mensais de gastos por categoria para acompanhar o consumo.</p>
+        <a matButton="filled" routerLink="new">Criar o primeiro orçamento</a>
+      </div>
+    } @else if (progress().length === 0) {
+      <div class="budgets__state">
+        <mat-icon aria-hidden="true">event_busy</mat-icon>
+        <p>
+          Nenhum orçamento valia em {{ monthLabel() }}: eles começam a contar no mês de criação.
+        </p>
+      </div>
+    } @else {
+      <section class="budgets__summary" aria-label="Resumo do mês">
+        <mat-card appearance="outlined" class="summary-card">
+          <span class="summary-card__label">Orçado</span>
+          <strong class="summary-card__value">{{ summary().limit | money }}</strong>
+        </mat-card>
+        <mat-card appearance="outlined" class="summary-card">
+          <span class="summary-card__label">Gasto</span>
+          <strong class="summary-card__value">{{ summary().spent | money }}</strong>
+        </mat-card>
+        <mat-card appearance="outlined" class="summary-card">
+          <span class="summary-card__label">Disponível</span>
+          <strong
+            class="summary-card__value"
+            [class.summary-card__value--negative]="summary().available < 0"
+          >
+            {{ summary().available | money }}
+          </strong>
+        </mat-card>
+        @if (summary().attentionCount > 0) {
+          <p class="budgets__attention" role="status">
+            <mat-icon aria-hidden="true">warning</mat-icon>
+            {{ summary().attentionCount }}
+            {{
+              summary().attentionCount === 1
+                ? 'orçamento precisa de atenção'
+                : 'orçamentos precisam de atenção'
+            }}
+          </p>
+        }
+      </section>
+
+      <ul class="budgets__list">
+        @for (item of progress(); track item.budget.id) {
+          @let category = categoryOf(item);
+          <li>
+            <mat-card appearance="outlined" class="budget" [class]="'budget--' + item.state">
+              <div class="budget__header">
+                <app-icon-avatar
+                  [icon]="category?.icon ?? 'category'"
+                  [color]="category?.color ?? '#546e7a'"
+                />
+                <div class="budget__heading">
+                  <h3 class="budget__name">
+                    {{ category?.name ?? 'Categoria removida'
+                    }}{{ category?.isArchived ? ' (arquivada)' : '' }}
+                  </h3>
+                  <p class="budget__state">
+                    <mat-icon aria-hidden="true">{{ stateIcons[item.state] }}</mat-icon>
+                    {{ stateLabels[item.state] }}
+                  </p>
+                </div>
+                <button
+                  matIconButton
+                  type="button"
+                  [attr.aria-label]="'Ações do orçamento ' + (category?.name ?? '')"
+                  [matMenuTriggerFor]="actions"
+                >
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #actions="matMenu" xPosition="before">
+                  <a mat-menu-item [routerLink]="[item.budget.id, 'edit']">
+                    <mat-icon>edit</mat-icon>
+                    <span>Editar</span>
+                  </a>
+                  <a
+                    mat-menu-item
+                    routerLink="/transactions"
+                    [queryParams]="{ categoryId: item.budget.categoryId }"
+                  >
+                    <mat-icon>receipt_long</mat-icon>
+                    <span>Ver transações</span>
+                  </a>
+                  <button mat-menu-item type="button" (click)="delete(item)">
+                    <mat-icon>delete</mat-icon>
+                    <span>Excluir</span>
+                  </button>
+                </mat-menu>
+              </div>
+
+              <mat-progress-bar
+                class="budget__bar"
+                mode="determinate"
+                [value]="progressBarValue(item)"
+                [attr.aria-label]="'Consumo do orçamento ' + (category?.name ?? '')"
+              />
+              <p class="budget__figures">
+                <span
+                  >{{ item.spent | money }} de {{ item.limit | money }} ({{
+                    item.percent.toFixed(0)
+                  }}%)</span
+                >
+                @if (item.available >= 0) {
+                  <span>Restam {{ item.available | money }}</span>
+                } @else {
+                  <span class="budget__over">Excedeu {{ -item.available | money }}</span>
+                }
+              </p>
+              @if (item.pending > 0) {
+                <p class="budget__pending">+ {{ item.pending | money }} pendentes (previstos)</p>
+              }
+              <p class="budget__threshold">Alerta a partir de {{ item.budget.alertThreshold }}%</p>
+            </mat-card>
+          </li>
+        }
+      </ul>
+    }
+  }
+}

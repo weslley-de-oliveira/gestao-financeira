@@ -224,6 +224,37 @@
     </mat-card>
 
     <mat-card appearance="outlined" class="widget">
+      <div class="widget__header">
+        <h2 class="widget__title">Orçamentos de {{ budgetMonthLabel }}</h2>
+        <a matButton routerLink="/budgets">Ver todos</a>
+      </div>
+      @switch (budgetsStatus()) {
+        @case ('loading') {
+          <mat-progress-bar mode="indeterminate" aria-label="Carregando orçamentos" />
+        }
+        @case ('error') {
+          <div class="widget__state" role="alert">
+            <p>Não foi possível carregar os orçamentos.</p>
+            <button matButton="outlined" type="button" (click)="reloadBudgets()">
+              Tentar novamente
+            </button>
+          </div>
+        }
+        @case ('ready') {
+          @if (budgetHighlights().length === 0) {
+            <div class="widget__state">
+              <mat-icon aria-hidden="true">pie_chart</mat-icon>
+              <p>Nenhum orçamento definido para este mês.</p>
+              <a matButton="outlined" routerLink="/budgets/new">Criar orçamento</a>
+            </div>
+          } @else {
+            <app-budget-highlights [items]="budgetHighlights()" />
+          }
+        }
+      }
+    </mat-card>
+
+    <mat-card appearance="outlined" class="widget">
       <h2 class="widget__title">Atalhos</h2>
       <nav class="shortcuts" aria-label="Atalhos">
         @for (shortcut of shortcuts; track shortcut.path) {

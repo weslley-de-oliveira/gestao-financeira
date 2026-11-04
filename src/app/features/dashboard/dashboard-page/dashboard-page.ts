@@ -13,7 +13,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
-import { PeriodService } from '../../../core/services/period.service';
+import { PeriodService, TODAY } from '../../../core/services/period.service';
 import { ChartSpec } from '../../../shared/components/chart/chart-spec';
 import { ChartView } from '../../../shared/components/chart/chart-view';
 import { PERIOD_OPTIONS, isInRange } from '../../../shared/models/period';
@@ -21,7 +21,13 @@ import { Transaction } from '../../../shared/models/transaction';
 import { IsoDatePipe } from '../../../shared/pipes/iso-date.pipe';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 import { formatIsoDate } from '../../../shared/utils/date';
+import { BudgetProgress } from '../../../shared/models/budget';
+import { formatMonth, toIsoMonth } from '../../../shared/utils/month';
 import { AccountsFacade, LoadStatus } from '../../accounts/accounts.facade';
+import { BudgetHighlights } from '../../budgets/budget-highlights/budget-highlights';
+import { BudgetsFacade } from '../../budgets/budgets.facade';
+import { budgetProgress } from '../../budgets/domain/budget-rules';
+import { CategoriesFacade } from '../../categories/categories.facade';
 import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
 import { summarizeTransactions } from '../../transactions/domain/transaction-rules';
 import {
@@ -36,6 +42,9 @@ import { balanceEvolution, incomeVsExpense, recentTransactions } from '../domain
 
 /** Quantidade de transações recentes exibidas. */
 const RECENT_LIMIT = 5;
+
+/** Quantidade de orçamentos exibidos: os mais consumidos do mês atual. */
+const BUDGET_HIGHLIGHTS = 3;
 
 interface Shortcut {
   label: string;
@@ -68,6 +77,7 @@ function combineStatus(...statuses: LoadStatus[]): LoadStatus {
     MatIcon,
     MatProgressBar,
     ChartView,
+    BudgetHighlights,
     IsoDatePipe,
     MoneyPipe,
   ],
@@ -79,7 +89,10 @@ export class DashboardPage implements OnInit {
   private readonly accountsFacade = inject(AccountsFacade);
   private readonly transactionsFacade = inject(TransactionsFacade);
   private readonly creditCardsFacade = inject(CreditCardsFacade);
+  private readonly budgetsFacade = inject(BudgetsFacade);
+  private readonly categoriesFacade = inject(CategoriesFacade);
   private readonly period = inject(PeriodService);
+  private readonly today = inject(TODAY);
   private readonly auth = inject(AuthService);
   private readonly locale = inject(LOCALE_ID);
   private readonly currency = inject(DEFAULT_CURRENCY_CODE);
@@ -190,6 +203,26 @@ export class DashboardPage implements OnInit {
     creditCards: byId(this.creditCardsFacade.cards()),
   }));
 
+  /** O widget de orçamentos usa sempre o mês atual, não o período da topbar. */
+  private readonly budgetMonth = toIsoMonth(this.today());
+  protected readonly budgetMonthLabel = formatMonth(this.budgetMonth);
+  protected readonly budgetsStatus = computed(() =>
+    combineStatus(
+      this.budgetsFacade.status(),
+      this.transactionsStatus(),
+      this.categoriesFacade.status(),
+    ),
+  );
+  protected readonly budgetHighlights = computed(() => {
+    const transactions = this.transactionsFacade.transactions();
+    return this.budgetsFacade
+      .budgets()
+      .map((budget) => budgetProgress(budget, transactions, this.budgetMonth))
+      .filter((item): item is BudgetProgress => item !== null)
+      .sort((a, b) => b.percent - a.percent)
+      .slice(0, BUDGET_HIGHLIGHTS);
+  });
+
   protected readonly shortcuts = SHORTCUTS;
   protected readonly accountLabel = accountLabel;
 
@@ -200,6 +233,12 @@ export class DashboardPage implements OnInit {
   protected reload(): void {
     this.reloadAccounts();
     this.reloadTransactions();
+    this.reloadBudgets();
+  }
+
+  protected reloadBudgets(): void {
+    void this.budgetsFacade.load();
+    void this.categoriesFacade.load();
   }
 
   protected reloadAccounts(): void {

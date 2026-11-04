@@ -1,0 +1,99 @@
+<a class="budget-form__back" matButton routerLink="/budgets">
+  <mat-icon>arrow_back</mat-icon>
+  Orçamentos
+</a>
+
+<h1 class="budget-form__title">{{ isEdit() ? 'Editar orçamento' : 'Novo orçamento' }}</h1>
+
+@switch (loadState()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando orçamento" />
+  }
+  @case ('not-found') {
+    <p class="budget-form__message" role="alert">Orçamento não encontrado.</p>
+    <a matButton="outlined" routerLink="/budgets">Ver orçamentos</a>
+  }
+  @case ('error') {
+    <p class="budget-form__message" role="alert">
+      Não foi possível carregar os dados. Tente novamente em instantes.
+    </p>
+  }
+  @case ('ready') {
+    @if (!isEdit() && categoryOptions().length === 0) {
+      <div class="budget-form__empty">
+        <p>Todas as categorias de despesa ativas já têm orçamento.</p>
+        <a matButton="outlined" routerLink="/categories/new">Criar categoria</a>
+      </div>
+    } @else {
+      <form class="budget-form" novalidate (submit)="onSubmit($event)">
+        @if (isEdit()) {
+          <p class="budget-form__category">
+            <span class="budget-form__label">Categoria</span>
+            {{ categoryName() }}
+          </p>
+        } @else {
+          <mat-form-field appearance="outline">
+            <mat-label>Categoria de despesa</mat-label>
+            <mat-select [formField]="budgetForm.categoryId">
+              @for (category of categoryOptions(); track category.id) {
+                <mat-option [value]="category.id">
+                  <mat-icon aria-hidden="true" [style.color]="category.color">
+                    {{ category.icon }}
+                  </mat-icon>
+                  {{ category.name }}
+                </mat-option>
+              }
+            </mat-select>
+            <mat-hint>Cada categoria pode ter um orçamento.</mat-hint>
+            @if (budgetForm.categoryId().errors()[0]; as error) {
+              <mat-error>{{ error.message }}</mat-error>
+            }
+          </mat-form-field>
+        }
+
+        <mat-form-field appearance="outline">
+          <mat-label>Limite mensal</mat-label>
+          <span matTextPrefix>R$&nbsp;</span>
+          <input
+            matInput
+            appMoneyMask
+            [allowNegative]="false"
+            inputmode="numeric"
+            autocomplete="off"
+            [formField]="budgetForm.limitAmount"
+          />
+          <mat-hint
+            >Vale de {{ currentMonthLabel }} em diante; os meses anteriores mantêm o limite que
+            tinham.</mat-hint
+          >
+          @if (budgetForm.limitAmount().errors()[0]; as error) {
+            <mat-error>{{ error.message }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Alertar a partir de</mat-label>
+          <mat-select [formField]="budgetForm.alertThreshold">
+            @for (option of thresholdOptions; track option) {
+              <mat-option [value]="option">{{ option }}% do limite</mat-option>
+            }
+          </mat-select>
+          @if (budgetForm.alertThreshold().errors()[0]; as error) {
+            <mat-error>{{ error.message }}</mat-error>
+          }
+        </mat-form-field>
+
+        @if (errorMessage(); as message) {
+          <p class="budget-form__message" role="alert">{{ message }}</p>
+        }
+
+        <div class="budget-form__actions">
+          <a matButton routerLink="/budgets">Cancelar</a>
+          <button matButton="filled" type="submit" [disabled]="budgetForm().submitting()">
+            {{ budgetForm().submitting() ? 'Salvando…' : 'Salvar' }}
+          </button>
+        </div>
+      </form>
+    }
+  }
+}

@@ -1,0 +1,19 @@
+<ul class="highlights">
+  @for (item of items(); track item.budget.id) {
+    <li class="highlights__item">
+      <div class="highlights__row">
+        <span class="highlights__name">{{ nameOf(item) }}</span>
+        <span class="highlights__state" [class]="'highlights__state--' + item.state">
+          <mat-icon aria-hidden="true">{{ stateIcons[item.state] }}</mat-icon>
+          {{ stateLabels[item.state] }}
+        </span>
+      </div>
+      <mat-progress-bar
+        mode="determinate"
+        [value]="progressBarValue(item)"
+        [attr.aria-label]="'Consumo do orçamento ' + nameOf(item)"
+      />
+      <span class="highlights__figures">{{ item.spent | money }} de {{ item.limit | money }}</span>
+    </li>
+  }
+</ul>

@@ -61,7 +61,12 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/credit-cards/credit-cards.routes').then((m) => m.CREDIT_CARDS_ROUTES),
       },
-      { path: 'budgets', title: 'Orçamentos', loadComponent: loadPlaceholder },
+      {
+        path: 'budgets',
+        title: 'Orçamentos',
+        loadChildren: () =>
+          import('./features/budgets/budgets.routes').then((m) => m.BUDGETS_ROUTES),
+      },
       {
         path: 'invoices',
         title: 'Faturas',
