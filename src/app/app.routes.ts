@@ -31,7 +31,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./core/layout/app-shell/app-shell').then((m) => m.AppShell),
     children: [
-      { path: 'dashboard', title: 'Dashboard', loadComponent: loadPlaceholder },
+      {
+        path: 'dashboard',
+        title: 'Dashboard',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard-page/dashboard-page').then((m) => m.DashboardPage),
+      },
       {
         path: 'accounts',
         title: 'Contas',

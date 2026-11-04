@@ -1,0 +1,238 @@
+<header class="dashboard__header">
+  <div>
+    <h1 class="dashboard__title">Olá{{ firstName() ? ', ' + firstName() : '' }}!</h1>
+    <p class="dashboard__subtitle">Período: {{ periodLabel() }} (altere na barra superior)</p>
+  </div>
+  <a matButton="filled" routerLink="/transactions/new">
+    <mat-icon>add</mat-icon>
+    Nova transação
+  </a>
+</header>
+
+@if (allFailed()) {
+  <div class="dashboard__state" role="alert">
+    <mat-icon aria-hidden="true">cloud_off</mat-icon>
+    <p>Não foi possível carregar o dashboard. Verifique se a API está em execução.</p>
+    <button matButton="outlined" type="button" (click)="reload()">Tentar novamente</button>
+  </div>
+} @else if (isEmpty()) {
+  <div class="dashboard__state">
+    <mat-icon aria-hidden="true">insights</mat-icon>
+    <p>Seu resumo financeiro aparece aqui assim que você cadastrar contas e transações.</p>
+    <div class="dashboard__state-actions">
+      <a matButton="filled" routerLink="/accounts/new">Cadastrar uma conta</a>
+      <a matButton="outlined" routerLink="/transactions/new">Registrar uma transação</a>
+    </div>
+  </div>
+} @else {
+  <section class="dashboard__summary" aria-label="Resumo">
+    <mat-card appearance="outlined" class="summary-card">
+      <span class="summary-card__label">Saldo total</span>
+      @switch (accountsStatus()) {
+        @case ('loading') {
+          <mat-progress-bar mode="indeterminate" aria-label="Carregando saldo" />
+        }
+        @case ('error') {
+          <span class="summary-card__error">Indisponível</span>
+          <button matButton type="button" (click)="reloadAccounts()">Tentar novamente</button>
+        }
+        @case ('ready') {
+          <strong
+            class="summary-card__value"
+            [class.summary-card__value--expense]="totalBalance() < 0"
+          >
+            {{ totalBalance() | money }}
+          </strong>
+          <span class="summary-card__hint">
+            Saldo atual de {{ activeAccountsCount() }}
+            {{ activeAccountsCount() === 1 ? 'conta ativa' : 'contas ativas' }}
+          </span>
+        }
+      }
+    </mat-card>
+
+    <mat-card appearance="outlined" class="summary-card">
+      <span class="summary-card__label">Receitas</span>
+      @if (transactionsStatus() === 'ready') {
+        <strong
+          class="summary-card__value"
+          [class.summary-card__value--income]="summary().income > 0"
+        >
+          {{ summary().income > 0 ? '+' : '' }}{{ summary().income | money }}
+        </strong>
+        <span class="summary-card__hint">Realizadas no período</span>
+      } @else {
+        <ng-container [ngTemplateOutlet]="periodTotalsState" />
+      }
+    </mat-card>
+
+    <mat-card appearance="outlined" class="summary-card">
+      <span class="summary-card__label">Despesas</span>
+      @if (transactionsStatus() === 'ready') {
+        <strong
+          class="summary-card__value"
+          [class.summary-card__value--expense]="summary().expense > 0"
+        >
+          {{ summary().expense > 0 ? '−' : '' }}{{ summary().expense | money }}
+        </strong>
+        <span class="summary-card__hint">Realizadas no período</span>
+      } @else {
+        <ng-container [ngTemplateOutlet]="periodTotalsState" />
+      }
+    </mat-card>
+
+    <mat-card appearance="outlined" class="summary-card">
+      <span class="summary-card__label">Resultado</span>
+      @if (transactionsStatus() === 'ready') {
+        <strong class="summary-card__value">{{ summary().net | money }}</strong>
+        <span class="summary-card__hint">
+          @if (summary().pendingCount === 1) {
+            1 pendente fora do cálculo
+          } @else if (summary().pendingCount > 1) {
+            {{ summary().pendingCount }} pendentes fora do cálculo
+          } @else {
+            Receitas − despesas
+          }
+        </span>
+      } @else {
+        <ng-container [ngTemplateOutlet]="periodTotalsState" />
+      }
+    </mat-card>
+  </section>
+
+  <ng-template #periodTotalsState>
+    @if (transactionsStatus() === 'loading') {
+      <mat-progress-bar mode="indeterminate" aria-label="Carregando totais do período" />
+    } @else {
+      <span class="summary-card__error">Indisponível</span>
+      <button matButton type="button" (click)="reloadTransactions()">Tentar novamente</button>
+    }
+  </ng-template>
+
+  <div class="dashboard__grid">
+    <mat-card appearance="outlined" class="widget">
+      <h2 class="widget__title">Receitas × despesas</h2>
+      @switch (transactionsStatus()) {
+        @case ('loading') {
+          <mat-progress-bar mode="indeterminate" aria-label="Carregando gráfico" />
+        }
+        @case ('error') {
+          <div class="widget__state" role="alert">
+            <p>Não foi possível carregar as transações.</p>
+            <button matButton="outlined" type="button" (click)="reloadTransactions()">
+              Tentar novamente
+            </button>
+          </div>
+        }
+        @case ('ready') {
+          @if (hasIncomeOrExpense()) {
+            <app-chart
+              [spec]="incomeExpenseChart()"
+              label="Receitas e despesas realizadas no período"
+            />
+          } @else {
+            <div class="widget__state">
+              <mat-icon aria-hidden="true">bar_chart</mat-icon>
+              <p>Nenhuma receita ou despesa realizada no período.</p>
+            </div>
+          }
+        }
+      }
+    </mat-card>
+
+    <mat-card appearance="outlined" class="widget">
+      <h2 class="widget__title">Evolução do saldo</h2>
+      @switch (combinedStatus()) {
+        @case ('loading') {
+          <mat-progress-bar mode="indeterminate" aria-label="Carregando gráfico" />
+        }
+        @case ('error') {
+          <div class="widget__state" role="alert">
+            <p>Não foi possível calcular a evolução do saldo.</p>
+            <button matButton="outlined" type="button" (click)="retryFailed()">
+              Tentar novamente
+            </button>
+          </div>
+        }
+        @case ('ready') {
+          @if (activeAccountsCount() > 0) {
+            <app-chart
+              [spec]="balanceChart()"
+              label="Saldo total das contas ativas ao fim de cada dia"
+              categoryLabel="Dia"
+            />
+          } @else {
+            <div class="widget__state">
+              <mat-icon aria-hidden="true">show_chart</mat-icon>
+              <p>Cadastre uma conta ativa para acompanhar o saldo.</p>
+            </div>
+          }
+        }
+      }
+    </mat-card>
+
+    <mat-card appearance="outlined" class="widget">
+      <div class="widget__header">
+        <h2 class="widget__title">Transações recentes</h2>
+        <a matButton routerLink="/transactions">Ver todas</a>
+      </div>
+      @switch (combinedStatus()) {
+        @case ('loading') {
+          <mat-progress-bar mode="indeterminate" aria-label="Carregando transações" />
+        }
+        @case ('error') {
+          <div class="widget__state" role="alert">
+            <p>Não foi possível carregar as transações recentes.</p>
+            <button matButton="outlined" type="button" (click)="retryFailed()">
+              Tentar novamente
+            </button>
+          </div>
+        }
+        @case ('ready') {
+          @if (recent().length === 0) {
+            <div class="widget__state">
+              <mat-icon aria-hidden="true">receipt_long</mat-icon>
+              <p>Nenhuma transação no período.</p>
+            </div>
+          } @else {
+            <ul class="recent">
+              @for (transaction of recent(); track transaction.id) {
+                <li class="recent__item">
+                  <mat-icon class="recent__icon" aria-hidden="true">
+                    {{ typeIcon(transaction) }}
+                  </mat-icon>
+                  <div class="recent__main">
+                    <a class="recent__link" [routerLink]="['/transactions', transaction.id]">
+                      {{ transaction.description }}
+                    </a>
+                    <span class="recent__meta">
+                      {{ transaction.date | isoDate }} · {{ accountLabel(transaction, lookups()) }}
+                      @if (transaction.status === 'pending') {
+                        <span class="badge">Pendente</span>
+                      }
+                    </span>
+                  </div>
+                  <span class="amount" [class]="'amount--' + transaction.type">
+                    {{ sign(transaction) }}{{ transaction.amount | money }}
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        }
+      }
+    </mat-card>
+
+    <mat-card appearance="outlined" class="widget">
+      <h2 class="widget__title">Atalhos</h2>
+      <nav class="shortcuts" aria-label="Atalhos">
+        @for (shortcut of shortcuts; track shortcut.path) {
+          <a class="shortcuts__item" [routerLink]="shortcut.path">
+            <mat-icon aria-hidden="true">{{ shortcut.icon }}</mat-icon>
+            {{ shortcut.label }}
+          </a>
+        }
+      </nav>
+    </mat-card>
+  </div>
+}

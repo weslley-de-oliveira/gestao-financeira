@@ -67,7 +67,7 @@ describe('app routes', () => {
 
       expect(url()).toBe('/dashboard');
       expect(element().querySelector('app-shell')).not.toBeNull();
-      expect(element().querySelector('h1')?.textContent).toContain('Dashboard');
+      expect(element().querySelector('app-dashboard-page')).not.toBeNull();
       expect(TestBed.inject(Title).getTitle()).toBe('Dashboard · Gestão Financeira');
     });
 
