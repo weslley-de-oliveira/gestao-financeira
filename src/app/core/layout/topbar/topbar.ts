@@ -1,4 +1,4 @@
-import { Component, inject, output } from '@angular/core';
+import { Component, computed, inject, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,6 +10,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { PERIOD_OPTIONS, PeriodPreset } from '../../../shared/models/period';
 import { AuthService } from '../../auth/auth.service';
+import { PreferencesService } from '../../preferences/preferences.service';
 import { PeriodService } from '../../services/period.service';
 import { AppTitleStrategy } from '../app-title-strategy';
 
@@ -33,6 +34,7 @@ export class Topbar {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly preferences = inject(PreferencesService);
 
   readonly menuToggle = output<void>();
 
@@ -40,6 +42,11 @@ export class Topbar {
   protected readonly pageTitle = inject(AppTitleStrategy).pageTitle;
   protected readonly selectedPeriod = this.periodService.selected;
   protected readonly periodOptions = PERIOD_OPTIONS;
+  protected readonly isDark = computed(() => this.preferences.effectiveTheme() === 'dark');
+
+  protected toggleTheme(): void {
+    this.preferences.toggleTheme();
+  }
 
   protected onPeriodChange(period: PeriodPreset): void {
     this.periodService.select(period);

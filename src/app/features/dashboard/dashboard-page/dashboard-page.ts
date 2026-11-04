@@ -164,12 +164,12 @@ export class DashboardPage implements OnInit {
         {
           label: 'Receitas',
           values: points.map((point) => point.income),
-          color: '--mat-sys-primary',
+          color: '--chart-income',
         },
         {
           label: 'Despesas',
           values: points.map((point) => point.expense),
-          color: '--mat-sys-error',
+          color: '--chart-expense',
         },
       ],
       formatValue: this.formatValue,
@@ -193,7 +193,7 @@ export class DashboardPage implements OnInit {
         {
           label: 'Saldo',
           values: points.map((point) => point.balance),
-          color: '--mat-sys-primary',
+          color: '--chart-balance',
         },
       ],
       formatValue: this.formatValue,

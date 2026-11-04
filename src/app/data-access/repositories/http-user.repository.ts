@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
+import { User } from '../../shared/models/user';
 import { API_BASE_URL } from '../api/api.config';
 import { UserDto, toUserDto, toUserWithCredentials } from '../dto/user.dto';
 import { UserRepository, UserWithCredentials } from './user.repository';
@@ -18,5 +19,11 @@ export class HttpUserRepository extends UserRepository {
 
   create(record: UserWithCredentials): Observable<UserWithCredentials> {
     return this.http.post<UserDto>(this.url, toUserDto(record)).pipe(map(toUserWithCredentials));
+  }
+
+  updateName(id: string, name: string): Observable<User> {
+    return this.http
+      .patch<UserDto>(`${this.url}/${encodeURIComponent(id)}`, { name })
+      .pipe(map((dto) => toUserWithCredentials(dto).user));
   }
 }

@@ -1,5 +1,6 @@
 import { Injectable, InjectionToken, computed, inject, signal } from '@angular/core';
 import { DateRange, PeriodPreset, periodRange } from '../../shared/models/period';
+import { SessionCleanup } from '../auth/session-cleanup';
 
 /** Fonte da data atual; substituída nos testes para fixar o "hoje". */
 export const TODAY = new InjectionToken<() => Date>('TODAY', {
@@ -15,6 +16,10 @@ export class PeriodService {
   readonly selected = this._selected.asReadonly();
   /** Intervalo de datas do período selecionado. */
   readonly range = computed<DateRange>(() => periodRange(this._selected(), this.today()));
+
+  constructor() {
+    inject(SessionCleanup).register(() => this._selected.set('current-month'));
+  }
 
   select(period: PeriodPreset): void {
     this._selected.set(period);

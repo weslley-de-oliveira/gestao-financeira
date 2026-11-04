@@ -1,0 +1,113 @@
+<h1 class="settings__title">Configurações</h1>
+
+<div class="settings">
+  <mat-card appearance="outlined" class="settings__section">
+    <h2 class="settings__section-title">Perfil</h2>
+    <form class="settings__profile" novalidate (submit)="saveProfile($event)">
+      <mat-form-field appearance="outline">
+        <mat-label>Nome</mat-label>
+        <input matInput autocomplete="name" [formField]="profileForm.name" />
+        @if (profileForm.name().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="settings__readonly">
+        <span class="settings__label">E-mail</span>
+        <span>{{ user()?.email }}</span>
+        <span class="settings__hint">
+          O e-mail e a senha identificam o acesso e não são alterados aqui.
+        </span>
+      </div>
+
+      @if (profileError(); as message) {
+        <p class="settings__error" role="alert">{{ message }}</p>
+      }
+
+      <div class="settings__actions">
+        <button matButton="filled" type="submit" [disabled]="profileForm().submitting()">
+          {{ profileForm().submitting() ? 'Salvando…' : 'Salvar perfil' }}
+        </button>
+      </div>
+    </form>
+  </mat-card>
+
+  <mat-card appearance="outlined" class="settings__section">
+    <h2 class="settings__section-title">Aparência</h2>
+
+    <div class="settings__group">
+      <span id="settings-theme-label" class="settings__label">Tema</span>
+      <mat-button-toggle-group
+        aria-labelledby="settings-theme-label"
+        [value]="theme()"
+        (change)="setTheme($event.value)"
+      >
+        <mat-button-toggle value="light">
+          <mat-icon aria-hidden="true">light_mode</mat-icon>
+          Claro
+        </mat-button-toggle>
+        <mat-button-toggle value="dark">
+          <mat-icon aria-hidden="true">dark_mode</mat-icon>
+          Escuro
+        </mat-button-toggle>
+        <mat-button-toggle value="system">
+          <mat-icon aria-hidden="true">contrast</mat-icon>
+          Sistema
+        </mat-button-toggle>
+      </mat-button-toggle-group>
+      <span class="settings__hint">"Sistema" acompanha a preferência do seu dispositivo.</span>
+    </div>
+
+    <div class="settings__group">
+      <span id="settings-density-label" class="settings__label">Densidade</span>
+      <mat-button-toggle-group
+        aria-labelledby="settings-density-label"
+        [value]="density()"
+        (change)="setDensity($event.value)"
+      >
+        <mat-button-toggle value="default">Padrão</mat-button-toggle>
+        <mat-button-toggle value="compact">Compacta</mat-button-toggle>
+      </mat-button-toggle-group>
+      <span class="settings__hint">A compacta reduz a altura de campos e botões.</span>
+    </div>
+
+    <p class="settings__note">
+      <mat-icon aria-hidden="true">info</mat-icon>
+      Tema e densidade ficam salvos apenas neste navegador (localStorage) e não identificam você.
+    </p>
+  </mat-card>
+
+  <mat-card appearance="outlined" class="settings__section">
+    <h2 class="settings__section-title">Preferências regionais</h2>
+    <dl class="settings__regional">
+      <div>
+        <dt>Moeda</dt>
+        <dd>Real (BRL) · {{ moneySample | money }}</dd>
+      </div>
+      <div>
+        <dt>Idioma</dt>
+        <dd>Português (Brasil)</dd>
+      </div>
+      <div>
+        <dt>Formato de data</dt>
+        <dd>dd/mm/aaaa</dd>
+      </div>
+    </dl>
+    <p class="settings__hint">Fixas nesta versão da demonstração.</p>
+  </mat-card>
+
+  <mat-card appearance="outlined" class="settings__section">
+    <h2 class="settings__section-title">Sessão</h2>
+    <p class="settings__hint">
+      Encerrar a sessão apaga a sessão criptografada e os dados carregados nas telas. Para apagar a
+      conta e os dados fictícios, use a tela de
+      <a routerLink="/security">Segurança</a>.
+    </p>
+    <div class="settings__actions">
+      <button matButton="outlined" type="button" (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        Encerrar sessão
+      </button>
+    </div>
+  </mat-card>
+</div>

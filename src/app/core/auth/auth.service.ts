@@ -1,10 +1,13 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { UserDataRepository } from '../../data-access/repositories/user-data.repository';
 import { UserRepository } from '../../data-access/repositories/user.repository';
-import { User } from '../../shared/models/user';
+import { USER_NAME_MAX_LENGTH, User } from '../../shared/models/user';
+import { PreferencesService } from '../preferences/preferences.service';
 import { EncryptedSessionStorage } from '../security/encrypted-session-storage';
 import { PasswordHasher } from '../security/password-hasher';
 import { EmailAlreadyRegisteredError, InvalidCredentialsError } from './auth.errors';
+import { SessionCleanup } from './session-cleanup';
 
 export interface LoginCredentials {
   email: string;
@@ -28,6 +31,9 @@ export class AuthService {
   private readonly users = inject(UserRepository);
   private readonly hasher = inject(PasswordHasher);
   private readonly session = inject(EncryptedSessionStorage);
+  private readonly userData = inject(UserDataRepository);
+  private readonly preferences = inject(PreferencesService);
+  private readonly cleanup = inject(SessionCleanup);
   private readonly _currentUser = signal<User | null>(null);
 
   readonly currentUser = this._currentUser.asReadonly();
@@ -64,9 +70,40 @@ export class AuthService {
     await this.startSession(user);
   }
 
+  /** Encerra a sessão: apaga a sessão criptografada e o estado em memória das telas. */
   async logout(): Promise<void> {
     await this.session.removeItem(SESSION_KEY);
     this._currentUser.set(null);
+    this.cleanup.run();
+  }
+
+  /** Só o nome pode ser alterado: e-mail e senha são dados de autenticação, com fluxo próprio. */
+  async updateName(name: string): Promise<User> {
+    const normalized = name.trim().replace(/\s+/g, ' ');
+    if (!normalized || normalized.length > USER_NAME_MAX_LENGTH) {
+      throw new RangeError('Invalid name');
+    }
+    const updated = await firstValueFrom(this.users.updateName(this.requireUser().id, normalized));
+    await this.startSession(updated);
+    return updated;
+  }
+
+  /**
+   * Apaga o usuário e todos os dados fictícios dele na API, as preferências deste navegador e a
+   * sessão. Não pode ser desfeito.
+   */
+  async deleteAccount(): Promise<void> {
+    await firstValueFrom(this.userData.deleteAllForUser(this.requireUser().id));
+    this.preferences.reset();
+    await this.logout();
+  }
+
+  private requireUser(): User {
+    const user = this._currentUser();
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+    return user;
   }
 
   private async startSession(user: User): Promise<void> {

@@ -1,10 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/guards/auth.guards';
 
-// Página provisória: cada rota passa a carregar a tela real da sua feature quando ela for implementada.
-const loadPlaceholder = () =>
-  import('./core/layout/page-placeholder/page-placeholder').then((m) => m.PagePlaceholder);
-
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
   {
@@ -78,8 +74,18 @@ export const routes: Routes = [
         title: 'Metas',
         loadChildren: () => import('./features/goals/goals.routes').then((m) => m.GOALS_ROUTES),
       },
-      { path: 'settings', title: 'Configurações', loadComponent: loadPlaceholder },
-      { path: 'security', title: 'Segurança', loadComponent: loadPlaceholder },
+      {
+        path: 'settings',
+        title: 'Configurações',
+        loadComponent: () =>
+          import('./features/settings/settings-page/settings-page').then((m) => m.SettingsPage),
+      },
+      {
+        path: 'security',
+        title: 'Segurança',
+        loadComponent: () =>
+          import('./features/security/security-page/security-page').then((m) => m.SecurityPage),
+      },
     ],
   },
   {

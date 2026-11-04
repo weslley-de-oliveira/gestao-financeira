@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { SessionCleanup } from '../../core/auth/session-cleanup';
 import { TODAY } from '../../core/services/period.service';
 import { GoalChanges, GoalRepository } from '../../data-access/repositories/goal.repository';
 import { Goal, GoalContribution, GoalWithProgress } from '../../shared/models/goal';
@@ -39,6 +40,14 @@ export class GoalsFacade {
 
   readonly status = this._status.asReadonly();
   readonly goals = computed(() => this._goals().map((goal) => this.withProgress(goal)));
+
+  constructor() {
+    // Ao encerrar a sessão, nada do usuário anterior fica em memória.
+    inject(SessionCleanup).register(() => {
+      this._goals.set([]);
+      this._status.set('loading');
+    });
+  }
 
   async load(): Promise<void> {
     this._status.set('loading');

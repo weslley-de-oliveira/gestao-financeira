@@ -6,7 +6,7 @@ export type ChartType = 'bar' | 'line';
 export interface ChartSeries {
   label: string;
   values: readonly number[];
-  /** Variável CSS do tema com a cor da série, ex.: `--mat-sys-primary`. */
+  /** Variável CSS do tema com a cor da série, ex.: `--chart-income` (definidas em `styles.scss`). */
   color: string;
 }
 

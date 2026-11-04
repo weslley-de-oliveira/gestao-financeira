@@ -1,0 +1,98 @@
+import { Component, inject, signal } from '@angular/core';
+import { FormField, form, maxLength, required, submit, validate } from '@angular/forms/signals';
+import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIcon } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router, RouterLink } from '@angular/router';
+import { AuthService } from '../../../core/auth/auth.service';
+import {
+  DensityPreference,
+  PreferencesService,
+  ThemePreference,
+} from '../../../core/preferences/preferences.service';
+import { USER_NAME_MAX_LENGTH } from '../../../shared/models/user';
+import { MoneyPipe } from '../../../shared/pipes/money.pipe';
+
+interface ProfileFormModel {
+  name: string;
+}
+
+/** Perfil, preferências visuais (locais ao navegador), regionais fixas e encerrar sessão. */
+@Component({
+  imports: [
+    FormField,
+    RouterLink,
+    MatButtonModule,
+    MatButtonToggleModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatIcon,
+    MatInputModule,
+    MoneyPipe,
+  ],
+  selector: 'app-settings-page',
+  templateUrl: './settings-page.html',
+  styleUrl: './settings-page.scss',
+})
+export class SettingsPage {
+  private readonly auth = inject(AuthService);
+  private readonly preferences = inject(PreferencesService);
+  private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
+
+  protected readonly user = this.auth.currentUser;
+  protected readonly theme = this.preferences.theme;
+  protected readonly density = this.preferences.density;
+
+  private readonly profile = signal<ProfileFormModel>({ name: this.user()?.name ?? '' });
+  protected readonly profileForm = form(this.profile, (p) => {
+    required(p.name, { message: 'Informe o nome.' });
+    validate(p.name, ({ value }) =>
+      value() && !value().trim() ? { kind: 'blank', message: 'Informe o nome.' } : undefined,
+    );
+    maxLength(p.name, USER_NAME_MAX_LENGTH, {
+      message: `O nome deve ter no máximo ${USER_NAME_MAX_LENGTH} caracteres.`,
+    });
+  });
+  protected readonly profileError = signal<string | null>(null);
+
+  /** Exemplo do formato monetário fixo: R$ 1.234,56. */
+  protected readonly moneySample = 123_456;
+
+  protected async saveProfile(event: Event): Promise<void> {
+    event.preventDefault();
+    this.profileError.set(null);
+    await submit(this.profileForm, async (field) => {
+      try {
+        const user = await this.auth.updateName(field.name().value());
+        this.profile.set({ name: user.name });
+        this.notify('Perfil atualizado.');
+      } catch {
+        this.profileError.set('Não foi possível salvar o perfil. Tente novamente em instantes.');
+      }
+      return undefined;
+    });
+  }
+
+  protected setTheme(theme: ThemePreference): void {
+    this.preferences.setTheme(theme);
+  }
+
+  protected setDensity(density: DensityPreference): void {
+    this.preferences.setDensity(density);
+  }
+
+  protected async logout(): Promise<void> {
+    await this.auth.logout();
+    await this.router.navigateByUrl('/login');
+    this.notify('Sessão encerrada.');
+  }
+
+  private notify(message: string): void {
+    this.snackBar.open(message, 'Fechar', { duration: 4000 });
+  }
+}

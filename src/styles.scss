@@ -16,8 +16,24 @@ html {
     )
   );
 
+  // Cores das séries dos gráficos, separadas dos tokens do Material: os tons escuros padrão
+  // (primary/error 80) são claros e pálidos demais para marcas e reprovam no validador de paleta
+  // (faixa de luminosidade e croma). Os pares abaixo passam nos dois temas (CVD, contraste).
+  --chart-income: light-dark(#005cbb, #4f8ff6);
+  --chart-balance: var(--chart-income);
+  --chart-expense: light-dark(#ba1a1a, #f2554a);
+
   &.dark-theme {
     color-scheme: dark;
+  }
+
+  // Preferência "Compacta" das Configurações (PreferencesService).
+  &.compact-density {
+    @include mat.theme(
+      (
+        density: -2,
+      )
+    );
   }
 }
 

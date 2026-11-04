@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { SessionCleanup } from '../../core/auth/session-cleanup';
 import { AccountRepository } from '../../data-access/repositories/account.repository';
 import { TransactionRepository } from '../../data-access/repositories/transaction.repository';
 import { Account, AccountWithBalance } from '../../shared/models/account';
@@ -35,6 +36,15 @@ export class AccountsFacade {
       .filter((account) => !account.isArchived)
       .reduce((total, account) => total + account.currentBalance, 0),
   );
+
+  constructor() {
+    // Ao encerrar a sessão, nada do usuário anterior fica em memória.
+    inject(SessionCleanup).register(() => {
+      this._accounts.set([]);
+      this.movements = [];
+      this._status.set('loading');
+    });
+  }
 
   async load(): Promise<void> {
     this._status.set('loading');

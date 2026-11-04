@@ -7,6 +7,7 @@ import { CategoryRepository } from '../app/data-access/repositories/category.rep
 import { CreditCardRepository } from '../app/data-access/repositories/credit-card.repository';
 import { GoalRepository } from '../app/data-access/repositories/goal.repository';
 import { TransactionRepository } from '../app/data-access/repositories/transaction.repository';
+import { UserDataRepository } from '../app/data-access/repositories/user-data.repository';
 import { UserRepository } from '../app/data-access/repositories/user.repository';
 import { CHART_RENDERER } from '../app/shared/components/chart/chart-spec';
 import { FakeChartRenderer } from './fake-chart-renderer';
@@ -16,6 +17,7 @@ import { InMemoryCategoryRepository } from './in-memory-category.repository';
 import { InMemoryCreditCardRepository } from './in-memory-credit-card.repository';
 import { InMemoryGoalRepository } from './in-memory-goal.repository';
 import { InMemoryTransactionRepository } from './in-memory-transaction.repository';
+import { InMemoryUserDataRepository } from './in-memory-user-data.repository';
 import { InMemoryUserRepository } from './in-memory-user.repository';
 
 /** "Hoje" fixo nos testes: 15/11/2026. */
@@ -40,6 +42,7 @@ export const TEST_PROVIDERS: Provider[] = [
   { provide: BudgetRepository, useExisting: InMemoryBudgetRepository },
   InMemoryGoalRepository,
   { provide: GoalRepository, useExisting: InMemoryGoalRepository },
+  { provide: UserDataRepository, useClass: InMemoryUserDataRepository },
   FakeChartRenderer,
   { provide: CHART_RENDERER, useExisting: FakeChartRenderer },
   { provide: TODAY, useValue: () => new Date(TEST_TODAY) },

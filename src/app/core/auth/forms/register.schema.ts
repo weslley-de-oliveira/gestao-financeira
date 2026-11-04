@@ -7,6 +7,7 @@ import {
   schema,
   validate,
 } from '@angular/forms/signals';
+import { USER_NAME_MAX_LENGTH } from '../../../shared/models/user';
 
 export interface RegisterModel {
   name: string;
@@ -22,7 +23,6 @@ export const emptyRegister = (): RegisterModel => ({
   confirmPassword: '',
 });
 
-export const NAME_MAX_LENGTH = 80;
 export const PASSWORD_MIN_LENGTH = 8;
 
 /** Ao menos uma letra e um número. */
@@ -30,8 +30,8 @@ const PASSWORD_PATTERN = /^(?=.*\p{L})(?=.*\d).+$/u;
 
 export const registerSchema = schema<RegisterModel>((p) => {
   required(p.name, { message: 'Informe o nome.' });
-  maxLength(p.name, NAME_MAX_LENGTH, {
-    message: `O nome deve ter no máximo ${NAME_MAX_LENGTH} caracteres.`,
+  maxLength(p.name, USER_NAME_MAX_LENGTH, {
+    message: `O nome deve ter no máximo ${USER_NAME_MAX_LENGTH} caracteres.`,
   });
 
   required(p.email, { message: 'Informe o e-mail.' });

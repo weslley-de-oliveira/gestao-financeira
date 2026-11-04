@@ -1,0 +1,190 @@
+<h1 class="security__title">Segurança e privacidade</h1>
+
+<div class="security">
+  <section class="security__notice" aria-labelledby="demo-mode-title">
+    <mat-icon aria-hidden="true">science</mat-icon>
+    <div>
+      <h2 id="demo-mode-title" class="security__notice-title">Modo demonstrativo</h2>
+      <p>
+        Este é um projeto de portfólio. Use apenas dados fictícios: a API de desenvolvimento (JSON
+        Server) não tem autenticação, autorização nem proteção de servidor, e qualquer pessoa com
+        acesso a ela pode ler os dados.
+      </p>
+    </div>
+  </section>
+
+  <mat-card appearance="outlined" class="security__section">
+    <h2 class="security__section-title">Como a demonstração trata seus dados</h2>
+    <ul class="security__list">
+      <li>
+        <strong>Senha:</strong> nunca é guardada. Fica só um hash PBKDF2-SHA256 com 600.000
+        iterações e salt aleatório, verificado em tempo constante.
+      </li>
+      <li>
+        <strong>Sessão:</strong> nome, e-mail e id ficam no sessionStorage criptografados com
+        AES-256-GCM. A chave não é exportável, fica no IndexedDB e é descartada ao sair.
+      </li>
+      <li>
+        <strong>Preferências:</strong> tema e densidade ficam no localStorage, sem dados pessoais.
+      </li>
+      <li>
+        <strong>Limites:</strong> criptografia no navegador não protege contra XSS, extensões
+        maliciosas ou um dispositivo comprometido: um script na página usa as mesmas chaves. Em um
+        sistema real, autenticação, autorização e validação ficam no servidor, e senhas usam um
+        algoritmo como Argon2id.
+      </li>
+    </ul>
+  </mat-card>
+
+  <mat-card appearance="outlined" class="security__section">
+    <h2 class="security__section-title">Laboratório de criptografia</h2>
+    <p class="security__text">
+      Uma chave AES-256 é derivada da frase com PBKDF2-SHA256 e um <em>salt</em> aleatório. O texto
+      é criptografado com AES-GCM e um IV (vetor de inicialização) aleatório de 96 bits, novo a cada
+      operação, de modo que o mesmo texto gera resultados diferentes. O GCM também autentica os
+      dados: qualquer alteração faz a descriptografia falhar. A frase e a chave não são guardadas;
+      só o salt e o IV acompanham o resultado, pois não são secretos.
+    </p>
+
+    <form class="security__form" aria-label="Criptografar" novalidate (submit)="encrypt($event)">
+      <h3 class="security__form-title">1. Criptografar</h3>
+      <mat-form-field appearance="outline">
+        <mat-label>Frase secreta de demonstração</mat-label>
+        <input matInput type="password" autocomplete="off" [formField]="encryptForm.passphrase" />
+        <mat-hint>Não use uma senha real. Mínimo de {{ minLength }} caracteres.</mat-hint>
+        @if (encryptForm.passphrase().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Texto fictício</mat-label>
+        <textarea matInput rows="2" [formField]="encryptForm.plaintext"></textarea>
+        @if (encryptForm.plaintext().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+      <div>
+        <button matButton="filled" type="submit" [disabled]="encryptForm().submitting()">
+          <mat-icon>lock</mat-icon>
+          {{ encryptForm().submitting() ? 'Criptografando…' : 'Criptografar' }}
+        </button>
+      </div>
+    </form>
+
+    @if (encrypted(); as payload) {
+      <dl class="security__payload" aria-live="polite">
+        <div>
+          <dt>Algoritmo</dt>
+          <dd>{{ payload.alg }} · {{ payload.kdf }} ({{ payload.iterations }} iterações)</dd>
+        </div>
+        <div>
+          <dt>Salt (base64)</dt>
+          <dd>
+            <code>{{ payload.salt }}</code>
+          </dd>
+        </div>
+        <div>
+          <dt>IV (base64)</dt>
+          <dd>
+            <code>{{ payload.iv }}</code>
+          </dd>
+        </div>
+        <div>
+          <dt>Texto criptografado (base64)</dt>
+          <dd>
+            <code>{{ payload.ciphertext }}</code>
+          </dd>
+        </div>
+      </dl>
+    }
+
+    <form class="security__form" aria-label="Descriptografar" novalidate (submit)="decrypt($event)">
+      <h3 class="security__form-title">2. Descriptografar</h3>
+      <mat-form-field appearance="outline">
+        <mat-label>Dados criptografados (JSON)</mat-label>
+        <textarea
+          matInput
+          rows="6"
+          class="security__code"
+          spellcheck="false"
+          [formField]="decryptForm.payload"
+        ></textarea>
+        <mat-hint
+          >Altere um caractere do texto criptografado para ver a falha de autenticação.</mat-hint
+        >
+        @if (decryptForm.payload().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Frase secreta</mat-label>
+        <input matInput type="password" autocomplete="off" [formField]="decryptForm.passphrase" />
+        @if (decryptForm.passphrase().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+      <div>
+        <button matButton="filled" type="submit" [disabled]="decryptForm().submitting()">
+          <mat-icon>lock_open</mat-icon>
+          {{ decryptForm().submitting() ? 'Descriptografando…' : 'Descriptografar' }}
+        </button>
+      </div>
+    </form>
+
+    <div aria-live="polite">
+      @if (decrypted(); as text) {
+        <p class="security__result">
+          <mat-icon aria-hidden="true">check_circle</mat-icon>
+          <span
+            >Texto original: <strong>{{ text }}</strong></span
+          >
+        </p>
+      }
+      @if (decryptError(); as message) {
+        <p class="security__result security__result--error" role="alert">
+          <mat-icon aria-hidden="true">error</mat-icon>
+          <span>{{ message }}</span>
+        </p>
+      }
+    </div>
+  </mat-card>
+
+  <mat-card appearance="outlined" class="security__section">
+    <h2 class="security__section-title">Limpar os dados fictícios</h2>
+    <ul class="security__list">
+      <li>
+        <strong>Neste navegador:</strong> sair apaga a sessão e a chave dela; limpar os dados do
+        site no navegador remove também as preferências.
+      </li>
+      <li>
+        <strong>No ambiente de desenvolvimento:</strong> <code>npm run db:reset</code> restaura a
+        API simulada ao estado inicial, apagando os dados de todos os usuários.
+      </li>
+    </ul>
+
+    <div class="security__danger">
+      <h3 class="security__form-title">Excluir minha conta e dados</h3>
+      <p class="security__text">
+        Apaga o usuário e todas as contas, transações, categorias, cartões, orçamentos e metas dele,
+        além das preferências deste navegador. Não pode ser desfeito.
+      </p>
+      <mat-form-field appearance="outline">
+        <mat-label>Digite seu e-mail para confirmar</mat-label>
+        <input matInput type="email" autocomplete="off" [formField]="confirmForm.email" />
+        <mat-hint>{{ user()?.email }}</mat-hint>
+      </mat-form-field>
+      <div>
+        <button
+          matButton="filled"
+          class="security__delete"
+          type="button"
+          [disabled]="!canDelete() || deleting()"
+          (click)="deleteAccount()"
+        >
+          <mat-icon>delete_forever</mat-icon>
+          {{ deleting() ? 'Excluindo…' : 'Excluir conta e dados' }}
+        </button>
+      </div>
+    </div>
+  </mat-card>
+</div>

@@ -13,4 +13,7 @@ export abstract class UserRepository {
   abstract findByEmail(email: string): Observable<UserWithCredentials | null>;
 
   abstract create(record: UserWithCredentials): Observable<UserWithCredentials>;
+
+  /** Atualiza só o nome: e-mail e senha são dados de autenticação, com fluxo próprio. */
+  abstract updateName(id: string, name: string): Observable<User>;
 }

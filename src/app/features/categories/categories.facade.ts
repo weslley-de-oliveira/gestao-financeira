@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { SessionCleanup } from '../../core/auth/session-cleanup';
 import { CategoryRepository } from '../../data-access/repositories/category.repository';
 import { Category } from '../../shared/models/category';
 import {
@@ -36,6 +37,15 @@ export class CategoriesFacade {
 
   readonly categories = this._categories.asReadonly();
   readonly status = this._status.asReadonly();
+
+  constructor() {
+    // Ao encerrar a sessão, nada do usuário anterior fica em memória.
+    inject(SessionCleanup).register(() => {
+      this._categories.set([]);
+      this.seeding.clear();
+      this._status.set('loading');
+    });
+  }
 
   async load(): Promise<void> {
     this._status.set('loading');

@@ -20,6 +20,15 @@
     </mat-select>
   </mat-form-field>
 
+  <button
+    matIconButton
+    type="button"
+    [attr.aria-label]="isDark() ? 'Usar tema claro' : 'Usar tema escuro'"
+    (click)="toggleTheme()"
+  >
+    <mat-icon>{{ isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+  </button>
+
   <button matIconButton type="button" aria-label="Menu do usuário" [matMenuTriggerFor]="userMenu">
     <mat-icon>account_circle</mat-icon>
   </button>

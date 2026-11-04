@@ -1,0 +1,143 @@
+import { Component, computed, inject, signal } from '@angular/core';
+import { FormField, form, maxLength, minLength, required, submit } from '@angular/forms/signals';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIcon } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Router } from '@angular/router';
+import { AuthService } from '../../../core/auth/auth.service';
+import {
+  DecryptionFailedError,
+  DemoCipher,
+  EncryptedPayload,
+} from '../../../core/security/demo-cipher';
+
+export const PASSPHRASE_MIN_LENGTH = 8;
+export const DEMO_TEXT_MAX_LENGTH = 500;
+
+interface EncryptFormModel {
+  passphrase: string;
+  plaintext: string;
+}
+
+interface DecryptFormModel {
+  passphrase: string;
+  /** Payload em JSON, editável para demonstrar a detecção de alterações. */
+  payload: string;
+}
+
+/**
+ * Modo demonstrativo, laboratório de criptografia (AES-256-GCM + PBKDF2) e exclusão da conta.
+ * As frases ficam só no formulário, em memória, e são apagadas depois de cada operação.
+ */
+@Component({
+  imports: [FormField, MatButtonModule, MatCardModule, MatFormFieldModule, MatIcon, MatInputModule],
+  selector: 'app-security-page',
+  templateUrl: './security-page.html',
+  styleUrl: './security-page.scss',
+})
+export class SecurityPage {
+  private readonly cipher = inject(DemoCipher);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly snackBar = inject(MatSnackBar);
+
+  protected readonly user = this.auth.currentUser;
+  protected readonly minLength = PASSPHRASE_MIN_LENGTH;
+
+  private readonly encryptModel = signal<EncryptFormModel>({
+    passphrase: '',
+    plaintext: 'Saldo fictício da conta de teste: R$ 1.234,56',
+  });
+  protected readonly encryptForm = form(this.encryptModel, (p) => {
+    required(p.passphrase, { message: 'Informe uma frase secreta de demonstração.' });
+    minLength(p.passphrase, PASSPHRASE_MIN_LENGTH, {
+      message: `Use pelo menos ${PASSPHRASE_MIN_LENGTH} caracteres.`,
+    });
+    required(p.plaintext, { message: 'Informe um texto fictício.' });
+    maxLength(p.plaintext, DEMO_TEXT_MAX_LENGTH, {
+      message: `O texto deve ter no máximo ${DEMO_TEXT_MAX_LENGTH} caracteres.`,
+    });
+  });
+  protected readonly encrypted = signal<EncryptedPayload | null>(null);
+
+  private readonly decryptModel = signal<DecryptFormModel>({ passphrase: '', payload: '' });
+  protected readonly decryptForm = form(this.decryptModel, (p) => {
+    required(p.passphrase, { message: 'Informe a frase secreta.' });
+    required(p.payload, { message: 'Cole os dados criptografados.' });
+  });
+  protected readonly decrypted = signal<string | null>(null);
+  protected readonly decryptError = signal<string | null>(null);
+
+  /** Confirmação da exclusão: o e-mail da conta, digitado. */
+  private readonly confirmation = signal({ email: '' });
+  protected readonly confirmForm = form(this.confirmation);
+  protected readonly canDelete = computed(
+    () => this.confirmation().email.trim().toLowerCase() === this.user()?.email,
+  );
+  protected readonly deleting = signal(false);
+
+  protected async encrypt(event: Event): Promise<void> {
+    event.preventDefault();
+    await submit(this.encryptForm, async (field) => {
+      const { passphrase, plaintext } = field().value();
+      const payload = await this.cipher.encrypt(passphrase, plaintext);
+      this.encrypted.set(payload);
+      this.decrypted.set(null);
+      this.decryptError.set(null);
+      this.decryptForm().reset({ passphrase: '', payload: JSON.stringify(payload, null, 2) });
+      // A frase não é guardada: some do formulário assim que é usada.
+      this.encryptForm().reset({ passphrase: '', plaintext });
+      return undefined;
+    });
+  }
+
+  protected async decrypt(event: Event): Promise<void> {
+    event.preventDefault();
+    this.decrypted.set(null);
+    this.decryptError.set(null);
+    await submit(this.decryptForm, async (field) => {
+      const { passphrase, payload } = field().value();
+      let parsed: EncryptedPayload;
+      try {
+        parsed = JSON.parse(payload) as EncryptedPayload;
+      } catch {
+        this.decryptError.set('Os dados criptografados não estão no formato JSON esperado.');
+        return undefined;
+      }
+      try {
+        this.decrypted.set(await this.cipher.decrypt(passphrase, parsed));
+      } catch (error) {
+        if (!(error instanceof DecryptionFailedError)) {
+          throw error;
+        }
+        // Mensagem genérica de propósito: não indica qual parte falhou.
+        this.decryptError.set(
+          'Não foi possível descriptografar: a frase está incorreta ou os dados foram alterados.',
+        );
+      }
+      this.decryptForm().reset({ passphrase: '', payload });
+      return undefined;
+    });
+  }
+
+  protected async deleteAccount(): Promise<void> {
+    if (!this.canDelete() || this.deleting()) {
+      return;
+    }
+    this.deleting.set(true);
+    try {
+      await this.auth.deleteAccount();
+      await this.router.navigateByUrl('/login');
+      this.snackBar.open('Conta e dados fictícios excluídos.', 'Fechar', { duration: 5000 });
+    } catch {
+      this.snackBar.open('Não foi possível excluir os dados. Tente novamente.', 'Fechar', {
+        duration: 5000,
+      });
+    } finally {
+      this.deleting.set(false);
+    }
+  }
+}

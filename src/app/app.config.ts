@@ -13,6 +13,9 @@ import { MAT_ICON_DEFAULT_OPTIONS } from '@angular/material/icon';
 import { provideRouter, TitleStrategy, withComponentInputBinding } from '@angular/router';
 import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
+import { PreferencesService } from './core/preferences/preferences.service';
+import { HttpUserDataRepository } from './data-access/repositories/http-user-data.repository';
+import { UserDataRepository } from './data-access/repositories/user-data.repository';
 import { AppTitleStrategy } from './core/layout/app-title-strategy';
 import { AccountRepository } from './data-access/repositories/account.repository';
 import { BudgetRepository } from './data-access/repositories/budget.repository';
@@ -38,7 +41,10 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withFetch()),
     // Restaura a sessão antes da primeira navegação, para os guards já conhecerem o usuário.
     provideAppInitializer(() => inject(AuthService).restoreSession()),
+    // Aplica tema e densidade salvos antes da primeira renderização.
+    provideAppInitializer(() => void inject(PreferencesService)),
     { provide: UserRepository, useClass: HttpUserRepository },
+    { provide: UserDataRepository, useClass: HttpUserDataRepository },
     { provide: AccountRepository, useClass: HttpAccountRepository },
     { provide: CategoryRepository, useClass: HttpCategoryRepository },
     { provide: TransactionRepository, useClass: HttpTransactionRepository },

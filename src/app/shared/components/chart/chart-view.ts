@@ -7,6 +7,7 @@ import {
   input,
   viewChild,
 } from '@angular/core';
+import { PreferencesService } from '../../../core/preferences/preferences.service';
 import { CHART_RENDERER, ChartHandle, ChartSpec } from './chart-spec';
 
 /**
@@ -61,12 +62,15 @@ export class ChartView {
 
   private readonly canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
   private readonly renderer = inject(CHART_RENDERER);
+  private readonly preferences = inject(PreferencesService);
   private handle?: ChartHandle;
 
   constructor() {
     afterRenderEffect({
       write: () => {
         const spec = this.spec();
+        // O canvas guarda as cores já resolvidas: ao trocar o tema, o gráfico é redesenhado.
+        this.preferences.effectiveTheme();
         if (this.handle) {
           this.handle.update(spec);
         } else {

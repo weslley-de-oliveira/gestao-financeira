@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { SessionCleanup } from '../../core/auth/session-cleanup';
 import { TODAY } from '../../core/services/period.service';
 import { AccountRepository } from '../../data-access/repositories/account.repository';
 import { CreditCardRepository } from '../../data-access/repositories/credit-card.repository';
@@ -42,6 +43,15 @@ export class CreditCardsFacade {
 
   readonly cards = this._cards.asReadonly();
   readonly status = this._status.asReadonly();
+
+  constructor() {
+    // Ao encerrar a sessão, nada do usuário anterior fica em memória.
+    inject(SessionCleanup).register(() => {
+      this._cards.set([]);
+      this.purchases = [];
+      this._status.set('loading');
+    });
+  }
 
   async load(): Promise<void> {
     this._status.set('loading');

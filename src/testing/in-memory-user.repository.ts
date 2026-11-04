@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import {
   UserRepository,
   UserWithCredentials,
 } from '../app/data-access/repositories/user.repository';
+import { User } from '../app/shared/models/user';
 
 /** Repositório de usuários em memória, para testes sem JSON Server. */
 @Injectable()
@@ -17,5 +18,14 @@ export class InMemoryUserRepository extends UserRepository {
   create(record: UserWithCredentials): Observable<UserWithCredentials> {
     this.records.push(record);
     return of(record);
+  }
+
+  updateName(id: string, name: string): Observable<User> {
+    const record = this.records.find((item) => item.user.id === id);
+    if (!record) {
+      return throwError(() => new Error(`User ${id} not found`));
+    }
+    record.user = { ...record.user, name };
+    return of({ ...record.user });
   }
 }
