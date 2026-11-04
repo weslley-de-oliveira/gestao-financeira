@@ -1,0 +1,86 @@
+<a
+  class="category-form__back"
+  matButton
+  routerLink="/categories"
+  [queryParams]="{ type: categoryForm.type().value() }"
+>
+  <mat-icon>arrow_back</mat-icon>
+  Categorias
+</a>
+
+<h1 class="category-form__title">{{ isEdit() ? 'Editar categoria' : 'Nova categoria' }}</h1>
+
+@switch (loadState()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando categoria" />
+  }
+  @case ('not-found') {
+    <p class="category-form__message" role="alert">Categoria não encontrada.</p>
+    <a matButton="outlined" routerLink="/categories">Ver categorias</a>
+  }
+  @case ('error') {
+    <p class="category-form__message" role="alert">
+      Não foi possível carregar a categoria. Tente novamente em instantes.
+    </p>
+  }
+  @case ('ready') {
+    <form class="category-form" novalidate (submit)="onSubmit($event)">
+      @if (isEdit()) {
+        <p class="category-form__info">
+          Tipo: <strong>{{ typeLabel() }}</strong> — não muda depois da criação, para manter as
+          transações compatíveis.
+          @if (isDefault()) {
+            Esta é uma categoria padrão do aplicativo.
+          }
+        </p>
+      } @else {
+        <div class="category-form__type">
+          <span id="category-type-label" class="category-form__label">Tipo</span>
+          <mat-button-toggle-group
+            aria-labelledby="category-type-label"
+            [formField]="categoryForm.type"
+          >
+            <mat-button-toggle value="expense">Despesa</mat-button-toggle>
+            <mat-button-toggle value="income">Receita</mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
+      }
+
+      <mat-form-field appearance="outline">
+        <mat-label>Nome</mat-label>
+        <input matInput autocomplete="off" [formField]="categoryForm.name" />
+        @if (categoryForm.name().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="category-form__row">
+        <app-color-select [formField]="categoryForm.color" />
+        <app-icon-select [formField]="categoryForm.icon" [options]="iconOptions" />
+      </div>
+
+      @if (isEdit()) {
+        <mat-slide-toggle class="category-form__toggle" [formField]="categoryForm.isArchived">
+          Categoria arquivada
+        </mat-slide-toggle>
+        <p class="category-form__hint">
+          Categorias arquivadas não aparecem nas opções para novas transações. As transações já
+          registradas continuam com ela.
+        </p>
+      }
+
+      @if (errorMessage(); as message) {
+        <p class="category-form__message" role="alert">{{ message }}</p>
+      }
+
+      <div class="category-form__actions">
+        <a matButton routerLink="/categories" [queryParams]="{ type: categoryForm.type().value() }">
+          Cancelar
+        </a>
+        <button matButton="filled" type="submit" [disabled]="categoryForm().submitting()">
+          {{ categoryForm().submitting() ? 'Salvando…' : 'Salvar' }}
+        </button>
+      </div>
+    </form>
+  }
+}

@@ -4,7 +4,8 @@ import { MatButtonHarness } from '@angular/material/button/testing';
 import { MatDialogHarness } from '@angular/material/dialog/testing';
 import { Title } from '@angular/platform-browser';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { seedAccounts, signInTestUser } from '../../../../testing/account-fixtures';
+import { seedAccounts } from '../../../../testing/account-fixtures';
+import { signInTestUser } from '../../../../testing/auth-fixtures';
 import { TEST_PROVIDERS } from '../../../../testing/test-providers';
 import { appConfig } from '../../../app.config';
 

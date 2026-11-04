@@ -9,12 +9,9 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
-import {
-  ACCOUNT_COLORS,
-  ACCOUNT_ICONS,
-  ACCOUNT_TYPES,
-  ACCOUNT_TYPE_LABELS,
-} from '../../../shared/models/account';
+import { ACCOUNT_ICONS, ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from '../../../shared/models/account';
+import { ColorSelect } from '../../../shared/components/appearance-select/color-select';
+import { IconSelect } from '../../../shared/components/appearance-select/icon-select';
 import { MoneyMaskDirective } from '../../../shared/directives/money-mask.directive';
 import { AccountsFacade } from '../accounts.facade';
 import {
@@ -38,6 +35,8 @@ type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
     MatProgressBar,
     MatSelectModule,
     MatSlideToggle,
+    ColorSelect,
+    IconSelect,
     MoneyMaskDirective,
   ],
   selector: 'app-account-form-page',
@@ -66,14 +65,7 @@ export class AccountFormPage implements OnInit {
     value,
     label: ACCOUNT_TYPE_LABELS[value],
   }));
-  protected readonly colorOptions = ACCOUNT_COLORS;
   protected readonly iconOptions = ACCOUNT_ICONS;
-  protected readonly selectedColor = computed(() =>
-    ACCOUNT_COLORS.find((option) => option.value === this.model().color),
-  );
-  protected readonly selectedIcon = computed(() =>
-    ACCOUNT_ICONS.find((option) => option.value === this.model().icon),
-  );
 
   ngOnInit(): void {
     const id = this.id();

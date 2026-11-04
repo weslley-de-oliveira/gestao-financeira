@@ -10,9 +10,9 @@ import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { RouterLink } from '@angular/router';
 import { ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS, Account } from '../../../shared/models/account';
+import { IconAvatar } from '../../../shared/components/icon-avatar/icon-avatar';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 import { AccountArchiveAction } from '../account-archive';
-import { AccountAvatar } from '../account-avatar/account-avatar';
 import { AccountsFacade } from '../accounts.facade';
 import {
   ACCOUNT_SORT_OPTIONS,
@@ -33,7 +33,7 @@ import {
     MatMenuModule,
     MatProgressBar,
     MatSelectModule,
-    AccountAvatar,
+    IconAvatar,
     MoneyPipe,
   ],
   selector: 'app-account-list-page',

@@ -1,4 +1,5 @@
 import { AccountType, AccountWithBalance } from '../../../shared/models/account';
+import { normalizeForSearch } from '../../../shared/utils/text';
 
 export type AccountStatusFilter = 'active' | 'archived' | 'all';
 export type AccountSort = 'name' | 'balance-desc' | 'balance-asc';
@@ -34,7 +35,7 @@ export function queryAccounts(
   accounts: readonly AccountWithBalance[],
   query: AccountQuery,
 ): AccountWithBalance[] {
-  const search = normalize(query.search.trim());
+  const search = normalizeForSearch(query.search.trim());
 
   return accounts
     .filter(
@@ -42,8 +43,8 @@ export function queryAccounts(
         (query.type === 'all' || account.type === query.type) &&
         matchesStatus(account, query.status) &&
         (!search ||
-          normalize(account.name).includes(search) ||
-          normalize(account.institution ?? '').includes(search)),
+          normalizeForSearch(account.name).includes(search) ||
+          normalizeForSearch(account.institution ?? '').includes(search)),
     )
     .sort((a, b) => compare(a, b, query.sort));
 }
@@ -62,11 +63,4 @@ function compare(a: AccountWithBalance, b: AccountWithBalance, sort: AccountSort
     case 'balance-asc':
       return a.currentBalance - b.currentBalance || byName;
   }
-}
-
-function normalize(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase();
 }

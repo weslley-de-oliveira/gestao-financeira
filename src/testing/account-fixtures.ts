@@ -1,14 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { AuthService } from '../app/core/auth/auth.service';
 import { Account } from '../app/shared/models/account';
 import { InMemoryAccountRepository } from './in-memory-account.repository';
-
-/** Cadastra e autentica a usuária fictícia usada nos testes; retorna o id dela. */
-export async function signInTestUser(): Promise<string> {
-  const auth = TestBed.inject(AuthService);
-  await auth.register({ name: 'Ana Teste', email: 'ana@exemplo.com', password: 'senha123' });
-  return auth.currentUser()?.id ?? '';
-}
 
 /** Grava contas diretamente no repositório em memória. */
 export function seedAccounts(userId: string, ...accounts: Partial<Account>[]): Account[] {

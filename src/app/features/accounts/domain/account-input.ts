@@ -1,11 +1,11 @@
 import {
-  ACCOUNT_COLORS,
   ACCOUNT_ICONS,
   ACCOUNT_INSTITUTION_MAX_LENGTH,
   ACCOUNT_NAME_MAX_LENGTH,
   ACCOUNT_TYPES,
   Account,
 } from '../../../shared/models/account';
+import { APPEARANCE_COLORS, isAppearanceOption } from '../../../shared/models/appearance';
 import { MAX_MONEY_CENTS, isValidCents } from '../../../shared/utils/money';
 
 /** Dados editáveis de uma conta, já com o saldo inicial em centavos. */
@@ -41,10 +41,10 @@ export function normalizeAccountInput(input: AccountInput): AccountInput {
   if (!isValidCents(input.initialBalance) || Math.abs(input.initialBalance) > MAX_MONEY_CENTS) {
     throw new InvalidAccountInputError('initialBalance');
   }
-  if (!ACCOUNT_COLORS.some((option) => option.value === input.color)) {
+  if (!isAppearanceOption(APPEARANCE_COLORS, input.color)) {
     throw new InvalidAccountInputError('color');
   }
-  if (!ACCOUNT_ICONS.some((option) => option.value === input.icon)) {
+  if (!isAppearanceOption(ACCOUNT_ICONS, input.icon)) {
     throw new InvalidAccountInputError('icon');
   }
 

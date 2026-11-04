@@ -1,0 +1,96 @@
+<header class="categories__header">
+  <div>
+    <h1 class="categories__title">Categorias</h1>
+    <p class="categories__subtitle">Organize suas receitas e despesas.</p>
+  </div>
+  <a matButton="filled" routerLink="new" [queryParams]="{ type: query().type }">
+    <mat-icon>add</mat-icon>
+    Nova categoria
+  </a>
+</header>
+
+@switch (status()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando categorias" />
+  }
+  @case ('error') {
+    <div class="categories__state" role="alert">
+      <mat-icon aria-hidden="true">cloud_off</mat-icon>
+      <p>Não foi possível carregar as categorias. Verifique se a API está em execução.</p>
+      <button matButton="outlined" type="button" (click)="reload()">Tentar novamente</button>
+    </div>
+  }
+  @case ('ready') {
+    <form class="categories__filters" role="search" aria-label="Filtrar categorias" novalidate>
+      <mat-button-toggle-group
+        class="categories__type"
+        aria-label="Tipo de categoria"
+        hideSingleSelectionIndicator
+        [formField]="filterForm.type"
+      >
+        <mat-button-toggle value="expense">
+          Despesas ({{ activeCount().expense }})
+        </mat-button-toggle>
+        <mat-button-toggle value="income">
+          Receitas ({{ activeCount().income }})
+        </mat-button-toggle>
+      </mat-button-toggle-group>
+
+      <mat-form-field class="categories__search" appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Buscar por nome</mat-label>
+        <mat-icon matPrefix aria-hidden="true">search</mat-icon>
+        <input matInput type="search" [formField]="filterForm.search" />
+      </mat-form-field>
+
+      <mat-slide-toggle [formField]="filterForm.showArchived">Mostrar arquivadas</mat-slide-toggle>
+    </form>
+
+    <p class="visually-hidden" aria-live="polite">
+      {{ visibleCategories().length }}
+      {{ visibleCategories().length === 1 ? 'categoria encontrada' : 'categorias encontradas' }}
+    </p>
+
+    @if (visibleCategories().length === 0) {
+      <div class="categories__state">
+        <mat-icon aria-hidden="true">search_off</mat-icon>
+        <p>Nenhuma categoria encontrada.</p>
+      </div>
+    } @else {
+      <mat-card appearance="outlined">
+        <ul class="categories__list">
+          @for (category of visibleCategories(); track category.id) {
+            <li class="category-row" [class.category-row--archived]="category.isArchived">
+              <app-icon-avatar [icon]="category.icon" [color]="category.color" />
+              <span class="category-row__name">{{ category.name }}</span>
+              @if (category.isDefault) {
+                <span class="category-row__badge">Padrão</span>
+              }
+              @if (category.isArchived) {
+                <span class="category-row__badge">Arquivada</span>
+              }
+              <button
+                matIconButton
+                type="button"
+                class="category-row__actions"
+                [attr.aria-label]="'Ações da categoria ' + category.name"
+                [matMenuTriggerFor]="actions"
+              >
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #actions="matMenu" xPosition="before">
+                <a mat-menu-item [routerLink]="[category.id, 'edit']">
+                  <mat-icon>edit</mat-icon>
+                  <span>Editar</span>
+                </a>
+                <button mat-menu-item type="button" (click)="toggleArchived(category)">
+                  <mat-icon>{{ category.isArchived ? 'unarchive' : 'archive' }}</mat-icon>
+                  <span>{{ category.isArchived ? 'Reativar' : 'Arquivar' }}</span>
+                </button>
+              </mat-menu>
+            </li>
+          }
+        </ul>
+      </mat-card>
+    }
+  }
+}

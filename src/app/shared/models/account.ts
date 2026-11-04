@@ -1,4 +1,5 @@
 import { Cents } from '../utils/money';
+import { AppearanceOption } from './appearance';
 
 export const ACCOUNT_TYPES = ['checking', 'savings', 'cash', 'investment', 'other'] as const;
 
@@ -22,7 +23,7 @@ export interface Account {
   type: AccountType;
   institution: string | null;
   initialBalance: Cents;
-  /** Cor de identificação, uma das `ACCOUNT_COLORS`. */
+  /** Cor de identificação, uma das `APPEARANCE_COLORS`. */
   color: string;
   /** Ícone do Material Symbols, um dos `ACCOUNT_ICONS`. */
   icon: string;
@@ -35,24 +36,7 @@ export interface AccountWithBalance extends Account {
   currentBalance: Cents;
 }
 
-export interface AccountOption {
-  value: string;
-  label: string;
-}
-
-/** Cores de identificação: dados escolhidos pelo usuário, não tokens do tema. */
-export const ACCOUNT_COLORS: readonly AccountOption[] = [
-  { value: '#1565c0', label: 'Azul' },
-  { value: '#2e7d32', label: 'Verde' },
-  { value: '#6a1b9a', label: 'Roxo' },
-  { value: '#c62828', label: 'Vermelho' },
-  { value: '#ef6c00', label: 'Laranja' },
-  { value: '#00838f', label: 'Ciano' },
-  { value: '#ad1457', label: 'Rosa' },
-  { value: '#546e7a', label: 'Cinza' },
-];
-
-export const ACCOUNT_ICONS: readonly AccountOption[] = [
+export const ACCOUNT_ICONS: readonly AppearanceOption[] = [
   { value: 'account_balance', label: 'Banco' },
   { value: 'account_balance_wallet', label: 'Carteira' },
   { value: 'savings', label: 'Cofrinho' },

@@ -30,19 +30,6 @@
   }
 }
 
-.account-form__option {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.account-form__swatch {
-  display: inline-block;
-  width: 1rem;
-  height: 1rem;
-  border-radius: var(--mat-sys-corner-full);
-}
-
 .account-form__toggle {
   margin-top: 0.5rem;
 }

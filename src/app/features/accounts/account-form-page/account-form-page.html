@@ -68,51 +68,8 @@
       </mat-form-field>
 
       <div class="account-form__row">
-        <mat-form-field appearance="outline">
-          <mat-label>Cor</mat-label>
-          <mat-select [formField]="accountForm.color">
-            <mat-select-trigger>
-              <span class="account-form__option">
-                <span
-                  class="account-form__swatch"
-                  aria-hidden="true"
-                  [style.background]="selectedColor()?.value"
-                ></span>
-                {{ selectedColor()?.label }}
-              </span>
-            </mat-select-trigger>
-            @for (option of colorOptions; track option.value) {
-              <mat-option [value]="option.value">
-                <span class="account-form__option">
-                  <span
-                    class="account-form__swatch"
-                    aria-hidden="true"
-                    [style.background]="option.value"
-                  ></span>
-                  {{ option.label }}
-                </span>
-              </mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
-          <mat-label>Ícone</mat-label>
-          <mat-select [formField]="accountForm.icon">
-            <mat-select-trigger>
-              <span class="account-form__option">
-                <mat-icon aria-hidden="true">{{ selectedIcon()?.value }}</mat-icon>
-                {{ selectedIcon()?.label }}
-              </span>
-            </mat-select-trigger>
-            @for (option of iconOptions; track option.value) {
-              <mat-option [value]="option.value">
-                <mat-icon aria-hidden="true">{{ option.value }}</mat-icon>
-                {{ option.label }}
-              </mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+        <app-color-select [formField]="accountForm.color" />
+        <app-icon-select [formField]="accountForm.icon" [options]="iconOptions" />
       </div>
 
       @if (isEdit()) {

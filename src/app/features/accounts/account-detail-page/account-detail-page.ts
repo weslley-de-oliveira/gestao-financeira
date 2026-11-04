@@ -5,9 +5,9 @@ import { MatIcon } from '@angular/material/icon';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { RouterLink } from '@angular/router';
 import { ACCOUNT_TYPE_LABELS, AccountWithBalance } from '../../../shared/models/account';
+import { IconAvatar } from '../../../shared/components/icon-avatar/icon-avatar';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 import { AccountArchiveAction } from '../account-archive';
-import { AccountAvatar } from '../account-avatar/account-avatar';
 import { AccountsFacade } from '../accounts.facade';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
@@ -19,7 +19,7 @@ type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
     MatCardModule,
     MatIcon,
     MatProgressBar,
-    AccountAvatar,
+    IconAvatar,
     MoneyPipe,
   ],
   selector: 'app-account-detail-page',

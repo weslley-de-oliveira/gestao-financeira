@@ -22,7 +22,7 @@
   @case ('ready') {
     @if (account(); as account) {
       <header class="account-detail__header">
-        <app-account-avatar [icon]="account.icon" [color]="account.color" />
+        <app-icon-avatar [icon]="account.icon" [color]="account.color" />
         <div class="account-detail__heading">
           <h1 class="account-detail__title">{{ account.name }}</h1>
           <p class="account-detail__meta">

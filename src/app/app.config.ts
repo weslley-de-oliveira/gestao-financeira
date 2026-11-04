@@ -15,7 +15,9 @@ import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
 import { AppTitleStrategy } from './core/layout/app-title-strategy';
 import { AccountRepository } from './data-access/repositories/account.repository';
+import { CategoryRepository } from './data-access/repositories/category.repository';
 import { HttpAccountRepository } from './data-access/repositories/http-account.repository';
+import { HttpCategoryRepository } from './data-access/repositories/http-category.repository';
 import { HttpUserRepository } from './data-access/repositories/http-user.repository';
 import { UserRepository } from './data-access/repositories/user.repository';
 
@@ -30,6 +32,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => inject(AuthService).restoreSession()),
     { provide: UserRepository, useClass: HttpUserRepository },
     { provide: AccountRepository, useClass: HttpAccountRepository },
+    { provide: CategoryRepository, useClass: HttpCategoryRepository },
     { provide: TitleStrategy, useExisting: AppTitleStrategy },
     { provide: LOCALE_ID, useValue: 'pt-BR' },
     { provide: DEFAULT_CURRENCY_CODE, useValue: 'BRL' },

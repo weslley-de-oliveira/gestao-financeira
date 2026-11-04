@@ -1,11 +1,11 @@
 import { maxLength, required, schema, validate } from '@angular/forms/signals';
 import {
-  ACCOUNT_COLORS,
   ACCOUNT_INSTITUTION_MAX_LENGTH,
   ACCOUNT_NAME_MAX_LENGTH,
   Account,
   AccountType,
 } from '../../../shared/models/account';
+import { APPEARANCE_COLORS } from '../../../shared/models/appearance';
 import { MAX_MONEY_CENTS, formatMoneyInput, parseMoney } from '../../../shared/utils/money';
 import { AccountInput } from '../domain/account-input';
 
@@ -25,7 +25,7 @@ export const emptyAccountForm = (): AccountFormModel => ({
   type: 'checking',
   institution: '',
   initialBalance: '0,00',
-  color: ACCOUNT_COLORS[0].value,
+  color: APPEARANCE_COLORS[0].value,
   icon: 'account_balance',
   isArchived: false,
 });
