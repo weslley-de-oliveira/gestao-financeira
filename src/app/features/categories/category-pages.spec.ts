@@ -12,8 +12,10 @@ import { MatSlideToggleHarness } from '@angular/material/slide-toggle/testing';
 import { Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { signInTestUser } from '../../../testing/auth-fixtures';
+import { seedCategories } from '../../../testing/category-fixtures';
 import { InMemoryCategoryRepository } from '../../../testing/in-memory-category.repository';
 import { TEST_PROVIDERS } from '../../../testing/test-providers';
+import { seedTransactions } from '../../../testing/transaction-fixtures';
 import { appConfig } from '../../app.config';
 import { Category } from '../../shared/models/category';
 import { DEFAULT_CATEGORIES } from './domain/default-categories';
@@ -52,20 +54,7 @@ describe('category pages', () => {
   }
 
   function seed(...categories: Partial<Category>[]): Category[] {
-    const created = categories.map((overrides, index): Category => ({
-      id: `category-${index + 1}`,
-      userId,
-      name: `Categoria ${index + 1}`,
-      type: 'expense',
-      icon: 'more_horiz',
-      color: '#546e7a',
-      isDefault: false,
-      isArchived: false,
-      createdAt: '2026-01-01T00:00:00.000Z',
-      ...overrides,
-    }));
-    records().push(...created);
-    return created;
+    return seedCategories(userId, ...categories);
   }
 
   async function input(label: string): Promise<MatInputHarness> {
@@ -112,6 +101,24 @@ describe('category pages', () => {
         await loader.getHarness(MatInputHarness.with({ selector: '[type="search"]' }))
       ).setValue('RESTAU');
       expect(rowNames()).toEqual(['Restaurante']);
+    });
+
+    it('shows how many transactions use each category', async () => {
+      seed({ name: 'Mercado' }, { name: 'Lazer' }, { name: 'Pets' });
+      seedTransactions(
+        userId,
+        { categoryId: 'category-1' },
+        { categoryId: 'category-1' },
+        { categoryId: 'category-2' },
+      );
+
+      await open('/categories');
+
+      const usage = [
+        ...(harness.routeNativeElement as HTMLElement).querySelectorAll('.category-row__usage'),
+      ].map((item) => item.textContent?.trim());
+      expect(rowNames()).toEqual(['Lazer', 'Mercado', 'Pets']);
+      expect(usage).toEqual(['1 transação', '2 transações', 'Nenhuma transação']);
     });
 
     it('opens the tab given by the type query param', async () => {

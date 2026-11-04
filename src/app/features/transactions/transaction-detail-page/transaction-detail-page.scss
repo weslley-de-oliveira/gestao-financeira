@@ -1,0 +1,106 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: block;
+  max-width: 48rem;
+}
+
+.transaction-detail__back {
+  margin: 0 0 0.5rem -0.75rem;
+}
+
+.transaction-detail__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.transaction-detail__type {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-large);
+}
+
+.transaction-detail__title {
+  margin: 0.25rem 0 0;
+  font: var(--mat-sys-headline-small);
+  overflow-wrap: anywhere;
+}
+
+.transaction-detail__amount {
+  margin: 0.25rem 0 0;
+  font: var(--mat-sys-headline-medium);
+}
+
+.transaction-detail__amount--income {
+  color: var(--mat-sys-primary);
+}
+
+.transaction-detail__amount--expense {
+  color: var(--mat-sys-error);
+}
+
+.transaction-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.transaction-detail__fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin: 0;
+  padding: 1rem;
+
+  @include bp.md-up {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  dt {
+    color: var(--mat-sys-on-surface-variant);
+    font: var(--mat-sys-label-medium);
+  }
+
+  dd {
+    margin: 0.25rem 0 0;
+  }
+}
+
+.transaction-detail__notes {
+  grid-column: 1 / -1;
+  white-space: pre-line;
+}
+
+.transaction-detail__category {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.transaction-detail__hint {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.transaction-detail__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2rem 1rem;
+  border: 1px dashed var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-large);
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+
+  p {
+    margin: 0;
+  }
+}

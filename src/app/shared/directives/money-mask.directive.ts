@@ -1,4 +1,4 @@
-import { DestroyRef, Directive, ElementRef, inject } from '@angular/core';
+import { DestroyRef, Directive, ElementRef, inject, input } from '@angular/core';
 import { applyMoneyMask } from '../utils/money';
 
 /**
@@ -7,11 +7,14 @@ import { applyMoneyMask } from '../utils/money';
  */
 @Directive({ selector: 'input[appMoneyMask]' })
 export class MoneyMaskDirective {
+  /** `false` ignora o "-" (valores sempre positivos, como o de uma transação). */
+  readonly allowNegative = input(true);
+
   constructor() {
     const input = inject<ElementRef<HTMLInputElement>>(ElementRef).nativeElement;
 
     const mask = () => {
-      const masked = applyMoneyMask(input.value);
+      const masked = applyMoneyMask(input.value, this.allowNegative());
       if (input.value !== masked) {
         input.value = masked;
       }

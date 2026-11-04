@@ -4,7 +4,7 @@ Aplicação web de gestão financeira pessoal, desenvolvida como projeto de port
 
 O sistema permitirá organizar contas, receitas, despesas, cartões de crédito, faturas, orçamentos e metas financeiras.
 
-> **Status:** em desenvolvimento. Implementados: fundação (tema, layout, navegação, CI), autenticação demonstrativa, contas (listagem com busca e filtros, cadastro, edição, detalhe e arquivamento) e categorias de receita e despesa (conjunto padrão, personalização, prevenção de duplicidade e arquivamento). Próximas etapas: transações e dashboard.
+> **Status:** em desenvolvimento. Implementados: fundação (tema, layout, navegação, CI), autenticação demonstrativa, contas (listagem com busca e filtros, cadastro, edição, detalhe e arquivamento) categorias de receita e despesa (conjunto padrão, personalização, prevenção de duplicidade e arquivamento) e transações (receitas, despesas e transferências, com status pendente, filtros por período e paginação). Próximas etapas: dashboard, cartões e faturas.
 
 > **Aviso:** este é um projeto demonstrativo. Utilize apenas dados fictícios — nunca credenciais, contas ou cartões reais. A API utilizada no desenvolvimento é simulada e não oferece segurança de produção.
 
@@ -26,6 +26,7 @@ O sistema permitirá organizar contas, receitas, despesas, cartões de crédito,
 | SCSS                                                        | Tema do Material e estilos dos componentes            |
 | Material Symbols                                            | Ícones                                                |
 | Angular CDK 22                                              | Primitivas de interface (base do Material)            |
+| [date-fns 4](https://date-fns.org)                          | Datas e adapter do datepicker do Material (pt-BR)     |
 | [JSON Server 0.17](https://github.com/typicode/json-server) | API REST simulada para desenvolvimento                |
 | concurrently                                                | Execução paralela do Angular e da API simulada        |
 | [Vitest](https://vitest.dev)                                | Testes unitários                                      |

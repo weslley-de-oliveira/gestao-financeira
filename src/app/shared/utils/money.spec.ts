@@ -65,6 +65,10 @@ describe('money', () => {
       expect(applyMoneyMask(typed)).toBe(masked);
     });
 
+    it('ignores the minus sign when negatives are not allowed', () => {
+      expect(applyMoneyMask('1,50-', false)).toBe('1,50');
+    });
+
     it('ignores digits beyond the maximum length', () => {
       expect(applyMoneyMask('9'.repeat(15))).toBe('9.999.999.999,99');
     });

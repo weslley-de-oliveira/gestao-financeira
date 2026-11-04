@@ -37,6 +37,23 @@ describe('account balance', () => {
     expect(movementEffect(transfer, 'other')).toBe(0);
   });
 
+  it('ignores pending movements', () => {
+    const movements: BalanceMovement[] = [
+      { type: 'income', amount: 30_000, accountId: 'checking', status: 'completed' },
+      { type: 'expense', amount: 50_000, accountId: 'checking', status: 'pending' },
+      {
+        type: 'transfer',
+        amount: 10_000,
+        accountId: 'checking',
+        destinationAccountId: 'savings',
+        status: 'pending',
+      },
+    ];
+
+    expect(calculateBalance(checking, movements)).toBe(130_000);
+    expect(calculateBalance(savings, movements)).toBe(50_000);
+  });
+
   it('keeps the consolidated balance unchanged after transfers', () => {
     const before = calculateTotalBalance([checking, savings], []);
     const after = calculateTotalBalance(

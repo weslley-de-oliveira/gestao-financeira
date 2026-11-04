@@ -1,13 +1,10 @@
-import { BreakpointObserver } from '@angular/cdk/layout';
-import { Component, inject, viewChild } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, viewChild } from '@angular/core';
 import { MatIcon } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatSidenav, MatSidenavModule } from '@angular/material/sidenav';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { map } from 'rxjs';
 import { APP_NAME } from '../app-title-strategy';
-import { MOBILE_MEDIA_QUERY } from '../breakpoints';
+import { injectIsMobile } from '../breakpoints';
 import { NAVIGATION_GROUPS } from '../navigation';
 import { Topbar } from '../topbar/topbar';
 
@@ -31,12 +28,7 @@ export class AppShell {
 
   protected readonly appName = APP_NAME;
   protected readonly navigationGroups = NAVIGATION_GROUPS;
-  protected readonly isMobile = toSignal(
-    inject(BreakpointObserver)
-      .observe(MOBILE_MEDIA_QUERY)
-      .pipe(map((state) => state.matches)),
-    { initialValue: false },
-  );
+  protected readonly isMobile = injectIsMobile();
 
   protected toggleSidenav(): void {
     void this.sidenav().toggle();

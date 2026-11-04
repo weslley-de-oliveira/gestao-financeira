@@ -16,6 +16,7 @@ import { firstValueFrom } from 'rxjs';
 import { openConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { IconAvatar } from '../../../shared/components/icon-avatar/icon-avatar';
 import { CATEGORY_TYPES, Category, CategoryType } from '../../../shared/models/category';
+import { TransactionsFacade } from '../../transactions/transactions.facade';
 import { CategoriesFacade } from '../categories.facade';
 import { defaultCategoryQuery, queryCategories } from '../domain/category-rules';
 
@@ -40,6 +41,7 @@ import { defaultCategoryQuery, queryCategories } from '../domain/category-rules'
 })
 export class CategoryListPage implements OnInit {
   private readonly facade = inject(CategoriesFacade);
+  private readonly transactionsFacade = inject(TransactionsFacade);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
 
@@ -49,7 +51,24 @@ export class CategoryListPage implements OnInit {
   protected readonly query = signal(defaultCategoryQuery());
   protected readonly filterForm = form(this.query);
 
-  protected readonly status = this.facade.status;
+  protected readonly status = computed(() => {
+    const statuses = [this.facade.status(), this.transactionsFacade.status()];
+    return statuses.includes('error')
+      ? 'error'
+      : statuses.includes('loading')
+        ? 'loading'
+        : 'ready';
+  });
+  /** Quantidade de transações por categoria (todos os períodos). */
+  protected readonly usage = computed(() => {
+    const counts = new Map<string, number>();
+    for (const { categoryId } of this.transactionsFacade.transactions()) {
+      if (categoryId) {
+        counts.set(categoryId, (counts.get(categoryId) ?? 0) + 1);
+      }
+    }
+    return counts;
+  });
   protected readonly visibleCategories = computed(() =>
     queryCategories(this.facade.categories(), this.query()),
   );
@@ -66,11 +85,12 @@ export class CategoryListPage implements OnInit {
     if (isCategoryType(type)) {
       this.query.update((query) => ({ ...query, type }));
     }
-    void this.facade.load();
+    this.reload();
   }
 
   protected reload(): void {
     void this.facade.load();
+    void this.transactionsFacade.load();
   }
 
   protected async toggleArchived(category: Category): Promise<void> {

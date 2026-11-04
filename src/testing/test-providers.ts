@@ -1,13 +1,22 @@
 import { Provider } from '@angular/core';
+import { TODAY } from '../app/core/services/period.service';
 import { PBKDF2_ITERATIONS } from '../app/core/security/password-hasher';
 import { AccountRepository } from '../app/data-access/repositories/account.repository';
 import { CategoryRepository } from '../app/data-access/repositories/category.repository';
+import { TransactionRepository } from '../app/data-access/repositories/transaction.repository';
 import { UserRepository } from '../app/data-access/repositories/user.repository';
 import { InMemoryAccountRepository } from './in-memory-account.repository';
 import { InMemoryCategoryRepository } from './in-memory-category.repository';
+import { InMemoryTransactionRepository } from './in-memory-transaction.repository';
 import { InMemoryUserRepository } from './in-memory-user.repository';
 
-/** Substitui o JSON Server por memória e reduz as iterações do PBKDF2 para acelerar os testes. */
+/** "Hoje" fixo nos testes: 15/11/2026. */
+export const TEST_TODAY = new Date(2026, 10, 15);
+
+/**
+ * Substitui o JSON Server por memória, fixa a data atual e reduz as iterações do PBKDF2
+ * para acelerar os testes.
+ */
 export const TEST_PROVIDERS: Provider[] = [
   InMemoryUserRepository,
   { provide: UserRepository, useExisting: InMemoryUserRepository },
@@ -15,5 +24,8 @@ export const TEST_PROVIDERS: Provider[] = [
   { provide: AccountRepository, useExisting: InMemoryAccountRepository },
   InMemoryCategoryRepository,
   { provide: CategoryRepository, useExisting: InMemoryCategoryRepository },
+  InMemoryTransactionRepository,
+  { provide: TransactionRepository, useExisting: InMemoryTransactionRepository },
+  { provide: TODAY, useValue: () => new Date(TEST_TODAY) },
   { provide: PBKDF2_ITERATIONS, useValue: 1_000 },
 ];

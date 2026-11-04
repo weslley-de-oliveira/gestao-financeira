@@ -1,16 +1,19 @@
 import { Account } from '../../../shared/models/account';
+import { TransactionStatus, TransactionType } from '../../../shared/models/transaction';
 import { Cents, assertValidCents } from '../../../shared/utils/money';
 
 /**
- * Movimentação que altera o saldo de uma conta. As transações (etapa de Transações) seguem
- * este formato: `amount` é sempre positivo e o tipo define se ele entra ou sai da conta.
+ * Movimentação que altera o saldo de uma conta. As transações seguem este formato:
+ * `amount` é sempre positivo e o tipo define se ele entra ou sai da conta.
  */
 export interface BalanceMovement {
-  type: 'income' | 'expense' | 'transfer';
+  type: TransactionType;
   amount: Cents;
   accountId: string;
   /** Conta que recebe o valor; apenas em transferências. */
   destinationAccountId?: string | null;
+  /** Movimentações pendentes não alteram o saldo. Ausente equivale a realizada. */
+  status?: TransactionStatus;
 }
 
 /** Efeito de uma movimentação no saldo de uma conta: positivo credita, negativo debita. */
@@ -18,6 +21,9 @@ export function movementEffect(movement: BalanceMovement, accountId: string): Ce
   assertValidCents(movement.amount, 'amount');
   if (movement.amount < 0) {
     throw new RangeError('amount must not be negative');
+  }
+  if (movement.status === 'pending') {
+    return 0;
   }
 
   switch (movement.type) {

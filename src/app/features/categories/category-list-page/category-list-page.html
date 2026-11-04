@@ -61,7 +61,22 @@
           @for (category of visibleCategories(); track category.id) {
             <li class="category-row" [class.category-row--archived]="category.isArchived">
               <app-icon-avatar [icon]="category.icon" [color]="category.color" />
-              <span class="category-row__name">{{ category.name }}</span>
+              <div class="category-row__main">
+                <span class="category-row__name">{{ category.name }}</span>
+                <span class="category-row__usage">
+                  @switch (usage().get(category.id) ?? 0) {
+                    @case (0) {
+                      Nenhuma transação
+                    }
+                    @case (1) {
+                      1 transação
+                    }
+                    @default {
+                      {{ usage().get(category.id) }} transações
+                    }
+                  }
+                </span>
+              </div>
               @if (category.isDefault) {
                 <span class="category-row__badge">Padrão</span>
               }
@@ -78,6 +93,14 @@
                 <mat-icon>more_vert</mat-icon>
               </button>
               <mat-menu #actions="matMenu" xPosition="before">
+                <a
+                  mat-menu-item
+                  routerLink="/transactions"
+                  [queryParams]="{ categoryId: category.id }"
+                >
+                  <mat-icon>receipt_long</mat-icon>
+                  <span>Ver transações</span>
+                </a>
                 <a mat-menu-item [routerLink]="[category.id, 'edit']">
                   <mat-icon>edit</mat-icon>
                   <span>Editar</span>

@@ -1,0 +1,96 @@
+<a class="transaction-detail__back" matButton routerLink="/transactions">
+  <mat-icon>arrow_back</mat-icon>
+  Transações
+</a>
+
+@switch (loadState()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando transação" />
+  }
+  @case ('not-found') {
+    <div class="transaction-detail__state" role="alert">
+      <p>Transação não encontrada.</p>
+      <a matButton="outlined" routerLink="/transactions">Ver transações</a>
+    </div>
+  }
+  @case ('error') {
+    <div class="transaction-detail__state" role="alert">
+      <p>Não foi possível carregar a transação.</p>
+      <button matButton="outlined" type="button" (click)="load()">Tentar novamente</button>
+    </div>
+  }
+  @case ('ready') {
+    @if (transaction(); as transaction) {
+      <header class="transaction-detail__header">
+        <div>
+          <p class="transaction-detail__type">
+            <mat-icon aria-hidden="true">{{ typeIcons[transaction.type] }}</mat-icon>
+            {{ typeLabels[transaction.type] }}
+          </p>
+          <h1 class="transaction-detail__title">{{ transaction.description }}</h1>
+          <p
+            class="transaction-detail__amount"
+            [class]="'transaction-detail__amount--' + transaction.type"
+          >
+            {{ signs[transaction.type] }}{{ transaction.amount | money }}
+          </p>
+        </div>
+        <div class="transaction-detail__actions">
+          <a matButton="outlined" [routerLink]="['/transactions', transaction.id, 'edit']">
+            <mat-icon>edit</mat-icon>
+            Editar
+          </a>
+          <button matButton="outlined" type="button" (click)="toggleStatus(transaction)">
+            <mat-icon>{{ transaction.status === 'pending' ? 'task_alt' : 'schedule' }}</mat-icon>
+            {{
+              transaction.status === 'pending' ? 'Marcar como realizada' : 'Marcar como pendente'
+            }}
+          </button>
+          <button matButton="outlined" type="button" (click)="delete(transaction)">
+            <mat-icon>delete</mat-icon>
+            Excluir
+          </button>
+        </div>
+      </header>
+
+      <mat-card appearance="outlined">
+        <dl class="transaction-detail__fields">
+          <div>
+            <dt>Data</dt>
+            <dd>{{ transaction.date | isoDate }}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>
+              {{ statusLabels[transaction.status] }}
+              @if (transaction.status === 'pending') {
+                <span class="transaction-detail__hint">(não altera o saldo)</span>
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>{{ transaction.type === 'transfer' ? 'Contas' : 'Conta' }}</dt>
+            <dd>{{ accountLabel(transaction, lookups()) }}</dd>
+          </div>
+          @if (categoryOf(transaction, lookups()); as category) {
+            <div>
+              <dt>Categoria</dt>
+              <dd class="transaction-detail__category">
+                <mat-icon aria-hidden="true" [style.color]="category.color">
+                  {{ category.icon }}
+                </mat-icon>
+                {{ category.name }}
+              </dd>
+            </div>
+          }
+          @if (transaction.notes) {
+            <div class="transaction-detail__notes">
+              <dt>Observações</dt>
+              <dd>{{ transaction.notes }}</dd>
+            </div>
+          }
+        </dl>
+      </mat-card>
+    }
+  }
+}

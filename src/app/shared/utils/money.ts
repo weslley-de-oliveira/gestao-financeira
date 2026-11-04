@@ -45,15 +45,16 @@ const MONEY_MASK_MAX_DIGITS = 12;
 
 /**
  * Máscara de moeda em que os dígitos entram pela direita: digitar "1", "2", "3" resulta em
- * "0,01", "0,12", "1,23". Digitar "-" alterna o sinal. Sem dígitos, o campo fica vazio.
+ * "0,01", "0,12", "1,23". Digitar "-" alterna o sinal (se `allowNegative`). Sem dígitos, o
+ * campo fica vazio.
  */
-export function applyMoneyMask(text: string): string {
+export function applyMoneyMask(text: string, allowNegative = true): string {
   const digits = text.replace(/\D/g, '');
   if (!digits) {
     return '';
   }
   const significant = digits.replace(/^0+/, '').slice(0, MONEY_MASK_MAX_DIGITS);
   // Cada "-" digitado alterna o sinal do valor que já estava no campo.
-  const negative = (text.match(/-/g)?.length ?? 0) % 2 === 1;
+  const negative = allowNegative && (text.match(/-/g)?.length ?? 0) % 2 === 1;
   return formatMoneyInput(Number(significant || '0'), negative);
 }

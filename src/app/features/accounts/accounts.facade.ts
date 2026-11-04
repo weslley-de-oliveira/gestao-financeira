@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { AccountRepository } from '../../data-access/repositories/account.repository';
+import { TransactionRepository } from '../../data-access/repositories/transaction.repository';
 import { Account, AccountWithBalance } from '../../shared/models/account';
 import { BalanceMovement, calculateBalance } from './domain/account-balance';
 import { AccountInput, normalizeAccountInput } from './domain/account-input';
@@ -19,8 +20,11 @@ export class AccountNotFoundError extends Error {
 @Injectable({ providedIn: 'root' })
 export class AccountsFacade {
   private readonly repository = inject(AccountRepository);
+  private readonly transactions = inject(TransactionRepository);
   private readonly auth = inject(AuthService);
   private readonly _accounts = signal<AccountWithBalance[]>([]);
+  /** Transações do último carregamento, usadas para calcular os saldos. */
+  private movements: readonly BalanceMovement[] = [];
   private readonly _status = signal<LoadStatus>('loading');
 
   readonly accounts = this._accounts.asReadonly();
@@ -35,8 +39,13 @@ export class AccountsFacade {
   async load(): Promise<void> {
     this._status.set('loading');
     try {
-      const accounts = await firstValueFrom(this.repository.listByUser(this.userId()));
-      this._accounts.set(accounts.map(withBalance));
+      const userId = this.userId();
+      const [accounts, movements] = await Promise.all([
+        firstValueFrom(this.repository.listByUser(userId)),
+        firstValueFrom(this.transactions.listByUser(userId)),
+      ]);
+      this.movements = movements;
+      this._accounts.set(accounts.map((account) => this.withBalance(account)));
       this._status.set('ready');
     } catch {
       this._status.set('error');
@@ -45,8 +54,13 @@ export class AccountsFacade {
 
   /** Retorna `null` se a conta não existir ou pertencer a outro usuário. */
   async getById(id: string): Promise<AccountWithBalance | null> {
+    const userId = this.userId();
     const account = await firstValueFrom(this.repository.findById(id));
-    return account && account.userId === this.userId() ? withBalance(account) : null;
+    if (!account || account.userId !== userId) {
+      return null;
+    }
+    this.movements = await firstValueFrom(this.transactions.listByUser(userId));
+    return this.withBalance(account);
   }
 
   async create(input: AccountInput): Promise<AccountWithBalance> {
@@ -78,13 +92,18 @@ export class AccountsFacade {
   }
 
   private store(account: Account): AccountWithBalance {
-    const stored = withBalance(account);
+    const stored = this.withBalance(account);
     this._accounts.update((accounts) =>
       accounts.some((item) => item.id === stored.id)
         ? accounts.map((item) => (item.id === stored.id ? stored : item))
         : [...accounts, stored],
     );
     return stored;
+  }
+
+  /** Saldo atual pela regra única: saldo inicial + transações realizadas da conta. */
+  private withBalance(account: Account): AccountWithBalance {
+    return { ...account, currentBalance: calculateBalance(account, this.movements) };
   }
 
   private userId(): string {
@@ -94,11 +113,4 @@ export class AccountsFacade {
     }
     return user.id;
   }
-}
-
-/** As transações ainda não existem: por enquanto o saldo atual parte apenas do saldo inicial. */
-const NO_MOVEMENTS: readonly BalanceMovement[] = [];
-
-function withBalance(account: Account): AccountWithBalance {
-  return { ...account, currentBalance: calculateBalance(account, NO_MOVEMENTS) };
 }

@@ -64,13 +64,53 @@
       </div>
 
       <section class="account-detail__section" aria-labelledby="account-transactions-title">
-        <h2 id="account-transactions-title" class="account-detail__section-title">
-          Transações vinculadas
-        </h2>
-        <div class="account-detail__state">
-          <mat-icon aria-hidden="true">receipt_long</mat-icon>
-          <p>Nenhuma transação vinculada a esta conta.</p>
+        <div class="account-detail__section-header">
+          <h2 id="account-transactions-title" class="account-detail__section-title">
+            Transações vinculadas
+          </h2>
+          <a matButton routerLink="/transactions/new" [queryParams]="{ accountId: account.id }">
+            <mat-icon>add</mat-icon>
+            Nova transação
+          </a>
         </div>
+        @if (recentTransactions().length === 0) {
+          <div class="account-detail__state">
+            <mat-icon aria-hidden="true">receipt_long</mat-icon>
+            <p>Nenhuma transação vinculada a esta conta.</p>
+          </div>
+        } @else {
+          <mat-card appearance="outlined">
+            <ul class="account-detail__transactions">
+              @for (transaction of recentTransactions(); track transaction.id) {
+                <li class="account-detail__transaction">
+                  <span class="account-detail__transaction-date">
+                    {{ transaction.date | isoDate }}
+                  </span>
+                  <a
+                    class="account-detail__transaction-description"
+                    [routerLink]="['/transactions', transaction.id]"
+                  >
+                    {{ transaction.description }}
+                  </a>
+                  @if (transaction.status === 'pending') {
+                    <span class="account-detail__badge">Pendente</span>
+                  }
+                  <span class="account-detail__transaction-amount">
+                    {{ signForAccount(transaction, account.id) }}{{ transaction.amount | money }}
+                  </span>
+                </li>
+              }
+            </ul>
+          </mat-card>
+          <a
+            class="account-detail__see-all"
+            matButton
+            routerLink="/transactions"
+            [queryParams]="{ accountId: account.id }"
+          >
+            Ver na lista de transações ({{ linkedCount() }} no total)
+          </a>
+        }
       </section>
     }
   }

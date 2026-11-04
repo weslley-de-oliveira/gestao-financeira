@@ -7,6 +7,7 @@ import { Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { InMemoryUserRepository } from '../../../../testing/in-memory-user.repository';
 import { TEST_PROVIDERS } from '../../../../testing/test-providers';
+import { CRYPTO_WAIT } from '../../../../testing/wait';
 import { appConfig } from '../../../app.config';
 import { AuthService } from '../auth.service';
 
@@ -78,7 +79,7 @@ describe('RegisterPage', () => {
     await submit();
 
     // O hash da senha roda na Web Crypto, fora do controle do Angular: aguarda o resultado.
-    await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/dashboard'));
+    await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/dashboard'), CRYPTO_WAIT);
     expect(TestBed.inject(AuthService).currentUser()?.name).toBe('Ana Teste');
   });
 });

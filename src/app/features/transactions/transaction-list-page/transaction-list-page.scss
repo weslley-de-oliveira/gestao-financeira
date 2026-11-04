@@ -1,0 +1,225 @@
+@use 'breakpoints' as bp;
+
+.transactions__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.transactions__title {
+  margin: 0;
+  font: var(--mat-sys-headline-small);
+}
+
+.transactions__subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.transactions__summary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+
+  @include bp.md-up {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.transactions__summary-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem;
+}
+
+.summary-card__label {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-label-medium);
+}
+
+.summary-card__value {
+  font: var(--mat-sys-title-large);
+}
+
+.summary-card__value--income {
+  color: var(--mat-sys-primary);
+}
+
+.summary-card__value--expense {
+  color: var(--mat-sys-error);
+}
+
+.transactions__filters {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+
+  @include bp.md-up {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.transactions__search {
+  @include bp.md-up {
+    grid-column: 1 / -1;
+  }
+}
+
+.transactions__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 3rem 1rem;
+  border: 1px dashed var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-large);
+  color: var(--mat-sys-on-surface-variant);
+  text-align: center;
+
+  mat-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 2.5rem;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.transactions__results {
+  overflow: hidden;
+}
+
+.transactions__table {
+  width: 100%;
+}
+
+.transactions__link {
+  display: block;
+  color: inherit;
+  font: var(--mat-sys-body-large);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    border-radius: var(--mat-sys-corner-extra-small);
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+  }
+}
+
+.transactions__type,
+.transactions__category {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  mat-icon {
+    width: 1.125rem;
+    height: 1.125rem;
+    font-size: 1.125rem;
+  }
+}
+
+.transactions__type {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.transactions__muted {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.transactions__amount-cell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.transactions__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.transaction-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.25rem 0.75rem 1rem;
+
+  & + & {
+    border-top: 1px solid var(--mat-sys-outline-variant);
+  }
+}
+
+.transaction-item__main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.transaction-item__description {
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+  }
+}
+
+.transaction-item__meta {
+  overflow: hidden;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transaction-item__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.amount {
+  font: var(--mat-sys-title-small);
+  white-space: nowrap;
+}
+
+.amount--income {
+  color: var(--mat-sys-primary);
+}
+
+.amount--expense {
+  color: var(--mat-sys-error);
+}
+
+.badge {
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--mat-sys-corner-small);
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+  font: var(--mat-sys-label-small);
+}

@@ -38,7 +38,12 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/accounts/accounts.routes').then((m) => m.ACCOUNTS_ROUTES),
       },
-      { path: 'transactions', title: 'Transações', loadComponent: loadPlaceholder },
+      {
+        path: 'transactions',
+        title: 'Transações',
+        loadChildren: () =>
+          import('./features/transactions/transactions.routes').then((m) => m.TRANSACTIONS_ROUTES),
+      },
       {
         path: 'categories',
         title: 'Categorias',

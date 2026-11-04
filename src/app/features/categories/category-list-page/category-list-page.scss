@@ -83,9 +83,19 @@
   opacity: 0.72;
 }
 
-.category-row__name {
+.category-row__main {
+  display: flex;
   flex: 1;
+  flex-direction: column;
   min-width: 0;
+}
+
+.category-row__usage {
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+}
+
+.category-row__name {
   overflow: hidden;
   font: var(--mat-sys-body-large);
   text-overflow: ellipsis;

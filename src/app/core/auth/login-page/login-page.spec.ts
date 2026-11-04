@@ -7,6 +7,7 @@ import { MatInputHarness } from '@angular/material/input/testing';
 import { Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { TEST_PROVIDERS } from '../../../../testing/test-providers';
+import { CRYPTO_WAIT } from '../../../../testing/wait';
 import { appConfig } from '../../../app.config';
 import { AuthService } from '../auth.service';
 
@@ -67,7 +68,7 @@ describe('LoginPage', () => {
     await vi.waitFor(() => {
       harness.fixture.detectChanges();
       expect(alertText()).toBe('E-mail ou senha inválidos.');
-    });
+    }, CRYPTO_WAIT);
     expect(TestBed.inject(Router).url).toBe('/login');
   });
 
@@ -77,7 +78,7 @@ describe('LoginPage', () => {
 
     await submit();
 
-    await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/dashboard'));
+    await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/dashboard'), CRYPTO_WAIT);
     expect(TestBed.inject(AuthService).isAuthenticated()).toBe(true);
   });
 
@@ -87,6 +88,6 @@ describe('LoginPage', () => {
 
     await submit();
 
-    await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/goals'));
+    await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/goals'), CRYPTO_WAIT);
   });
 });
