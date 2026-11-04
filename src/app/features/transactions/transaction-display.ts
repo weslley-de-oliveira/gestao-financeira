@@ -1,20 +1,30 @@
 import { Account } from '../../shared/models/account';
 import { Category } from '../../shared/models/category';
 import { CreditCard } from '../../shared/models/credit-card';
-import { Transaction, TransactionType } from '../../shared/models/transaction';
+import {
+  Transaction,
+  TransactionType,
+  isCardPurchase,
+  isInvoicePayment,
+} from '../../shared/models/transaction';
 
 /** Ícone de cada tipo, exibido junto ao texto (o tipo nunca é indicado só por cor). */
 export const TRANSACTION_TYPE_ICONS: Readonly<Record<TransactionType, string>> = {
   expense: 'arrow_downward',
   income: 'arrow_upward',
   transfer: 'swap_horiz',
+  'invoice-payment': 'credit_score',
 };
 
-/** Sinal exibido antes do valor: despesas saem, receitas entram, transferências só movem. */
+/**
+ * Sinal exibido antes do valor: despesas e pagamentos de fatura saem, receitas entram,
+ * transferências só movem.
+ */
 export const TRANSACTION_SIGNS: Readonly<Record<TransactionType, string>> = {
   expense: '−',
   income: '+',
   transfer: '',
+  'invoice-payment': '−',
 };
 
 /** Nomes de contas, categorias e cartões por id, para exibir as transações. */
@@ -28,16 +38,35 @@ export function byId<T extends { id: string }>(items: readonly T[]): ReadonlyMap
   return new Map(items.map((item) => [item.id, item]));
 }
 
-/** "Corrente", em transferências "Corrente → Poupança" e, em compras, "Cartão Nubank". */
+/**
+ * "Corrente"; em transferências, "Corrente → Poupança"; em compras, "Cartão Nubank"; em
+ * pagamentos de fatura, "Corrente → Fatura Nubank".
+ */
 export function accountLabel(transaction: Transaction, lookups: TransactionLookups): string {
-  if (transaction.creditCardId) {
-    const card = lookups.creditCards.get(transaction.creditCardId);
-    return card ? `Cartão ${card.name}` : 'Cartão de crédito';
+  const account = (id: string | null) => (id && lookups.accounts.get(id)?.name) || 'Conta removida';
+  const card = (id: string | null) => (id && lookups.creditCards.get(id)?.name) || null;
+
+  if (isCardPurchase(transaction)) {
+    const name = card(transaction.creditCardId);
+    return name ? `Cartão ${name}` : 'Cartão de crédito';
   }
-  const name = (id: string | null) => (id && lookups.accounts.get(id)?.name) || 'Conta removida';
+  if (isInvoicePayment(transaction)) {
+    const name = card(transaction.creditCardId);
+    return `${account(transaction.accountId)} → ${name ? `Fatura ${name}` : 'Fatura do cartão'}`;
+  }
   return transaction.type === 'transfer'
-    ? `${name(transaction.accountId)} → ${name(transaction.destinationAccountId)}`
-    : name(transaction.accountId);
+    ? `${account(transaction.accountId)} → ${account(transaction.destinationAccountId)}`
+    : account(transaction.accountId);
+}
+
+/** Pagamentos de fatura só são criados e desfeitos pela tela de Faturas. */
+export function isEditable(transaction: Pick<Transaction, 'type'>): boolean {
+  return !isInvoicePayment(transaction);
+}
+
+/** Compras no cartão e pagamentos de fatura são sempre realizados. */
+export function canChangeStatus(transaction: Pick<Transaction, 'type' | 'creditCardId'>): boolean {
+  return !isCardPurchase(transaction) && !isInvoicePayment(transaction);
 }
 
 /**

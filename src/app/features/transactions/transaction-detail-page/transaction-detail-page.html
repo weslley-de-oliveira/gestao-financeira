@@ -36,11 +36,25 @@
           </p>
         </div>
         <div class="transaction-detail__actions">
-          <a matButton="outlined" [routerLink]="['/transactions', transaction.id, 'edit']">
-            <mat-icon>edit</mat-icon>
-            Editar
-          </a>
-          @if (!isCardPurchase(transaction)) {
+          @if (isEditable(transaction)) {
+            <a matButton="outlined" [routerLink]="['/transactions', transaction.id, 'edit']">
+              <mat-icon>edit</mat-icon>
+              Editar
+            </a>
+          } @else if (transaction.creditCardId) {
+            <a
+              matButton="outlined"
+              routerLink="/invoices"
+              [queryParams]="{
+                creditCardId: transaction.creditCardId,
+                month: transaction.invoiceMonth,
+              }"
+            >
+              <mat-icon>receipt_long</mat-icon>
+              Ver fatura
+            </a>
+          }
+          @if (canChangeStatus(transaction)) {
             <button matButton="outlined" type="button" (click)="toggleStatus(transaction)">
               <mat-icon>{{ transaction.status === 'pending' ? 'task_alt' : 'schedule' }}</mat-icon>
               {{
@@ -84,6 +98,11 @@
               {{ accountLabel(transaction, lookups()) }}
               @if (isCardPurchase(transaction)) {
                 <span class="transaction-detail__hint">(entra na fatura do cartão)</span>
+              }
+              @if (isInvoicePayment(transaction)) {
+                <span class="transaction-detail__hint"
+                  >(não é despesa: as compras já foram contadas)</span
+                >
               }
             </dd>
           </div>

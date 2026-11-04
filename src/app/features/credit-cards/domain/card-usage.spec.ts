@@ -18,11 +18,11 @@ describe('card usage', () => {
   };
 
   const purchases = [
-    { creditCardId: 'card', amount: 20_000, date: '2026-10-20' },
-    { creditCardId: 'card', amount: 15_050, date: '2026-11-04' },
-    { creditCardId: 'card', amount: 9_990, date: '2026-11-05' },
-    { creditCardId: 'other', amount: 50_000, date: '2026-11-01' },
-    { creditCardId: null, amount: 70_000, date: '2026-11-01' },
+    { type: 'expense' as const, creditCardId: 'card', amount: 20_000, date: '2026-10-20' },
+    { type: 'expense' as const, creditCardId: 'card', amount: 15_050, date: '2026-11-04' },
+    { type: 'expense' as const, creditCardId: 'card', amount: 9_990, date: '2026-11-05' },
+    { type: 'expense' as const, creditCardId: 'other', amount: 50_000, date: '2026-11-01' },
+    { type: 'expense' as const, creditCardId: null, amount: 70_000, date: '2026-11-01' },
   ];
 
   it('commits the limit with all purchases of the card', () => {
@@ -30,6 +30,28 @@ describe('card usage', () => {
 
     expect(usage.usedLimit).toBe(45_040);
     expect(usage.availableLimit).toBe(54_960);
+  });
+
+  it('releases the limit with the paid invoices of the card', () => {
+    const payments = [
+      {
+        type: 'invoice-payment' as const,
+        creditCardId: 'card',
+        amount: 35_050,
+        date: '2026-11-10',
+      },
+      {
+        type: 'invoice-payment' as const,
+        creditCardId: 'other',
+        amount: 9_000,
+        date: '2026-11-10',
+      },
+    ];
+
+    const usage = calculateCardUsage(card, [...purchases, ...payments], '2026-11-15');
+
+    expect(usage.usedLimit).toBe(9_990);
+    expect(usage.availableLimit).toBe(90_010);
   });
 
   it('sums only the purchases of the open invoice', () => {

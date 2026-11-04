@@ -1,4 +1,4 @@
-import { invoiceCycleFor } from './invoice-cycle';
+import { invoiceCycleFor, invoiceCycleForMonth } from './invoice-cycle';
 
 describe('invoiceCycleFor', () => {
   const card = { closingDay: 5, dueDay: 12 };
@@ -62,5 +62,32 @@ describe('invoiceCycleFor', () => {
 
   it('rejects an invalid date', () => {
     expect(() => invoiceCycleFor(card, '2026-02-30')).toThrow(RangeError);
+  });
+});
+
+describe('invoiceCycleForMonth', () => {
+  it('finds the invoice due in the reference month', () => {
+    expect(invoiceCycleForMonth({ closingDay: 5, dueDay: 12 }, '2026-12')).toEqual(
+      invoiceCycleFor({ closingDay: 5, dueDay: 12 }, '2026-11-20'),
+    );
+    expect(invoiceCycleForMonth({ closingDay: 25, dueDay: 5 }, '2027-01')).toMatchObject({
+      closingDate: '2026-12-25',
+      dueDate: '2027-01-05',
+      referenceMonth: '2027-01',
+    });
+  });
+
+  it('round-trips with the cycle of any purchase date', () => {
+    const card = { closingDay: 31, dueDay: 10 };
+    for (const date of ['2027-01-31', '2027-02-27', '2027-02-28', '2027-03-15']) {
+      const cycle = invoiceCycleFor(card, date);
+      expect(invoiceCycleForMonth(card, cycle.referenceMonth)).toEqual(cycle);
+    }
+  });
+
+  it('rejects an invalid month', () => {
+    expect(() => invoiceCycleForMonth({ closingDay: 5, dueDay: 12 }, '2026-13')).toThrow(
+      RangeError,
+    );
   });
 });

@@ -38,6 +38,21 @@ export function invoiceCycleFor(card: CardDays, date: IsoDate): InvoiceCycle {
   };
 }
 
+const REFERENCE_MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
+
+/** Fatura de um mês de referência (`yyyy-MM`, o mês do vencimento). */
+export function invoiceCycleForMonth(card: CardDays, referenceMonth: string): InvoiceCycle {
+  const match = REFERENCE_MONTH_PATTERN.exec(referenceMonth);
+  if (!match) {
+    throw new RangeError(`Invalid reference month: ${referenceMonth}`);
+  }
+  const dueMonth = Number(match[2]) - 1;
+  const closingMonth = dueMonth - (card.dueDay > card.closingDay ? 0 : 1);
+  const closing = dayOfMonth(Number(match[1]), closingMonth, card.closingDay);
+  // A véspera do fechamento é o último dia de compras dessa fatura.
+  return invoiceCycleFor(card, toIsoDate(subDays(closing, 1)));
+}
+
 /** Dia `day` do mês, limitado ao último dia; `month` fora de 0–11 avança ou recua o ano. */
 function dayOfMonth(year: number, month: number, day: number): Date {
   const first = new Date(year, month, 1);

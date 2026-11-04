@@ -30,7 +30,10 @@ export function movementEffect(movement: BalanceMovement, accountId: string): Ce
   switch (movement.type) {
     case 'income':
       return movement.accountId === accountId ? movement.amount : 0;
+    // O pagamento de fatura sai da conta como uma despesa, mas não é contado como despesa nos
+    // totais: as compras do cartão já foram.
     case 'expense':
+    case 'invoice-payment':
       return movement.accountId === accountId ? -movement.amount : 0;
     case 'transfer': {
       // Debita a origem e credita o destino: o patrimônio consolidado não muda.

@@ -62,7 +62,12 @@ export const routes: Routes = [
           import('./features/credit-cards/credit-cards.routes').then((m) => m.CREDIT_CARDS_ROUTES),
       },
       { path: 'budgets', title: 'Orçamentos', loadComponent: loadPlaceholder },
-      { path: 'invoices', title: 'Faturas', loadComponent: loadPlaceholder },
+      {
+        path: 'invoices',
+        title: 'Faturas',
+        loadComponent: () =>
+          import('./features/invoices/invoices-page/invoices-page').then((m) => m.InvoicesPage),
+      },
       { path: 'goals', title: 'Metas', loadComponent: loadPlaceholder },
       { path: 'settings', title: 'Configurações', loadComponent: loadPlaceholder },
       { path: 'security', title: 'Segurança', loadComponent: loadPlaceholder },

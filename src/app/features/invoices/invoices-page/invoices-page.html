@@ -1,0 +1,197 @@
+<header class="invoices__header">
+  <h1 class="invoices__title">Faturas</h1>
+</header>
+
+@switch (status()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando faturas" />
+  }
+  @case ('error') {
+    <div class="invoices__state" role="alert">
+      <mat-icon aria-hidden="true">cloud_off</mat-icon>
+      <p>Não foi possível carregar as faturas. Verifique se a API está em execução.</p>
+      <button matButton="outlined" type="button" (click)="reload()">Tentar novamente</button>
+    </div>
+  }
+  @case ('ready') {
+    @if (card(); as card) {
+      <div class="invoices__filters" role="group" aria-label="Selecionar fatura">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Cartão</mat-label>
+          <mat-select [value]="card.id" (selectionChange)="selectCard($event.value)">
+            @for (option of cardOptions(); track option.id) {
+              <mat-option [value]="option.id">
+                {{ option.name }} •••• {{ option.lastFourDigits
+                }}{{ option.isArchived ? ' (arquivado)' : '' }}
+              </mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        @if (invoice(); as invoice) {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Mês de referência</mat-label>
+            <mat-select
+              [value]="invoice.referenceMonth"
+              (selectionChange)="selectMonth($event.value)"
+            >
+              @for (item of invoices(); track item.referenceMonth) {
+                <mat-option [value]="item.referenceMonth">
+                  {{ monthLabel(item.referenceMonth) }} · {{ statusLabels[item.status] }}
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+      </div>
+
+      @if (invoice(); as invoice) {
+        <mat-card appearance="outlined" class="invoice">
+          <div class="invoice__summary">
+            <div>
+              <h2 class="invoice__title">
+                Fatura {{ monthLabel(invoice.referenceMonth) }} · {{ card.name }}
+              </h2>
+              <p class="invoice__total">{{ invoice.total | money }}</p>
+            </div>
+            <span class="invoice__status" [class]="'invoice__status--' + invoice.status">
+              {{ statusLabels[invoice.status] }}
+            </span>
+          </div>
+
+          <dl class="invoice__fields">
+            <div>
+              <dt>Compras de</dt>
+              <dd>{{ invoice.start | isoDate }} a {{ invoice.end | isoDate }}</dd>
+            </div>
+            <div>
+              <dt>Fechamento</dt>
+              <dd>{{ invoice.closingDate | isoDate }}</dd>
+            </div>
+            <div>
+              <dt>Vencimento</dt>
+              <dd>{{ invoice.dueDate | isoDate }}</dd>
+            </div>
+            <div>
+              <dt>Conta de pagamento</dt>
+              <dd>{{ paymentAccountName() }}</dd>
+            </div>
+          </dl>
+
+          <div class="invoice__payment" aria-live="polite">
+            @if (invoice.payment; as payment) {
+              <p>
+                <mat-icon aria-hidden="true">task_alt</mat-icon>
+                Paga em {{ payment.date | isoDate }}: {{ payment.amount | money }} da conta
+                {{ paymentAccountName() }}.
+              </p>
+              <button
+                matButton="outlined"
+                type="button"
+                [disabled]="busy()"
+                (click)="undoPayment(invoice)"
+              >
+                Desfazer pagamento
+              </button>
+            } @else if (canPay()) {
+              @if (invoice.status === 'overdue') {
+                <p class="invoice__overdue">
+                  <mat-icon aria-hidden="true">warning</mat-icon>
+                  Venceu em {{ invoice.dueDate | isoDate }}.
+                </p>
+              }
+              <button matButton="filled" type="button" [disabled]="busy()" (click)="pay(invoice)">
+                <mat-icon>payments</mat-icon>
+                Pagar {{ invoice.total | money }}
+              </button>
+            } @else if (invoice.status === 'open') {
+              <p class="invoice__hint">
+                A fatura está aberta e fecha em {{ invoice.closingDate | isoDate }}. O pagamento
+                fica disponível depois do fechamento.
+              </p>
+            } @else {
+              <p class="invoice__hint">Fatura sem compras: não há valor a pagar.</p>
+            }
+          </div>
+        </mat-card>
+
+        <section class="invoices__section" aria-labelledby="invoice-items-title">
+          <h2 id="invoice-items-title" class="invoices__section-title">
+            Compras ({{ invoice.purchases.length }})
+          </h2>
+          @if (invoice.purchases.length === 0) {
+            <div class="invoices__state">
+              <mat-icon aria-hidden="true">shopping_bag</mat-icon>
+              <p>Nenhuma compra nesta fatura.</p>
+              @if (!card.isArchived && invoice.status === 'open') {
+                <a
+                  matButton="outlined"
+                  routerLink="/transactions/new"
+                  [queryParams]="{ creditCardId: card.id }"
+                  >Registrar compra</a
+                >
+              }
+            </div>
+          } @else {
+            <mat-card appearance="outlined">
+              <ul class="invoice__items">
+                @for (purchase of invoice.purchases; track purchase.id) {
+                  <li class="invoice__item">
+                    <span class="invoice__item-date">{{ purchase.date | isoDate }}</span>
+                    <a
+                      class="invoice__item-description"
+                      [routerLink]="['/transactions', purchase.id]"
+                    >
+                      {{ purchase.description }}
+                    </a>
+                    <span class="invoice__item-amount">{{ purchase.amount | money }}</span>
+                  </li>
+                }
+                <li class="invoice__item invoice__item--total">
+                  <span class="invoice__item-description">Total</span>
+                  <span class="invoice__item-amount">{{ invoice.total | money }}</span>
+                </li>
+              </ul>
+            </mat-card>
+          }
+        </section>
+
+        <section class="invoices__section" aria-labelledby="invoice-history-title">
+          <h2 id="invoice-history-title" class="invoices__section-title">Histórico do cartão</h2>
+          <mat-card appearance="outlined">
+            <ul class="invoice__history">
+              @for (item of invoices(); track item.referenceMonth) {
+                <li>
+                  <button
+                    type="button"
+                    class="invoice__history-item"
+                    [class.invoice__history-item--selected]="
+                      item.referenceMonth === invoice.referenceMonth
+                    "
+                    [attr.aria-current]="item.referenceMonth === invoice.referenceMonth"
+                    (click)="selectMonth(item.referenceMonth)"
+                  >
+                    <span class="invoice__history-month">{{
+                      monthLabel(item.referenceMonth)
+                    }}</span>
+                    <span class="invoice__history-due">Vence {{ item.dueDate | isoDate }}</span>
+                    <span class="invoice__status" [class]="'invoice__status--' + item.status">
+                      {{ statusLabels[item.status] }}
+                    </span>
+                    <span class="invoice__history-total">{{ item.total | money }}</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          </mat-card>
+        </section>
+      }
+    } @else {
+      <div class="invoices__state">
+        <mat-icon aria-hidden="true">credit_card</mat-icon>
+        <p>Cadastre um cartão de crédito para acompanhar as faturas.</p>
+        <a matButton="filled" routerLink="/credit-cards/new">Cadastrar cartão</a>
+      </div>
+    }
+  }
+}

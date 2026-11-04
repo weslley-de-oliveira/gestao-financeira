@@ -3,8 +3,11 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { firstValueFrom } from 'rxjs';
 import { openConfirmDialog } from '../../shared/components/confirm-dialog/confirm-dialog';
-import { Transaction } from '../../shared/models/transaction';
-import { TransactionsFacade } from './transactions.facade';
+import { Transaction, isInvoicePayment } from '../../shared/models/transaction';
+import { PaidInvoiceError, TransactionsFacade } from './transactions.facade';
+
+export const PAID_INVOICE_MESSAGE =
+  'A fatura desta compra já foi paga. Desfaça o pagamento na tela de Faturas para alterá-la.';
 
 /** Ações sobre uma transação com feedback, compartilhadas pela listagem e pelo detalhe. */
 @Injectable({ providedIn: 'root' })
@@ -30,13 +33,18 @@ export class TransactionActions {
     }
   }
 
-  /** Exclui após confirmação. Retorna `true` se a transação foi excluída. */
+  /**
+   * Exclui após confirmação. Excluir um pagamento de fatura desfaz o pagamento. Retorna `true` se
+   * a transação foi excluída.
+   */
   async delete(transaction: Transaction): Promise<boolean> {
+    const payment = isInvoicePayment(transaction);
     const confirmed = await firstValueFrom(
       openConfirmDialog(this.dialog, {
         title: `Excluir "${transaction.description}"?`,
-        message:
-          'A transação será excluída definitivamente e o saldo da conta será recalculado. Esta ação não pode ser desfeita.',
+        message: payment
+          ? 'O pagamento será desfeito: o valor volta para a conta e a fatura volta a ficar em aberto.'
+          : 'A transação será excluída definitivamente e o saldo da conta será recalculado. Esta ação não pode ser desfeita.',
         confirmLabel: 'Excluir',
       }),
     );
@@ -45,10 +53,14 @@ export class TransactionActions {
     }
     try {
       await this.facade.delete(transaction.id);
-      this.notify('Transação excluída.');
+      this.notify(payment ? 'Pagamento desfeito.' : 'Transação excluída.');
       return true;
-    } catch {
-      this.notify('Não foi possível excluir a transação. Tente novamente.');
+    } catch (error) {
+      this.notify(
+        error instanceof PaidInvoiceError
+          ? PAID_INVOICE_MESSAGE
+          : 'Não foi possível excluir a transação. Tente novamente.',
+      );
       return false;
     }
   }

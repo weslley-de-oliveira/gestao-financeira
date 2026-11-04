@@ -30,14 +30,16 @@ import {
   defaultTransactionQuery,
   queryTransactions,
 } from '../domain/transaction-query';
-import { isCardPurchase, summarizeTransactions } from '../domain/transaction-rules';
+import { summarizeTransactions } from '../domain/transaction-rules';
 import { TransactionActions } from '../transaction-actions';
 import {
   TRANSACTION_SIGNS,
   TRANSACTION_TYPE_ICONS,
   accountLabel,
   byId,
+  canChangeStatus,
   categoryOf,
+  isEditable,
 } from '../transaction-display';
 import { TransactionsFacade } from '../transactions.facade';
 
@@ -194,8 +196,12 @@ export class TransactionListPage implements OnInit {
     return TRANSACTION_SIGNS[transaction.type];
   }
 
-  protected isCardPurchase(transaction: Transaction): boolean {
-    return isCardPurchase(transaction);
+  protected canChangeStatus(transaction: Transaction): boolean {
+    return canChangeStatus(transaction);
+  }
+
+  protected isEditable(transaction: Transaction): boolean {
+    return isEditable(transaction);
   }
 
   protected toggleStatus(transaction: Transaction): void {

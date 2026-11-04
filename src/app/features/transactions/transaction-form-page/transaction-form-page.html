@@ -13,6 +13,13 @@
     <p class="transaction-form__message" role="alert">Transação não encontrada.</p>
     <a matButton="outlined" routerLink="/transactions">Ver transações</a>
   }
+  @case ('not-editable') {
+    <p class="transaction-form__message" role="alert">
+      Pagamentos de fatura não são editados aqui. Para corrigir, desfaça o pagamento na tela de
+      Faturas e registre-o de novo.
+    </p>
+    <a matButton="outlined" routerLink="/invoices">Ver faturas</a>
+  }
   @case ('error') {
     <p class="transaction-form__message" role="alert">
       Não foi possível carregar os dados. Tente novamente em instantes.

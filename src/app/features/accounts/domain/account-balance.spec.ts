@@ -37,6 +37,16 @@ describe('account balance', () => {
     expect(movementEffect(transfer, 'other')).toBe(0);
   });
 
+  it('debits invoice payments and ignores card purchases', () => {
+    const movements: BalanceMovement[] = [
+      { type: 'expense', amount: 40_000, accountId: null },
+      { type: 'invoice-payment', amount: 40_000, accountId: 'checking' },
+    ];
+
+    expect(calculateBalance(checking, movements)).toBe(60_000);
+    expect(calculateBalance(savings, movements)).toBe(50_000);
+  });
+
   it('ignores pending movements', () => {
     const movements: BalanceMovement[] = [
       { type: 'income', amount: 30_000, accountId: 'checking', status: 'completed' },

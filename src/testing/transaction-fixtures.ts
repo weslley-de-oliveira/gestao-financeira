@@ -17,6 +17,7 @@ export function seedTransactions(
     date: '2026-11-10',
     accountId: 'account-1',
     creditCardId: null,
+    invoiceMonth: null,
     destinationAccountId: null,
     categoryId: 'category-1',
     status: 'completed',

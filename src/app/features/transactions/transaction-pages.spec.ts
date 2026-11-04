@@ -200,6 +200,48 @@ describe('transaction pages', () => {
       expect(items.join(' ')).not.toMatch(/pendente/i);
     });
 
+    it('shows invoice payments outside the totals and only allows deleting them', async () => {
+      seedCreditCards(userId, { name: 'Roxinho' });
+      seedTransactions(userId, {
+        description: 'Fatura Roxinho 11/2026',
+        type: 'invoice-payment',
+        creditCardId: 'card-1',
+        invoiceMonth: '2026-11',
+        categoryId: null,
+        amount: 20_000,
+      });
+
+      await open('/transactions');
+
+      expect(text()).toContain('Corrente → Fatura Roxinho');
+      expect(text()).toMatch(/Despesas\s*R\$\s0,00/);
+      const menu = await loader.getHarness(
+        MatMenuHarness.with({
+          selector: '[aria-label="Ações da transação Fatura Roxinho 11/2026"]',
+        }),
+      );
+      await menu.open();
+      const items = await Promise.all((await menu.getItems()).map((item) => item.getText()));
+      expect(items.join(' ')).not.toMatch(/Editar|pendente|realizada/i);
+      expect(items.join(' ')).toMatch(/Excluir/);
+    });
+
+    it('does not open invoice payments in the transaction form', async () => {
+      const [payment] = seedTransactions(userId, {
+        type: 'invoice-payment',
+        creditCardId: 'card-1',
+        invoiceMonth: '2026-11',
+        categoryId: null,
+      });
+
+      await open(`/transactions/${payment.id}/edit`);
+
+      await vi.waitFor(async () => {
+        await harness.fixture.whenStable();
+        expect(text()).toContain('Pagamentos de fatura não são editados aqui.');
+      });
+    });
+
     it('paginates on the client', async () => {
       seedTransactions(
         userId,

@@ -1,13 +1,23 @@
 import { Cents } from '../utils/money';
 
-export const TRANSACTION_TYPES = ['expense', 'income', 'transfer'] as const;
+export const TRANSACTION_TYPES = ['expense', 'income', 'transfer', 'invoice-payment'] as const;
 
+/**
+ * `invoice-payment` é o pagamento de uma fatura de cartão: debita a conta de pagamento, mas não é
+ * despesa (as compras já foram contadas). É criado e desfeito apenas pela tela de Faturas.
+ */
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
+
+/** Tipos que a pessoa cria e edita pelo formulário de transações. */
+export const EDITABLE_TRANSACTION_TYPES = ['expense', 'income', 'transfer'] as const;
+
+export type EditableTransactionType = (typeof EDITABLE_TRANSACTION_TYPES)[number];
 
 export const TRANSACTION_TYPE_LABELS: Readonly<Record<TransactionType, string>> = {
   expense: 'Despesa',
   income: 'Receita',
   transfer: 'Transferência',
+  'invoice-payment': 'Pagamento de fatura',
 };
 
 export const TRANSACTION_STATUSES = ['completed', 'pending'] as const;
@@ -33,20 +43,31 @@ export interface Transaction {
   /** Data da transação, sem horário: `yyyy-MM-dd`. */
   date: string;
   /**
-   * Conta da receita/despesa ou conta de origem da transferência. `null` nas compras no cartão:
-   * elas não alteram o saldo de nenhuma conta até o pagamento da fatura.
+   * Conta da receita/despesa, conta de origem da transferência ou conta que pagou a fatura.
+   * `null` nas compras no cartão: elas não alteram o saldo de nenhuma conta.
    */
   accountId: string | null;
   /**
-   * Cartão de uma compra (apenas despesas, sempre realizadas); `null` nas demais transações.
-   * Toda transação tem conta ou cartão, nunca os dois.
+   * Cartão de uma compra (despesa sempre realizada, sem conta) ou da fatura paga; `null` nas
+   * demais transações.
    */
   creditCardId: string | null;
+  /** Mês de referência (`yyyy-MM`) da fatura paga; apenas em `invoice-payment`. */
+  invoiceMonth: string | null;
   /** Apenas em transferências. */
   destinationAccountId: string | null;
-  /** Obrigatória em receitas e despesas, compatível com o tipo; `null` em transferências. */
+  /** Obrigatória em receitas e despesas, compatível com o tipo; `null` nos demais tipos. */
   categoryId: string | null;
   status: TransactionStatus;
   notes: string | null;
   createdAt: string;
+}
+
+/** Compra no cartão de crédito: despesa sem conta, lançada na fatura do cartão. */
+export function isCardPurchase(transaction: Pick<Transaction, 'type' | 'creditCardId'>): boolean {
+  return transaction.type === 'expense' && transaction.creditCardId !== null;
+}
+
+export function isInvoicePayment(transaction: Pick<Transaction, 'type'>): boolean {
+  return transaction.type === 'invoice-payment';
 }

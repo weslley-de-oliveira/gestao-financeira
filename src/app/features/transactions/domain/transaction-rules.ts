@@ -2,10 +2,10 @@ import { Account } from '../../../shared/models/account';
 import { Category } from '../../../shared/models/category';
 import { CreditCard } from '../../../shared/models/credit-card';
 import {
+  EDITABLE_TRANSACTION_TYPES,
   TRANSACTION_DESCRIPTION_MAX_LENGTH,
   TRANSACTION_NOTES_MAX_LENGTH,
   TRANSACTION_STATUSES,
-  TRANSACTION_TYPES,
   Transaction,
 } from '../../../shared/models/transaction';
 import { isIsoDate } from '../../../shared/utils/date';
@@ -27,11 +27,6 @@ export type TransactionInput = Pick<
   | 'notes'
 >;
 
-/** Compra no cartão de crédito: despesa sem conta, lançada na fatura do cartão. */
-export function isCardPurchase(transaction: Pick<Transaction, 'creditCardId'>): boolean {
-  return transaction.creditCardId !== null;
-}
-
 export class InvalidTransactionInputError extends Error {
   constructor(readonly field: keyof TransactionInput) {
     super(`Invalid transaction ${field}`);
@@ -43,6 +38,7 @@ export class InvalidTransactionInputError extends Error {
  * Valida e normaliza os dados da transação. Transferências exigem contas diferentes e não têm
  * categoria; receitas e despesas exigem categoria e não têm conta de destino. Compras no cartão
  * são despesas sem conta e sempre realizadas: comprometem o limite desde a data da compra.
+ * Pagamentos de fatura não passam por aqui: são criados pela facade de Faturas.
  */
 export function normalizeTransactionInput(input: TransactionInput): TransactionInput {
   const description = collapseWhitespace(input.description);
@@ -50,7 +46,7 @@ export function normalizeTransactionInput(input: TransactionInput): TransactionI
   const isTransfer = input.type === 'transfer';
   const cardPurchase = !!input.creditCardId;
 
-  if (!TRANSACTION_TYPES.includes(input.type)) {
+  if (!EDITABLE_TRANSACTION_TYPES.some((type) => type === input.type)) {
     throw new InvalidTransactionInputError('type');
   }
   if (!description || description.length > TRANSACTION_DESCRIPTION_MAX_LENGTH) {

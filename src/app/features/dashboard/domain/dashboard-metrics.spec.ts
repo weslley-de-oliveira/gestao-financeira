@@ -36,6 +36,7 @@ function transaction(overrides: Partial<Transaction>): Transaction {
     date: '2026-11-10',
     accountId: 'a1',
     creditCardId: null,
+    invoiceMonth: null,
     destinationAccountId: null,
     categoryId: 'c1',
     status: 'completed',

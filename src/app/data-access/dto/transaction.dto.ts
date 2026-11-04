@@ -11,6 +11,8 @@ export interface TransactionDto {
   accountId: string | null;
   /** Ausente nos registros anteriores aos cartões. */
   creditCardId?: string | null;
+  /** Ausente nos registros anteriores às faturas. */
+  invoiceMonth?: string | null;
   destinationAccountId: string | null;
   categoryId: string | null;
   status: TransactionStatus;
@@ -28,6 +30,7 @@ export function toTransaction(dto: TransactionDto): Transaction {
     date: dto.date,
     accountId: dto.accountId ?? null,
     creditCardId: dto.creditCardId ?? null,
+    invoiceMonth: dto.invoiceMonth ?? null,
     destinationAccountId: dto.destinationAccountId ?? null,
     categoryId: dto.categoryId ?? null,
     status: dto.status ?? 'completed',

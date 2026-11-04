@@ -12,7 +12,11 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { TODAY } from '../../../core/services/period.service';
 import { MoneyMaskDirective } from '../../../shared/directives/money-mask.directive';
-import { TRANSACTION_TYPES, Transaction } from '../../../shared/models/transaction';
+import {
+  EDITABLE_TRANSACTION_TYPES,
+  Transaction,
+  isInvoicePayment,
+} from '../../../shared/models/transaction';
 import { AccountsFacade } from '../../accounts/accounts.facade';
 import { CategoriesFacade } from '../../categories/categories.facade';
 import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
@@ -25,9 +29,11 @@ import {
   toTransactionInput,
   transactionSchema,
 } from '../forms/transaction.schema';
-import { TransactionsFacade } from '../transactions.facade';
+import { PAID_INVOICE_MESSAGE } from '../transaction-actions';
+import { PaidInvoiceError, TransactionsFacade } from '../transactions.facade';
 
-type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
+/** `not-editable`: pagamentos de fatura só são criados e desfeitos pela tela de Faturas. */
+type LoadState = 'loading' | 'ready' | 'not-found' | 'not-editable' | 'error';
 
 /** Mensagens para as referências recusadas pela facade (conta ou categoria indisponível). */
 const REFERENCE_ERRORS: Partial<Record<keyof TransactionInput, string>> = {
@@ -146,7 +152,11 @@ export class TransactionFormPage implements OnInit {
         if (error instanceof InvalidTransactionInputError && message) {
           return { kind: 'reference', message, fieldTree: field[error.field] };
         }
-        this.errorMessage.set('Não foi possível salvar a transação. Tente novamente em instantes.');
+        this.errorMessage.set(
+          error instanceof PaidInvoiceError
+            ? PAID_INVOICE_MESSAGE
+            : 'Não foi possível salvar a transação. Tente novamente em instantes.',
+        );
       }
       return undefined;
     });
@@ -169,6 +179,10 @@ export class TransactionFormPage implements OnInit {
         this.loadState.set('not-found');
         return;
       }
+      if (transaction && isInvoicePayment(transaction)) {
+        this.loadState.set('not-editable');
+        return;
+      }
       this.original.set(transaction);
       this.model.set(transaction ? toTransactionFormModel(transaction) : this.prefilledModel());
       this.loadState.set('ready');
@@ -189,7 +203,7 @@ export class TransactionFormPage implements OnInit {
         creditCardId: card.id,
       });
     }
-    const type = TRANSACTION_TYPES.find((value) => value === this.type()) ?? 'expense';
+    const type = EDITABLE_TRANSACTION_TYPES.find((value) => value === this.type()) ?? 'expense';
     const accounts = this.accountOptions();
     const accountId =
       accounts.find((account) => account.id === this.accountId())?.id ??

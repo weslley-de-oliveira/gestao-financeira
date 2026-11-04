@@ -48,6 +48,7 @@ function transaction(overrides: Partial<Transaction>): Transaction {
     userId: 'user',
     ...expense,
     description: 'Transação',
+    invoiceMonth: null,
     notes: null,
     createdAt: '2026-11-01T10:00:00.000Z',
     ...overrides,

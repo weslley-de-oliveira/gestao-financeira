@@ -14,14 +14,16 @@ import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 import { AccountsFacade } from '../../accounts/accounts.facade';
 import { CategoriesFacade } from '../../categories/categories.facade';
 import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
-import { isCardPurchase } from '../domain/transaction-rules';
+import { isCardPurchase, isInvoicePayment } from '../../../shared/models/transaction';
 import { TransactionActions } from '../transaction-actions';
 import {
   TRANSACTION_SIGNS,
   TRANSACTION_TYPE_ICONS,
   accountLabel,
   byId,
+  canChangeStatus,
   categoryOf,
+  isEditable,
 } from '../transaction-display';
 import { TransactionsFacade } from '../transactions.facade';
 
@@ -66,6 +68,9 @@ export class TransactionDetailPage implements OnInit {
   protected readonly accountLabel = accountLabel;
   protected readonly categoryOf = categoryOf;
   protected readonly isCardPurchase = isCardPurchase;
+  protected readonly isInvoicePayment = isInvoicePayment;
+  protected readonly isEditable = isEditable;
+  protected readonly canChangeStatus = canChangeStatus;
 
   ngOnInit(): void {
     void this.load();

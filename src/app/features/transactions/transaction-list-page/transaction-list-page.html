@@ -75,6 +75,7 @@
             <mat-option value="expense">Despesas</mat-option>
             <mat-option value="income">Receitas</mat-option>
             <mat-option value="transfer">Transferências</mat-option>
+            <mat-option value="invoice-payment">Pagamentos de fatura</mat-option>
           </mat-select>
         </mat-form-field>
 
@@ -287,11 +288,13 @@
       <mat-icon>visibility</mat-icon>
       <span>Visualizar</span>
     </a>
-    <a mat-menu-item [routerLink]="[transaction.id, 'edit']">
-      <mat-icon>edit</mat-icon>
-      <span>Editar</span>
-    </a>
-    @if (!isCardPurchase(transaction)) {
+    @if (isEditable(transaction)) {
+      <a mat-menu-item [routerLink]="[transaction.id, 'edit']">
+        <mat-icon>edit</mat-icon>
+        <span>Editar</span>
+      </a>
+    }
+    @if (canChangeStatus(transaction)) {
       <button mat-menu-item type="button" (click)="toggleStatus(transaction)">
         <mat-icon>{{ transaction.status === 'pending' ? 'task_alt' : 'schedule' }}</mat-icon>
         <span>
