@@ -3,12 +3,14 @@ import { TODAY } from '../app/core/services/period.service';
 import { PBKDF2_ITERATIONS } from '../app/core/security/password-hasher';
 import { AccountRepository } from '../app/data-access/repositories/account.repository';
 import { CategoryRepository } from '../app/data-access/repositories/category.repository';
+import { CreditCardRepository } from '../app/data-access/repositories/credit-card.repository';
 import { TransactionRepository } from '../app/data-access/repositories/transaction.repository';
 import { UserRepository } from '../app/data-access/repositories/user.repository';
 import { CHART_RENDERER } from '../app/shared/components/chart/chart-spec';
 import { FakeChartRenderer } from './fake-chart-renderer';
 import { InMemoryAccountRepository } from './in-memory-account.repository';
 import { InMemoryCategoryRepository } from './in-memory-category.repository';
+import { InMemoryCreditCardRepository } from './in-memory-credit-card.repository';
 import { InMemoryTransactionRepository } from './in-memory-transaction.repository';
 import { InMemoryUserRepository } from './in-memory-user.repository';
 
@@ -28,6 +30,8 @@ export const TEST_PROVIDERS: Provider[] = [
   { provide: CategoryRepository, useExisting: InMemoryCategoryRepository },
   InMemoryTransactionRepository,
   { provide: TransactionRepository, useExisting: InMemoryTransactionRepository },
+  InMemoryCreditCardRepository,
+  { provide: CreditCardRepository, useExisting: InMemoryCreditCardRepository },
   FakeChartRenderer,
   { provide: CHART_RENDERER, useExisting: FakeChartRenderer },
   { provide: TODAY, useValue: () => new Date(TEST_TODAY) },

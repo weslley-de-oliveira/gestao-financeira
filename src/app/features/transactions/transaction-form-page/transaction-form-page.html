@@ -39,6 +39,21 @@
           </mat-button-toggle-group>
         </div>
 
+        @if (transactionForm.type().value() === 'expense' && creditCardOptions().length > 0) {
+          <div class="transaction-form__group">
+            <span id="transaction-payment-label" class="transaction-form__label"
+              >Forma de pagamento</span
+            >
+            <mat-button-toggle-group
+              aria-labelledby="transaction-payment-label"
+              [formField]="transactionForm.paymentMethod"
+            >
+              <mat-button-toggle value="account">Conta</mat-button-toggle>
+              <mat-button-toggle value="credit-card">Cartão de crédito</mat-button-toggle>
+            </mat-button-toggle-group>
+          </div>
+        }
+
         <mat-form-field appearance="outline">
           <mat-label>Descrição</mat-label>
           <input matInput autocomplete="off" [formField]="transactionForm.description" />
@@ -77,19 +92,37 @@
         </div>
 
         <div class="transaction-form__row">
-          <mat-form-field appearance="outline">
-            <mat-label>{{ isTransfer() ? 'Conta de origem' : 'Conta' }}</mat-label>
-            <mat-select [formField]="transactionForm.accountId">
-              @for (account of accountOptions(); track account.id) {
-                <mat-option [value]="account.id">
-                  {{ account.name }}{{ account.isArchived ? ' (arquivada)' : '' }}
-                </mat-option>
+          @if (isCardPurchase()) {
+            <mat-form-field appearance="outline">
+              <mat-label>Cartão</mat-label>
+              <mat-select [formField]="transactionForm.creditCardId">
+                @for (card of creditCardOptions(); track card.id) {
+                  <mat-option [value]="card.id">
+                    {{ card.name }} •••• {{ card.lastFourDigits
+                    }}{{ card.isArchived ? ' (arquivado)' : '' }}
+                  </mat-option>
+                }
+              </mat-select>
+              <mat-hint>A compra entra na fatura e não altera o saldo das contas.</mat-hint>
+              @if (transactionForm.creditCardId().errors()[0]; as error) {
+                <mat-error>{{ error.message }}</mat-error>
               }
-            </mat-select>
-            @if (transactionForm.accountId().errors()[0]; as error) {
-              <mat-error>{{ error.message }}</mat-error>
-            }
-          </mat-form-field>
+            </mat-form-field>
+          } @else {
+            <mat-form-field appearance="outline">
+              <mat-label>{{ isTransfer() ? 'Conta de origem' : 'Conta' }}</mat-label>
+              <mat-select [formField]="transactionForm.accountId">
+                @for (account of accountOptions(); track account.id) {
+                  <mat-option [value]="account.id">
+                    {{ account.name }}{{ account.isArchived ? ' (arquivada)' : '' }}
+                  </mat-option>
+                }
+              </mat-select>
+              @if (transactionForm.accountId().errors()[0]; as error) {
+                <mat-error>{{ error.message }}</mat-error>
+              }
+            </mat-form-field>
+          }
 
           @if (isTransfer()) {
             <mat-form-field appearance="outline">
@@ -125,19 +158,22 @@
           }
         </div>
 
-        <div class="transaction-form__group">
-          <span id="transaction-status-label" class="transaction-form__label">Status</span>
-          <mat-button-toggle-group
-            aria-labelledby="transaction-status-label"
-            [formField]="transactionForm.status"
-          >
-            <mat-button-toggle value="completed">Realizada</mat-button-toggle>
-            <mat-button-toggle value="pending">Pendente</mat-button-toggle>
-          </mat-button-toggle-group>
-          <span class="transaction-form__hint"
-            >Transações pendentes não alteram o saldo da conta.</span
-          >
-        </div>
+        <!-- Compras no cartão são sempre realizadas. -->
+        @if (!isCardPurchase()) {
+          <div class="transaction-form__group">
+            <span id="transaction-status-label" class="transaction-form__label">Status</span>
+            <mat-button-toggle-group
+              aria-labelledby="transaction-status-label"
+              [formField]="transactionForm.status"
+            >
+              <mat-button-toggle value="completed">Realizada</mat-button-toggle>
+              <mat-button-toggle value="pending">Pendente</mat-button-toggle>
+            </mat-button-toggle-group>
+            <span class="transaction-form__hint"
+              >Transações pendentes não alteram o saldo da conta.</span
+            >
+          </div>
+        }
 
         <mat-form-field appearance="outline">
           <mat-label>Observações (opcional)</mat-label>

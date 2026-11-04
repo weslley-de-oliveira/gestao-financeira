@@ -8,7 +8,9 @@ export interface TransactionDto {
   description: string;
   amount: number;
   date: string;
-  accountId: string;
+  accountId: string | null;
+  /** Ausente nos registros anteriores aos cartões. */
+  creditCardId?: string | null;
   destinationAccountId: string | null;
   categoryId: string | null;
   status: TransactionStatus;
@@ -24,7 +26,8 @@ export function toTransaction(dto: TransactionDto): Transaction {
     description: dto.description,
     amount: dto.amount,
     date: dto.date,
-    accountId: dto.accountId,
+    accountId: dto.accountId ?? null,
+    creditCardId: dto.creditCardId ?? null,
     destinationAccountId: dto.destinationAccountId ?? null,
     categoryId: dto.categoryId ?? null,
     status: dto.status ?? 'completed',

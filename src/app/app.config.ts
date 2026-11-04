@@ -16,8 +16,10 @@ import { AuthService } from './core/auth/auth.service';
 import { AppTitleStrategy } from './core/layout/app-title-strategy';
 import { AccountRepository } from './data-access/repositories/account.repository';
 import { CategoryRepository } from './data-access/repositories/category.repository';
+import { CreditCardRepository } from './data-access/repositories/credit-card.repository';
 import { HttpAccountRepository } from './data-access/repositories/http-account.repository';
 import { HttpCategoryRepository } from './data-access/repositories/http-category.repository';
+import { HttpCreditCardRepository } from './data-access/repositories/http-credit-card.repository';
 import { HttpTransactionRepository } from './data-access/repositories/http-transaction.repository';
 import { HttpUserRepository } from './data-access/repositories/http-user.repository';
 import { TransactionRepository } from './data-access/repositories/transaction.repository';
@@ -36,6 +38,7 @@ export const appConfig: ApplicationConfig = {
     { provide: AccountRepository, useClass: HttpAccountRepository },
     { provide: CategoryRepository, useClass: HttpCategoryRepository },
     { provide: TransactionRepository, useClass: HttpTransactionRepository },
+    { provide: CreditCardRepository, useClass: HttpCreditCardRepository },
     { provide: TitleStrategy, useExisting: AppTitleStrategy },
     { provide: LOCALE_ID, useValue: 'pt-BR' },
     { provide: DEFAULT_CURRENCY_CODE, useValue: 'BRL' },

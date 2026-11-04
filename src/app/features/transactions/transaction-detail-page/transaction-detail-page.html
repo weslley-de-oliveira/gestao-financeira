@@ -40,12 +40,14 @@
             <mat-icon>edit</mat-icon>
             Editar
           </a>
-          <button matButton="outlined" type="button" (click)="toggleStatus(transaction)">
-            <mat-icon>{{ transaction.status === 'pending' ? 'task_alt' : 'schedule' }}</mat-icon>
-            {{
-              transaction.status === 'pending' ? 'Marcar como realizada' : 'Marcar como pendente'
-            }}
-          </button>
+          @if (!isCardPurchase(transaction)) {
+            <button matButton="outlined" type="button" (click)="toggleStatus(transaction)">
+              <mat-icon>{{ transaction.status === 'pending' ? 'task_alt' : 'schedule' }}</mat-icon>
+              {{
+                transaction.status === 'pending' ? 'Marcar como realizada' : 'Marcar como pendente'
+              }}
+            </button>
+          }
           <button matButton="outlined" type="button" (click)="delete(transaction)">
             <mat-icon>delete</mat-icon>
             Excluir
@@ -69,8 +71,21 @@
             </dd>
           </div>
           <div>
-            <dt>{{ transaction.type === 'transfer' ? 'Contas' : 'Conta' }}</dt>
-            <dd>{{ accountLabel(transaction, lookups()) }}</dd>
+            <dt>
+              {{
+                isCardPurchase(transaction)
+                  ? 'Pagamento'
+                  : transaction.type === 'transfer'
+                    ? 'Contas'
+                    : 'Conta'
+              }}
+            </dt>
+            <dd>
+              {{ accountLabel(transaction, lookups()) }}
+              @if (isCardPurchase(transaction)) {
+                <span class="transaction-detail__hint">(entra na fatura do cartão)</span>
+              }
+            </dd>
           </div>
           @if (categoryOf(transaction, lookups()); as category) {
             <div>

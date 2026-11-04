@@ -15,6 +15,7 @@ const expense: TransactionInput = {
   amount: 25_090,
   date: '2026-11-04',
   accountId: 'checking',
+  creditCardId: null,
   destinationAccountId: null,
   categoryId: 'food',
   status: 'completed',
@@ -104,6 +105,10 @@ describe('transaction rules', () => {
         { id: 'salary', type: 'income', isArchived: false },
         { id: 'old-category', type: 'expense', isArchived: true },
       ],
+      creditCards: [
+        { id: 'card', isArchived: false },
+        { id: 'old-card', isArchived: true },
+      ],
     };
 
     it('accepts existing active references', () => {
@@ -135,6 +140,57 @@ describe('transaction rules', () => {
       const previous = { ...expense, accountId: 'old', categoryId: 'old-category' };
       expect(() => assertValidReferences(previous, references, previous)).not.toThrow();
       expect(fieldOf(() => assertValidReferences(previous, references, expense))).toBe('accountId');
+    });
+
+    it('validates the card of a purchase instead of an account', () => {
+      const purchase = { ...expense, accountId: null, creditCardId: 'card' };
+      expect(() => assertValidReferences(purchase, references)).not.toThrow();
+      expect(
+        fieldOf(() => assertValidReferences({ ...purchase, creditCardId: 'x' }, references)),
+      ).toBe('creditCardId');
+
+      const archived = { ...purchase, creditCardId: 'old-card' };
+      expect(fieldOf(() => assertValidReferences(archived, references))).toBe('creditCardId');
+      expect(() => assertValidReferences(archived, references, archived)).not.toThrow();
+    });
+  });
+
+  describe('card purchases', () => {
+    const purchase: TransactionInput = { ...expense, accountId: null, creditCardId: 'card' };
+
+    it('are always completed expenses without an account', () => {
+      expect(
+        normalizeTransactionInput({ ...purchase, accountId: 'checking', status: 'pending' }),
+      ).toMatchObject({ accountId: null, creditCardId: 'card', status: 'completed' });
+    });
+
+    it('cannot be incomes or transfers', () => {
+      expect(fieldOf(() => normalizeTransactionInput({ ...purchase, type: 'income' }))).toBe(
+        'creditCardId',
+      );
+      expect(
+        fieldOf(() =>
+          normalizeTransactionInput({
+            ...purchase,
+            type: 'transfer',
+            destinationAccountId: 'savings',
+          }),
+        ),
+      ).toBe('creditCardId');
+    });
+
+    it('requires an account when there is no card', () => {
+      expect(fieldOf(() => normalizeTransactionInput({ ...expense, accountId: null }))).toBe(
+        'accountId',
+      );
+    });
+
+    it('count as expenses in the summary', () => {
+      const summary = summarizeTransactions([
+        transaction({ amount: 10_000 }),
+        transaction({ amount: 5_000, accountId: null, creditCardId: 'card' }),
+      ]);
+      expect(summary.expense).toBe(15_000);
     });
   });
 
@@ -174,6 +230,13 @@ describe('transaction rules', () => {
         status: 'pending',
         notes: 'Outubro',
       }),
+      transaction({
+        description: 'Farmácia',
+        accountId: null,
+        creditCardId: 'card',
+        date: '2026-11-02',
+        amount: 4_500,
+      }),
     ];
     const november = { start: '2026-11-01', end: '2026-11-30' };
 
@@ -189,11 +252,16 @@ describe('transaction rules', () => {
     }
 
     it('limits to the period and sorts by most recent date', () => {
-      expect(descriptions({})).toEqual(['Salário', 'Reserva', 'Mercado']);
+      expect(descriptions({})).toEqual(['Salário', 'Reserva', 'Mercado', 'Farmácia']);
+    });
+
+    it('filters card purchases by the card id in the account filter', () => {
+      expect(descriptions({ accountId: 'card' })).toEqual(['Farmácia']);
+      expect(descriptions({ accountId: 'checking' })).toEqual(['Salário', 'Reserva', 'Mercado']);
     });
 
     it('combines filters', () => {
-      expect(descriptions({ type: 'expense' })).toEqual(['Mercado']);
+      expect(descriptions({ type: 'expense' })).toEqual(['Mercado', 'Farmácia']);
       expect(descriptions({ accountId: 'savings' })).toEqual(['Reserva']);
       expect(descriptions({ categoryId: 'salary' })).toEqual(['Salário']);
       expect(
@@ -208,8 +276,18 @@ describe('transaction rules', () => {
     });
 
     it('sorts by amount', () => {
-      expect(descriptions({ sort: 'amount-asc' })).toEqual(['Mercado', 'Reserva', 'Salário']);
-      expect(descriptions({ sort: 'date-asc' })).toEqual(['Mercado', 'Reserva', 'Salário']);
+      expect(descriptions({ sort: 'amount-asc' })).toEqual([
+        'Farmácia',
+        'Mercado',
+        'Reserva',
+        'Salário',
+      ]);
+      expect(descriptions({ sort: 'date-asc' })).toEqual([
+        'Farmácia',
+        'Mercado',
+        'Reserva',
+        'Salário',
+      ]);
     });
   });
 });

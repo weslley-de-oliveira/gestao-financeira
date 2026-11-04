@@ -1,0 +1,159 @@
+<a class="card-form__back" matButton [routerLink]="cancelLink()">
+  <mat-icon>arrow_back</mat-icon>
+  Voltar
+</a>
+
+<h1 class="card-form__title">{{ isEdit() ? 'Editar cartão' : 'Novo cartão' }}</h1>
+
+@switch (loadState()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando cartão" />
+  }
+  @case ('not-found') {
+    <p class="card-form__message" role="alert">Cartão não encontrado.</p>
+    <a matButton="outlined" routerLink="/credit-cards">Ver cartões</a>
+  }
+  @case ('error') {
+    <p class="card-form__message" role="alert">
+      Não foi possível carregar os dados. Tente novamente em instantes.
+    </p>
+  }
+  @case ('ready') {
+    @if (accountOptions().length === 0) {
+      <div class="card-form__empty">
+        <p>Cadastre uma conta antes: ela será usada para pagar as faturas do cartão.</p>
+        <a matButton="filled" routerLink="/accounts/new">Cadastrar conta</a>
+      </div>
+    } @else {
+      <p class="card-form__notice">
+        <mat-icon aria-hidden="true">shield</mat-icon>
+        <span
+          >Use apenas dados fictícios. O sistema nunca pede o número completo, o código de segurança
+          (CVV) nem a senha do cartão.</span
+        >
+      </p>
+
+      <form class="card-form" novalidate (submit)="onSubmit($event)">
+        <mat-form-field appearance="outline">
+          <mat-label>Apelido do cartão</mat-label>
+          <input matInput autocomplete="off" [formField]="cardForm.name" />
+          @if (cardForm.name().errors()[0]; as error) {
+            <mat-error>{{ error.message }}</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="card-form__row">
+          <mat-form-field appearance="outline">
+            <mat-label>Bandeira</mat-label>
+            <mat-select [formField]="cardForm.brand">
+              @for (option of brandOptions; track option.value) {
+                <mat-option [value]="option.value">{{ option.label }}</mat-option>
+              }
+            </mat-select>
+            @if (cardForm.brand().errors()[0]; as error) {
+              <mat-error>{{ error.message }}</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Últimos 4 dígitos</mat-label>
+            <span matTextPrefix>•••• &nbsp;</span>
+            <input
+              matInput
+              inputmode="numeric"
+              autocomplete="off"
+              [formField]="cardForm.lastFourDigits"
+            />
+            <mat-hint>Apenas para identificar o cartão.</mat-hint>
+            @if (cardForm.lastFourDigits().errors()[0]; as error) {
+              <mat-error>{{ error.message }}</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Limite</mat-label>
+          <span matTextPrefix>R$&nbsp;</span>
+          <input
+            matInput
+            appMoneyMask
+            [allowNegative]="false"
+            inputmode="numeric"
+            autocomplete="off"
+            [formField]="cardForm.creditLimit"
+          />
+          @if (cardForm.creditLimit().errors()[0]; as error) {
+            <mat-error>{{ error.message }}</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="card-form__row">
+          <mat-form-field appearance="outline">
+            <mat-label>Dia de fechamento</mat-label>
+            <mat-select [formField]="cardForm.closingDay">
+              @for (day of dayOptions; track day) {
+                <mat-option [value]="day">{{ day }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint>Compras a partir desse dia vão para a fatura seguinte.</mat-hint>
+            @if (cardForm.closingDay().errors()[0]; as error) {
+              <mat-error>{{ error.message }}</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Dia de vencimento</mat-label>
+            <mat-select [formField]="cardForm.dueDay">
+              @for (day of dayOptions; track day) {
+                <mat-option [value]="day">{{ day }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint>Em meses mais curtos, vale o último dia do mês.</mat-hint>
+            @if (cardForm.dueDay().errors()[0]; as error) {
+              <mat-error>{{ error.message }}</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Conta de pagamento</mat-label>
+          <mat-select [formField]="cardForm.paymentAccountId">
+            @for (account of accountOptions(); track account.id) {
+              <mat-option [value]="account.id">
+                {{ account.name }}{{ account.isArchived ? ' (arquivada)' : '' }}
+              </mat-option>
+            }
+          </mat-select>
+          <mat-hint>Conta usada para pagar as faturas.</mat-hint>
+          @if (cardForm.paymentAccountId().errors()[0]; as error) {
+            <mat-error>{{ error.message }}</mat-error>
+          }
+        </mat-form-field>
+
+        <div class="card-form__row">
+          <app-color-select [formField]="cardForm.color" />
+        </div>
+
+        @if (isEdit()) {
+          <mat-slide-toggle class="card-form__toggle" [formField]="cardForm.isArchived">
+            Cartão arquivado
+          </mat-slide-toggle>
+          <p class="card-form__hint">
+            Cartões arquivados não aceitam novas compras. As compras e o histórico são preservados.
+          </p>
+        }
+
+        @if (errorMessage(); as message) {
+          <p class="card-form__message" role="alert">{{ message }}</p>
+        }
+
+        <div class="card-form__actions">
+          <a matButton [routerLink]="cancelLink()">Cancelar</a>
+          <button matButton="filled" type="submit" [disabled]="cardForm().submitting()">
+            {{ cardForm().submitting() ? 'Salvando…' : 'Salvar' }}
+          </button>
+        </div>
+      </form>
+    }
+  }
+}

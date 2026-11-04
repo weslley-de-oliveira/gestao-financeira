@@ -32,8 +32,16 @@ export interface Transaction {
   amount: Cents;
   /** Data da transação, sem horário: `yyyy-MM-dd`. */
   date: string;
-  /** Conta da receita/despesa ou conta de origem da transferência. */
-  accountId: string;
+  /**
+   * Conta da receita/despesa ou conta de origem da transferência. `null` nas compras no cartão:
+   * elas não alteram o saldo de nenhuma conta até o pagamento da fatura.
+   */
+  accountId: string | null;
+  /**
+   * Cartão de uma compra (apenas despesas, sempre realizadas); `null` nas demais transações.
+   * Toda transação tem conta ou cartão, nunca os dois.
+   */
+  creditCardId: string | null;
   /** Apenas em transferências. */
   destinationAccountId: string | null;
   /** Obrigatória em receitas e despesas, compatível com o tipo; `null` em transferências. */

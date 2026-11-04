@@ -1,0 +1,154 @@
+<a class="card-detail__back" matButton routerLink="/credit-cards">
+  <mat-icon>arrow_back</mat-icon>
+  Cartões
+</a>
+
+@switch (loadState()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando cartão" />
+  }
+  @case ('not-found') {
+    <div class="card-detail__state" role="alert">
+      <p>Cartão não encontrado.</p>
+      <a matButton="outlined" routerLink="/credit-cards">Ver cartões</a>
+    </div>
+  }
+  @case ('error') {
+    <div class="card-detail__state" role="alert">
+      <p>Não foi possível carregar o cartão.</p>
+      <button matButton="outlined" type="button" (click)="load()">Tentar novamente</button>
+    </div>
+  }
+  @case ('ready') {
+    @if (card(); as card) {
+      <header class="card-detail__header">
+        <app-icon-avatar icon="credit_card" [color]="card.color" />
+        <div class="card-detail__heading">
+          <h1 class="card-detail__title">{{ card.name }}</h1>
+          <p class="card-detail__meta">
+            {{ brandLabels[card.brand] }} ·
+            <span [attr.aria-label]="'final ' + card.lastFourDigits"
+              >•••• {{ card.lastFourDigits }}</span
+            >
+            @if (card.isArchived) {
+              <span class="card-detail__badge">Arquivado</span>
+            }
+          </p>
+        </div>
+        <div class="card-detail__actions">
+          <a matButton="outlined" [routerLink]="['/credit-cards', card.id, 'edit']">
+            <mat-icon>edit</mat-icon>
+            Editar
+          </a>
+          <a matButton="outlined" routerLink="/invoices" [queryParams]="{ creditCardId: card.id }">
+            <mat-icon>receipt_long</mat-icon>
+            Faturas
+          </a>
+          <button matButton="outlined" type="button" (click)="toggleArchived(card)">
+            <mat-icon>{{ card.isArchived ? 'unarchive' : 'archive' }}</mat-icon>
+            {{ card.isArchived ? 'Reativar' : 'Arquivar' }}
+          </button>
+        </div>
+      </header>
+
+      <div class="card-detail__panels">
+        <mat-card appearance="outlined" class="card-detail__panel">
+          <span class="card-detail__label">Limite disponível</span>
+          <strong
+            class="card-detail__amount"
+            [class.card-detail__amount--negative]="card.availableLimit < 0"
+          >
+            {{ card.availableLimit | money }}
+          </strong>
+          <mat-progress-bar
+            mode="determinate"
+            [value]="usagePercent(card)"
+            aria-label="Limite utilizado"
+          />
+          <dl class="card-detail__figures">
+            <div>
+              <dt>Limite total</dt>
+              <dd>{{ card.creditLimit | money }}</dd>
+            </div>
+            <div>
+              <dt>Utilizado</dt>
+              <dd>{{ card.usedLimit | money }}</dd>
+            </div>
+          </dl>
+          @if (card.availableLimit < 0) {
+            <p class="card-detail__warning" role="status">
+              <mat-icon aria-hidden="true">warning</mat-icon>
+              Limite ultrapassado.
+            </p>
+          }
+        </mat-card>
+
+        <mat-card appearance="outlined" class="card-detail__panel">
+          <span class="card-detail__label">Próxima fatura</span>
+          <strong class="card-detail__amount">{{ card.nextInvoice.amount | money }}</strong>
+          <dl class="card-detail__figures">
+            <div>
+              <dt>Compras de</dt>
+              <dd>{{ card.nextInvoice.start | isoDate }} a {{ card.nextInvoice.end | isoDate }}</dd>
+            </div>
+            <div>
+              <dt>Fechamento</dt>
+              <dd>{{ card.nextInvoice.closingDate | isoDate }}</dd>
+            </div>
+            <div>
+              <dt>Vencimento</dt>
+              <dd>{{ card.nextInvoice.dueDate | isoDate }}</dd>
+            </div>
+            <div>
+              <dt>Conta de pagamento</dt>
+              <dd>{{ paymentAccountName() }}</dd>
+            </div>
+          </dl>
+        </mat-card>
+      </div>
+
+      <section class="card-detail__section" aria-labelledby="card-purchases-title">
+        <div class="card-detail__section-header">
+          <h2 id="card-purchases-title" class="card-detail__section-title">Compras recentes</h2>
+          @if (!card.isArchived) {
+            <a matButton routerLink="/transactions/new" [queryParams]="{ creditCardId: card.id }">
+              <mat-icon>add</mat-icon>
+              Nova compra
+            </a>
+          }
+        </div>
+        @if (recentPurchases().length === 0) {
+          <div class="card-detail__state">
+            <mat-icon aria-hidden="true">shopping_bag</mat-icon>
+            <p>Nenhuma compra lançada neste cartão.</p>
+          </div>
+        } @else {
+          <mat-card appearance="outlined">
+            <ul class="card-detail__purchases">
+              @for (purchase of recentPurchases(); track purchase.id) {
+                <li class="card-detail__purchase">
+                  <span class="card-detail__purchase-date">{{ purchase.date | isoDate }}</span>
+                  <a
+                    class="card-detail__purchase-description"
+                    [routerLink]="['/transactions', purchase.id]"
+                  >
+                    {{ purchase.description }}
+                  </a>
+                  <span class="card-detail__purchase-amount">−{{ purchase.amount | money }}</span>
+                </li>
+              }
+            </ul>
+          </mat-card>
+          <a
+            class="card-detail__see-all"
+            matButton
+            routerLink="/transactions"
+            [queryParams]="{ creditCardId: card.id }"
+          >
+            Ver na lista de transações ({{ purchaseCount() }} no total)
+          </a>
+        }
+      </section>
+    }
+  }
+}

@@ -1,0 +1,157 @@
+<header class="cards__header">
+  <div>
+    <h1 class="cards__title">Cartões de crédito</h1>
+    @if (status() === 'ready' && totals().count > 0) {
+      <p class="cards__summary">
+        {{ totals().count }} {{ totals().count === 1 ? 'cartão ativo' : 'cartões ativos' }} ·
+        Disponível <strong>{{ totals().available | money }}</strong> de
+        {{ totals().limit | money }}
+      </p>
+    }
+  </div>
+  <a matButton="filled" routerLink="new">
+    <mat-icon>add</mat-icon>
+    Novo cartão
+  </a>
+</header>
+
+@switch (status()) {
+  @case ('loading') {
+    <mat-progress-bar mode="indeterminate" aria-label="Carregando cartões" />
+  }
+  @case ('error') {
+    <div class="cards__state" role="alert">
+      <mat-icon aria-hidden="true">cloud_off</mat-icon>
+      <p>Não foi possível carregar os cartões. Verifique se a API está em execução.</p>
+      <button matButton="outlined" type="button" (click)="reload()">Tentar novamente</button>
+    </div>
+  }
+  @case ('ready') {
+    @if (!hasCards()) {
+      <div class="cards__state">
+        <mat-icon aria-hidden="true">credit_card</mat-icon>
+        <p>Você ainda não cadastrou nenhum cartão.</p>
+        <a matButton="filled" routerLink="new">Cadastrar o primeiro cartão</a>
+      </div>
+    } @else {
+      <form class="cards__filters" aria-label="Filtrar cartões" novalidate>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Status</mat-label>
+          <mat-select [formField]="filterForm.status">
+            @for (option of statusOptions; track option.value) {
+              <mat-option [value]="option.value">{{ option.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </form>
+
+      <p class="visually-hidden" aria-live="polite">
+        {{ visibleCards().length }}
+        {{ visibleCards().length === 1 ? 'cartão encontrado' : 'cartões encontrados' }}
+      </p>
+
+      @if (visibleCards().length === 0) {
+        <div class="cards__state">
+          <mat-icon aria-hidden="true">search_off</mat-icon>
+          <p>Nenhum cartão com esse status.</p>
+          <button matButton="outlined" type="button" (click)="showAll()">Ver todos</button>
+        </div>
+      } @else {
+        <ul class="cards__list">
+          @for (card of visibleCards(); track card.id) {
+            <li>
+              <mat-card
+                class="credit-card"
+                appearance="outlined"
+                [class.credit-card--archived]="card.isArchived"
+              >
+                <div class="credit-card__header">
+                  <app-icon-avatar icon="credit_card" [color]="card.color" />
+                  <div class="credit-card__heading">
+                    <h2 class="credit-card__name">
+                      <a [routerLink]="card.id">{{ card.name }}</a>
+                    </h2>
+                    <p class="credit-card__meta">
+                      {{ brandLabels[card.brand] }} ·
+                      <span [attr.aria-label]="'final ' + card.lastFourDigits"
+                        >•••• {{ card.lastFourDigits }}</span
+                      >
+                    </p>
+                  </div>
+                  <button
+                    matIconButton
+                    type="button"
+                    [attr.aria-label]="'Ações do cartão ' + card.name"
+                    [matMenuTriggerFor]="actions"
+                  >
+                    <mat-icon>more_vert</mat-icon>
+                  </button>
+                  <mat-menu #actions="matMenu" xPosition="before">
+                    <a mat-menu-item [routerLink]="card.id">
+                      <mat-icon>visibility</mat-icon>
+                      <span>Visualizar</span>
+                    </a>
+                    <a mat-menu-item [routerLink]="[card.id, 'edit']">
+                      <mat-icon>edit</mat-icon>
+                      <span>Editar</span>
+                    </a>
+                    <a
+                      mat-menu-item
+                      routerLink="/invoices"
+                      [queryParams]="{ creditCardId: card.id }"
+                    >
+                      <mat-icon>receipt_long</mat-icon>
+                      <span>Faturas</span>
+                    </a>
+                    <button mat-menu-item type="button" (click)="toggleArchived(card)">
+                      <mat-icon>{{ card.isArchived ? 'unarchive' : 'archive' }}</mat-icon>
+                      <span>{{ card.isArchived ? 'Reativar' : 'Arquivar' }}</span>
+                    </button>
+                  </mat-menu>
+                </div>
+
+                <div class="credit-card__limit">
+                  <div class="credit-card__limit-row">
+                    <span class="credit-card__label">Disponível</span>
+                    @if (card.isArchived) {
+                      <span class="credit-card__badge">Arquivado</span>
+                    }
+                  </div>
+                  <p
+                    class="credit-card__available"
+                    [class.credit-card__available--negative]="card.availableLimit < 0"
+                  >
+                    {{ card.availableLimit | money }}
+                  </p>
+                  <mat-progress-bar
+                    mode="determinate"
+                    [value]="usagePercent(card)"
+                    [attr.aria-label]="'Limite utilizado do cartão ' + card.name"
+                  />
+                  <p class="credit-card__usage">
+                    Utilizado {{ card.usedLimit | money }} de {{ card.creditLimit | money }}
+                  </p>
+                </div>
+
+                <dl class="credit-card__invoice">
+                  <div>
+                    <dt>Próxima fatura</dt>
+                    <dd>{{ card.nextInvoice.amount | money }}</dd>
+                  </div>
+                  <div>
+                    <dt>Vencimento</dt>
+                    <dd>{{ card.nextInvoice.dueDate | isoDate }}</dd>
+                  </div>
+                  <div>
+                    <dt>Fecha / vence</dt>
+                    <dd>Dia {{ card.closingDay }} / dia {{ card.dueDay }}</dd>
+                  </div>
+                </dl>
+              </mat-card>
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+}

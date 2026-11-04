@@ -15,6 +15,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { seedAccounts } from '../../../testing/account-fixtures';
 import { signInTestUser } from '../../../testing/auth-fixtures';
 import { seedCategories } from '../../../testing/category-fixtures';
+import { seedCreditCards } from '../../../testing/credit-card-fixtures';
 import { InMemoryAccountRepository } from '../../../testing/in-memory-account.repository';
 import { InMemoryTransactionRepository } from '../../../testing/in-memory-transaction.repository';
 import { TEST_PROVIDERS } from '../../../testing/test-providers';
@@ -172,9 +173,31 @@ describe('transaction pages', () => {
       expect(rowDescriptions()).toEqual(['Cinema']);
 
       await (await select('Tipo')).clickOptions({ text: 'Todos' });
-      await (await select('Conta')).clickOptions({ text: 'Todas' });
+      await (await select('Conta ou cartão')).clickOptions({ text: 'Todos' });
       await (await select('Categoria')).clickOptions({ text: 'Mercado' });
       expect(rowDescriptions()).toEqual(['Mercado']);
+    });
+
+    it('shows card purchases with the card name, filterable and without the pending action', async () => {
+      seedCreditCards(userId, { name: 'Roxinho' });
+      seedTransactions(
+        userId,
+        { description: 'Mercado' },
+        { description: 'Notebook', accountId: null, creditCardId: 'card-1', amount: 350_000 },
+      );
+
+      await open('/transactions?creditCardId=card-1');
+
+      expect(rowDescriptions()).toEqual(['Notebook']);
+      expect(text()).toContain('Cartão Roxinho');
+      expect(text()).toMatch(/Despesas\s*−R\$\s3\.500,00/);
+
+      const menu = await loader.getHarness(
+        MatMenuHarness.with({ selector: '[aria-label="Ações da transação Notebook"]' }),
+      );
+      await menu.open();
+      const items = await Promise.all((await menu.getItems()).map((item) => item.getText()));
+      expect(items.join(' ')).not.toMatch(/pendente/i);
     });
 
     it('paginates on the client', async () => {
@@ -366,6 +389,55 @@ describe('transaction pages', () => {
       await vi.waitFor(() =>
         expect(TestBed.inject(Router).url).toBe(`/transactions/${transaction.id}`),
       );
+    });
+
+    it('registers a card purchase without account or status', async () => {
+      seedCreditCards(
+        userId,
+        { name: 'Roxinho', lastFourDigits: '4321' },
+        { name: 'Velho', isArchived: true },
+      );
+      await open('/transactions/new');
+
+      const groups = await loader.getAllHarnesses(MatButtonToggleGroupHarness);
+      await (await groups[1].getToggles({ text: 'Cartão de crédito' }))[0].check();
+      expect(
+        await loader.getAllHarnesses(MatFormFieldHarness.with({ floatingLabelText: 'Conta' })),
+      ).toHaveLength(0);
+      expect(text()).not.toContain('Pendente');
+
+      const cards = await select('Cartão');
+      await cards.open();
+      const cardNames = await Promise.all((await cards.getOptions()).map((o) => o.getText()));
+      expect(cardNames).toEqual(['Roxinho •••• 4321']);
+      await cards.close();
+
+      await save();
+      expect(await (await field('Cartão')).getTextErrors()).toEqual(['Selecione o cartão.']);
+
+      await (await input('Descrição')).setValue('Notebook');
+      await (await input('Valor')).setValue('350000');
+      await cards.clickOptions({ text: /Roxinho/ });
+      await (await select('Categoria')).clickOptions({ text: 'Lazer' });
+      await save();
+
+      expect(records()).toEqual([
+        expect.objectContaining({
+          type: 'expense',
+          accountId: null,
+          creditCardId: 'card-1',
+          status: 'completed',
+          amount: 350_000,
+        }),
+      ]);
+    });
+
+    it('preselects the card from the query param of "Nova compra"', async () => {
+      seedCreditCards(userId, { name: 'Roxinho' });
+
+      await open('/transactions/new?creditCardId=card-1');
+
+      expect(await (await select('Cartão')).getValueText()).toContain('Roxinho');
     });
 
     it('asks for an account when there is no active one', async () => {

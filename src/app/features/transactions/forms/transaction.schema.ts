@@ -1,4 +1,11 @@
-import { hidden, maxLength, required, schema, validate } from '@angular/forms/signals';
+import {
+  RootFieldContext,
+  hidden,
+  maxLength,
+  required,
+  schema,
+  validate,
+} from '@angular/forms/signals';
 import {
   TRANSACTION_DESCRIPTION_MAX_LENGTH,
   TRANSACTION_NOTES_MAX_LENGTH,
@@ -10,16 +17,22 @@ import { parseIsoDate, toIsoDate } from '../../../shared/utils/date';
 import { MAX_MONEY_CENTS, formatMoneyInput, parseMoney } from '../../../shared/utils/money';
 import { TransactionInput } from '../domain/transaction-rules';
 
+/** Despesas podem ser pagas por uma conta ou lançadas num cartão de crédito. */
+export type PaymentMethod = 'account' | 'credit-card';
+
 /**
  * Modelo do formulário: valor como texto mascarado ("1.234,56") e data como `Date` do datepicker;
  * convertidos para centavos e `yyyy-MM-dd` no envio. Selects vazios usam `''`.
  */
 export interface TransactionFormModel {
   type: TransactionType;
+  /** Só vale em despesas; receitas e transferências sempre usam conta. */
+  paymentMethod: PaymentMethod;
   description: string;
   amount: string;
   date: Date | null;
   accountId: string;
+  creditCardId: string;
   destinationAccountId: string;
   categoryId: string;
   status: TransactionStatus;
@@ -31,10 +44,12 @@ export const emptyTransactionForm = (
   overrides: Partial<TransactionFormModel> = {},
 ): TransactionFormModel => ({
   type: 'expense',
+  paymentMethod: 'account',
   description: '',
   amount: '',
   date: today,
   accountId: '',
+  creditCardId: '',
   destinationAccountId: '',
   categoryId: '',
   status: 'completed',
@@ -45,10 +60,12 @@ export const emptyTransactionForm = (
 export function toTransactionFormModel(transaction: Transaction): TransactionFormModel {
   return {
     type: transaction.type,
+    paymentMethod: transaction.creditCardId ? 'credit-card' : 'account',
     description: transaction.description,
     amount: formatMoneyInput(transaction.amount),
     date: parseIsoDate(transaction.date),
-    accountId: transaction.accountId,
+    accountId: transaction.accountId ?? '',
+    creditCardId: transaction.creditCardId ?? '',
     destinationAccountId: transaction.destinationAccountId ?? '',
     categoryId: transaction.categoryId ?? '',
     status: transaction.status,
@@ -63,22 +80,34 @@ export function toTransactionInput(model: TransactionFormModel): TransactionInpu
     throw new RangeError('Invalid transaction form');
   }
   const isTransfer = model.type === 'transfer';
+  const cardPurchase = isCardPurchaseModel(model);
   return {
     type: model.type,
     description: model.description,
     amount,
     date: toIsoDate(model.date),
-    accountId: model.accountId,
+    accountId: cardPurchase ? null : model.accountId,
+    creditCardId: cardPurchase ? model.creditCardId : null,
     destinationAccountId: isTransfer ? model.destinationAccountId : null,
     categoryId: isTransfer ? null : model.categoryId,
-    status: model.status,
+    status: cardPurchase ? 'completed' : model.status,
     notes: model.notes || null,
   };
 }
 
+/** Despesa lançada no cartão. */
+export function isCardPurchaseModel(
+  model: Pick<TransactionFormModel, 'type' | 'paymentMethod'>,
+): boolean {
+  return model.type === 'expense' && model.paymentMethod === 'credit-card';
+}
+
+type Context = Pick<RootFieldContext<unknown>, 'valueOf'>;
+
 export const transactionSchema = schema<TransactionFormModel>((p) => {
-  const isTransfer = ({ valueOf }: { valueOf: (path: typeof p.type) => TransactionType }) =>
-    valueOf(p.type) === 'transfer';
+  const isTransfer = ({ valueOf }: Context) => valueOf(p.type) === 'transfer';
+  const isCardPurchase = ({ valueOf }: Context) =>
+    isCardPurchaseModel({ type: valueOf(p.type), paymentMethod: valueOf(p.paymentMethod) });
 
   required(p.description, { message: 'Informe a descrição.' });
   validate(p.description, ({ value }) =>
@@ -104,7 +133,14 @@ export const transactionSchema = schema<TransactionFormModel>((p) => {
 
   required(p.date, { message: 'Informe a data.' });
 
-  required(p.accountId, { message: 'Selecione a conta.' });
+  hidden(p.paymentMethod, { when: (ctx) => ctx.valueOf(p.type) !== 'expense' });
+
+  // Compra no cartão: cartão obrigatório, sem conta e sempre realizada.
+  hidden(p.accountId, { when: isCardPurchase });
+  required(p.accountId, { message: 'Selecione a conta.', when: (ctx) => !isCardPurchase(ctx) });
+  hidden(p.creditCardId, { when: (ctx) => !isCardPurchase(ctx) });
+  required(p.creditCardId, { message: 'Selecione o cartão.', when: isCardPurchase });
+  hidden(p.status, { when: isCardPurchase });
 
   // Transferência: conta de destino obrigatória e diferente da origem; sem categoria.
   hidden(p.destinationAccountId, { when: (ctx) => !isTransfer(ctx) });

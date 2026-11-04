@@ -24,12 +24,13 @@ import { IsoDatePipe } from '../../../shared/pipes/iso-date.pipe';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 import { AccountsFacade } from '../../accounts/accounts.facade';
 import { CategoriesFacade } from '../../categories/categories.facade';
+import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
 import {
   TRANSACTION_SORT_OPTIONS,
   defaultTransactionQuery,
   queryTransactions,
 } from '../domain/transaction-query';
-import { summarizeTransactions } from '../domain/transaction-rules';
+import { isCardPurchase, summarizeTransactions } from '../domain/transaction-rules';
 import { TransactionActions } from '../transaction-actions';
 import {
   TRANSACTION_SIGNS,
@@ -68,11 +69,13 @@ export class TransactionListPage implements OnInit {
   private readonly facade = inject(TransactionsFacade);
   private readonly accountsFacade = inject(AccountsFacade);
   private readonly categoriesFacade = inject(CategoriesFacade);
+  private readonly creditCardsFacade = inject(CreditCardsFacade);
   private readonly period = inject(PeriodService);
   private readonly actions = inject(TransactionActions);
 
   /** Query params opcionais que pré-filtram a lista (por exemplo, vindo do detalhe da conta). */
   readonly accountId = input<string>();
+  readonly creditCardId = input<string>();
   readonly categoryId = input<string>();
 
   protected readonly isMobile = injectIsMobile();
@@ -97,6 +100,7 @@ export class TransactionListPage implements OnInit {
   protected readonly lookups = computed(() => ({
     accounts: byId(this.accountsFacade.accounts()),
     categories: byId(this.categoriesFacade.categories()),
+    creditCards: byId(this.creditCardsFacade.cards()),
   }));
   protected readonly hasTransactions = computed(() => this.facade.transactions().length > 0);
   protected readonly filtered = computed(() =>
@@ -120,6 +124,9 @@ export class TransactionListPage implements OnInit {
 
   protected readonly accountOptions = computed(() =>
     [...this.accountsFacade.accounts()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
+  );
+  protected readonly creditCardOptions = computed(() =>
+    [...this.creditCardsFacade.cards()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
   );
   protected readonly categoryGroups = computed(() => {
     const sorted = [...this.categoriesFacade.categories()].sort((a, b) =>
@@ -146,7 +153,8 @@ export class TransactionListPage implements OnInit {
   protected readonly categoryOf = categoryOf;
 
   ngOnInit(): void {
-    const accountId = this.accountId();
+    // O filtro de conta também aceita um cartão (por exemplo, vindo do detalhe do cartão).
+    const accountId = this.accountId() ?? this.creditCardId();
     const categoryId = this.categoryId();
     this.query.update((query) => ({
       ...query,
@@ -160,6 +168,8 @@ export class TransactionListPage implements OnInit {
     void this.facade.load();
     void this.accountsFacade.load();
     void this.categoriesFacade.load();
+    // Só fornece os nomes dos cartões; sem eles, as compras aparecem como "Cartão de crédito".
+    void this.creditCardsFacade.load();
   }
 
   protected clearFilters(): void {
@@ -182,6 +192,10 @@ export class TransactionListPage implements OnInit {
 
   protected sign(transaction: Transaction): string {
     return TRANSACTION_SIGNS[transaction.type];
+  }
+
+  protected isCardPurchase(transaction: Transaction): boolean {
+    return isCardPurchase(transaction);
   }
 
   protected toggleStatus(transaction: Transaction): void {

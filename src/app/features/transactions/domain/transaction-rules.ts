@@ -1,5 +1,6 @@
 import { Account } from '../../../shared/models/account';
 import { Category } from '../../../shared/models/category';
+import { CreditCard } from '../../../shared/models/credit-card';
 import {
   TRANSACTION_DESCRIPTION_MAX_LENGTH,
   TRANSACTION_NOTES_MAX_LENGTH,
@@ -19,11 +20,17 @@ export type TransactionInput = Pick<
   | 'amount'
   | 'date'
   | 'accountId'
+  | 'creditCardId'
   | 'destinationAccountId'
   | 'categoryId'
   | 'status'
   | 'notes'
 >;
+
+/** Compra no cartão de crédito: despesa sem conta, lançada na fatura do cartão. */
+export function isCardPurchase(transaction: Pick<Transaction, 'creditCardId'>): boolean {
+  return transaction.creditCardId !== null;
+}
 
 export class InvalidTransactionInputError extends Error {
   constructor(readonly field: keyof TransactionInput) {
@@ -34,12 +41,14 @@ export class InvalidTransactionInputError extends Error {
 
 /**
  * Valida e normaliza os dados da transação. Transferências exigem contas diferentes e não têm
- * categoria; receitas e despesas exigem categoria e não têm conta de destino.
+ * categoria; receitas e despesas exigem categoria e não têm conta de destino. Compras no cartão
+ * são despesas sem conta e sempre realizadas: comprometem o limite desde a data da compra.
  */
 export function normalizeTransactionInput(input: TransactionInput): TransactionInput {
   const description = collapseWhitespace(input.description);
   const notes = input.notes?.trim() || null;
   const isTransfer = input.type === 'transfer';
+  const cardPurchase = !!input.creditCardId;
 
   if (!TRANSACTION_TYPES.includes(input.type)) {
     throw new InvalidTransactionInputError('type');
@@ -53,7 +62,10 @@ export function normalizeTransactionInput(input: TransactionInput): TransactionI
   if (!isIsoDate(input.date)) {
     throw new InvalidTransactionInputError('date');
   }
-  if (!input.accountId) {
+  if (cardPurchase && input.type !== 'expense') {
+    throw new InvalidTransactionInputError('creditCardId');
+  }
+  if (!cardPurchase && !input.accountId) {
     throw new InvalidTransactionInputError('accountId');
   }
   if (
@@ -76,20 +88,24 @@ export function normalizeTransactionInput(input: TransactionInput): TransactionI
     ...input,
     description,
     notes,
+    accountId: cardPurchase ? null : input.accountId,
+    creditCardId: cardPurchase ? input.creditCardId : null,
     destinationAccountId: isTransfer ? input.destinationAccountId : null,
     categoryId: isTransfer ? null : input.categoryId,
+    status: cardPurchase ? 'completed' : input.status,
   };
 }
 
 export interface TransactionReferences {
   accounts: readonly Pick<Account, 'id' | 'isArchived'>[];
   categories: readonly Pick<Category, 'id' | 'type' | 'isArchived'>[];
+  creditCards: readonly Pick<CreditCard, 'id' | 'isArchived'>[];
 }
 
 /**
- * Conta(s) e categoria devem existir entre as do usuário e estar ativas. Na edição, mantêm-se
- * válidas as referências que a transação já tinha, mesmo que tenham sido arquivadas depois.
- * A categoria deve ser do mesmo tipo da transação.
+ * Conta(s), cartão e categoria devem existir entre os do usuário e estar ativos. Na edição,
+ * mantêm-se válidas as referências que a transação já tinha, mesmo que tenham sido arquivadas
+ * depois. A categoria deve ser do mesmo tipo da transação.
  */
 export function assertValidReferences(
   input: TransactionInput,
@@ -104,7 +120,12 @@ export function assertValidReferences(
     );
   };
 
-  if (!usableAccount(input.accountId)) {
+  if (input.creditCardId) {
+    const card = references.creditCards.find((item) => item.id === input.creditCardId);
+    if (!card || (card.isArchived && card.id !== previous?.creditCardId)) {
+      throw new InvalidTransactionInputError('creditCardId');
+    }
+  } else if (!usableAccount(input.accountId)) {
     throw new InvalidTransactionInputError('accountId');
   }
   if (input.type === 'transfer') {

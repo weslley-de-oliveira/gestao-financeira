@@ -3,11 +3,14 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { AccountRepository } from '../../data-access/repositories/account.repository';
 import { CategoryRepository } from '../../data-access/repositories/category.repository';
+import { CreditCardRepository } from '../../data-access/repositories/credit-card.repository';
 import { TransactionRepository } from '../../data-access/repositories/transaction.repository';
 import { Transaction, TransactionStatus } from '../../shared/models/transaction';
 import {
+  InvalidTransactionInputError,
   TransactionInput,
   assertValidReferences,
+  isCardPurchase,
   normalizeTransactionInput,
 } from './domain/transaction-rules';
 
@@ -29,6 +32,7 @@ export class TransactionsFacade {
   private readonly repository = inject(TransactionRepository);
   private readonly accounts = inject(AccountRepository);
   private readonly categories = inject(CategoryRepository);
+  private readonly creditCards = inject(CreditCardRepository);
   private readonly auth = inject(AuthService);
   private readonly _transactions = signal<Transaction[]>([]);
   private readonly _status = signal<LoadStatus>('loading');
@@ -71,8 +75,12 @@ export class TransactionsFacade {
     return this.store(await firstValueFrom(this.repository.update(id, normalized)));
   }
 
+  /** Compras no cartão são sempre realizadas e não podem ficar pendentes. */
   async setStatus(id: string, status: TransactionStatus): Promise<Transaction> {
-    await this.getOwned(id);
+    const transaction = await this.getOwned(id);
+    if (isCardPurchase(transaction) && status !== 'completed') {
+      throw new InvalidTransactionInputError('status');
+    }
     return this.store(await firstValueFrom(this.repository.update(id, { status })));
   }
 
@@ -85,11 +93,12 @@ export class TransactionsFacade {
 
   private async validateReferences(input: TransactionInput, previous?: Transaction): Promise<void> {
     const userId = this.userId();
-    const [accounts, categories] = await Promise.all([
+    const [accounts, categories, creditCards] = await Promise.all([
       firstValueFrom(this.accounts.listByUser(userId)),
       firstValueFrom(this.categories.listByUser(userId)),
+      firstValueFrom(this.creditCards.listByUser(userId)),
     ]);
-    assertValidReferences(input, { accounts, categories }, previous);
+    assertValidReferences(input, { accounts, categories, creditCards }, previous);
   }
 
   private async getOwned(id: string): Promise<Transaction> {

@@ -1,5 +1,6 @@
 import { Account } from '../../shared/models/account';
 import { Category } from '../../shared/models/category';
+import { CreditCard } from '../../shared/models/credit-card';
 import { Transaction, TransactionType } from '../../shared/models/transaction';
 
 /** Ícone de cada tipo, exibido junto ao texto (o tipo nunca é indicado só por cor). */
@@ -16,18 +17,23 @@ export const TRANSACTION_SIGNS: Readonly<Record<TransactionType, string>> = {
   transfer: '',
 };
 
-/** Nomes de contas e categorias por id, para exibir as transações. */
+/** Nomes de contas, categorias e cartões por id, para exibir as transações. */
 export interface TransactionLookups {
   accounts: ReadonlyMap<string, Account>;
   categories: ReadonlyMap<string, Category>;
+  creditCards: ReadonlyMap<string, CreditCard>;
 }
 
 export function byId<T extends { id: string }>(items: readonly T[]): ReadonlyMap<string, T> {
   return new Map(items.map((item) => [item.id, item]));
 }
 
-/** "Corrente" ou, em transferências, "Corrente → Poupança". */
+/** "Corrente", em transferências "Corrente → Poupança" e, em compras, "Cartão Nubank". */
 export function accountLabel(transaction: Transaction, lookups: TransactionLookups): string {
+  if (transaction.creditCardId) {
+    const card = lookups.creditCards.get(transaction.creditCardId);
+    return card ? `Cartão ${card.name}` : 'Cartão de crédito';
+  }
   const name = (id: string | null) => (id && lookups.accounts.get(id)?.name) || 'Conta removida';
   return transaction.type === 'transfer'
     ? `${name(transaction.accountId)} → ${name(transaction.destinationAccountId)}`

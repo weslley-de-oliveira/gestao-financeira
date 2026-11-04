@@ -20,6 +20,7 @@ describe('TransactionsFacade', () => {
     amount: 25_000,
     date: '2026-11-10',
     accountId: 'account-1',
+    creditCardId: null,
     destinationAccountId: null,
     categoryId: 'category-1',
     status: 'completed',

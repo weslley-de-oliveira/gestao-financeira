@@ -55,8 +55,13 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./features/categories/categories.routes').then((m) => m.CATEGORIES_ROUTES),
       },
+      {
+        path: 'credit-cards',
+        title: 'Cartões de crédito',
+        loadChildren: () =>
+          import('./features/credit-cards/credit-cards.routes').then((m) => m.CREDIT_CARDS_ROUTES),
+      },
       { path: 'budgets', title: 'Orçamentos', loadComponent: loadPlaceholder },
-      { path: 'credit-cards', title: 'Cartões de crédito', loadComponent: loadPlaceholder },
       { path: 'invoices', title: 'Faturas', loadComponent: loadPlaceholder },
       { path: 'goals', title: 'Metas', loadComponent: loadPlaceholder },
       { path: 'settings', title: 'Configurações', loadComponent: loadPlaceholder },

@@ -9,7 +9,8 @@ import { Cents, assertValidCents } from '../../../shared/utils/money';
 export interface BalanceMovement {
   type: TransactionType;
   amount: Cents;
-  accountId: string;
+  /** `null` nas compras no cartão, que não movimentam conta. */
+  accountId: string | null;
   /** Conta que recebe o valor; apenas em transferências. */
   destinationAccountId?: string | null;
   /** Movimentações pendentes não alteram o saldo. Ausente equivale a realizada. */

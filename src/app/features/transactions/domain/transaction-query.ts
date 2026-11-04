@@ -11,7 +11,7 @@ export type TransactionSort = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount
 export interface TransactionQuery {
   search: string;
   type: TransactionType | 'all';
-  /** Conta de origem ou de destino. */
+  /** Conta de origem ou de destino, ou o cartão das compras (os ids nunca coincidem). */
   accountId: string;
   categoryId: string;
   status: TransactionStatus | 'all';
@@ -53,7 +53,8 @@ export function queryTransactions(
         (query.status === 'all' || transaction.status === query.status) &&
         (query.accountId === ALL ||
           transaction.accountId === query.accountId ||
-          transaction.destinationAccountId === query.accountId) &&
+          transaction.destinationAccountId === query.accountId ||
+          transaction.creditCardId === query.accountId) &&
         (query.categoryId === ALL || transaction.categoryId === query.categoryId) &&
         (!search ||
           normalizeForSearch(transaction.description).includes(search) ||

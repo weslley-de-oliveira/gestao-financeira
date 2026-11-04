@@ -15,10 +15,12 @@ import { MoneyMaskDirective } from '../../../shared/directives/money-mask.direct
 import { TRANSACTION_TYPES, Transaction } from '../../../shared/models/transaction';
 import { AccountsFacade } from '../../accounts/accounts.facade';
 import { CategoriesFacade } from '../../categories/categories.facade';
+import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
 import { InvalidTransactionInputError, TransactionInput } from '../domain/transaction-rules';
 import {
   TransactionFormModel,
   emptyTransactionForm,
+  isCardPurchaseModel,
   toTransactionFormModel,
   toTransactionInput,
   transactionSchema,
@@ -32,6 +34,7 @@ const REFERENCE_ERRORS: Partial<Record<keyof TransactionInput, string>> = {
   accountId: 'Selecione uma conta ativa.',
   destinationAccountId: 'Selecione uma conta de destino ativa e diferente da origem.',
   categoryId: 'Selecione uma categoria ativa do mesmo tipo da transação.',
+  creditCardId: 'Selecione um cartão ativo.',
 };
 
 /** Formulário de criação (`/transactions/new`) e edição (`/transactions/:id/edit`). */
@@ -57,14 +60,16 @@ export class TransactionFormPage implements OnInit {
   private readonly facade = inject(TransactionsFacade);
   private readonly accountsFacade = inject(AccountsFacade);
   private readonly categoriesFacade = inject(CategoriesFacade);
+  private readonly creditCardsFacade = inject(CreditCardsFacade);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
   private readonly today = inject(TODAY);
 
   /** Parâmetro `:id` da rota; ausente na criação. */
   readonly id = input<string>();
-  /** Query params opcionais da criação: conta e tipo pré-selecionados. */
+  /** Query params opcionais da criação: conta (ou cartão) e tipo pré-selecionados. */
   readonly accountId = input<string>();
+  readonly creditCardId = input<string>();
   readonly type = input<string>();
 
   private readonly model = signal(emptyTransactionForm(this.today()));
@@ -73,6 +78,7 @@ export class TransactionFormPage implements OnInit {
   protected readonly transactionForm = form(this.model, transactionSchema);
   protected readonly isEdit = computed(() => this.id() !== undefined);
   protected readonly isTransfer = computed(() => this.model().type === 'transfer');
+  protected readonly isCardPurchase = computed(() => isCardPurchaseModel(this.model()));
   protected readonly loadState = signal<LoadState>('loading');
   protected readonly errorMessage = signal<string | null>(null);
 
@@ -87,6 +93,11 @@ export class TransactionFormPage implements OnInit {
           account.id === original?.destinationAccountId,
       );
   });
+  protected readonly creditCardOptions = computed(() =>
+    this.creditCardsFacade
+      .cards()
+      .filter((card) => !card.isArchived || card.id === this.original()?.creditCardId),
+  );
   protected readonly categoryOptions = computed(() => {
     const { type } = this.model();
     const original = this.original();
@@ -148,6 +159,7 @@ export class TransactionFormPage implements OnInit {
         id ? this.facade.getById(id) : Promise.resolve(null),
         this.accountsFacade.load(),
         this.categoriesFacade.load(),
+        this.creditCardsFacade.load(),
       ]);
       if (this.accountsFacade.status() === 'error' || this.categoriesFacade.status() === 'error') {
         this.loadState.set('error');
@@ -165,8 +177,18 @@ export class TransactionFormPage implements OnInit {
     }
   }
 
-  /** Conta e tipo vindos da URL (por exemplo, "Nova transação" no detalhe de uma conta). */
+  /**
+   * Conta, cartão e tipo vindos da URL (por exemplo, "Nova transação" no detalhe de uma conta ou
+   * "Nova compra" no detalhe de um cartão).
+   */
   private prefilledModel(): TransactionFormModel {
+    const card = this.creditCardOptions().find((item) => item.id === this.creditCardId());
+    if (card) {
+      return emptyTransactionForm(this.today(), {
+        paymentMethod: 'credit-card',
+        creditCardId: card.id,
+      });
+    }
     const type = TRANSACTION_TYPES.find((value) => value === this.type()) ?? 'expense';
     const accounts = this.accountOptions();
     const accountId =

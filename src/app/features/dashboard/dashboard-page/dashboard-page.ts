@@ -22,6 +22,7 @@ import { IsoDatePipe } from '../../../shared/pipes/iso-date.pipe';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 import { formatIsoDate } from '../../../shared/utils/date';
 import { AccountsFacade, LoadStatus } from '../../accounts/accounts.facade';
+import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
 import { summarizeTransactions } from '../../transactions/domain/transaction-rules';
 import {
   TRANSACTION_SIGNS,
@@ -77,6 +78,7 @@ function combineStatus(...statuses: LoadStatus[]): LoadStatus {
 export class DashboardPage implements OnInit {
   private readonly accountsFacade = inject(AccountsFacade);
   private readonly transactionsFacade = inject(TransactionsFacade);
+  private readonly creditCardsFacade = inject(CreditCardsFacade);
   private readonly period = inject(PeriodService);
   private readonly auth = inject(AuthService);
   private readonly locale = inject(LOCALE_ID);
@@ -185,6 +187,7 @@ export class DashboardPage implements OnInit {
     accounts: byId(this.accountsFacade.accounts()),
     // A lista recente identifica o tipo pelo ícone; não precisa das categorias.
     categories: new Map(),
+    creditCards: byId(this.creditCardsFacade.cards()),
   }));
 
   protected readonly shortcuts = SHORTCUTS;
@@ -205,6 +208,8 @@ export class DashboardPage implements OnInit {
 
   protected reloadTransactions(): void {
     void this.transactionsFacade.load();
+    // Só fornece os nomes dos cartões das compras recentes; uma falha não bloqueia o dashboard.
+    void this.creditCardsFacade.load();
   }
 
   /** Recarrega só as fontes que falharam. */

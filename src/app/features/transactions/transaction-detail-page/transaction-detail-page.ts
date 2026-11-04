@@ -13,6 +13,8 @@ import { IsoDatePipe } from '../../../shared/pipes/iso-date.pipe';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 import { AccountsFacade } from '../../accounts/accounts.facade';
 import { CategoriesFacade } from '../../categories/categories.facade';
+import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
+import { isCardPurchase } from '../domain/transaction-rules';
 import { TransactionActions } from '../transaction-actions';
 import {
   TRANSACTION_SIGNS,
@@ -43,6 +45,7 @@ export class TransactionDetailPage implements OnInit {
   private readonly facade = inject(TransactionsFacade);
   private readonly accountsFacade = inject(AccountsFacade);
   private readonly categoriesFacade = inject(CategoriesFacade);
+  private readonly creditCardsFacade = inject(CreditCardsFacade);
   private readonly actions = inject(TransactionActions);
   private readonly router = inject(Router);
 
@@ -54,6 +57,7 @@ export class TransactionDetailPage implements OnInit {
   protected readonly lookups = computed(() => ({
     accounts: byId(this.accountsFacade.accounts()),
     categories: byId(this.categoriesFacade.categories()),
+    creditCards: byId(this.creditCardsFacade.cards()),
   }));
   protected readonly typeLabels = TRANSACTION_TYPE_LABELS;
   protected readonly typeIcons = TRANSACTION_TYPE_ICONS;
@@ -61,6 +65,7 @@ export class TransactionDetailPage implements OnInit {
   protected readonly signs = TRANSACTION_SIGNS;
   protected readonly accountLabel = accountLabel;
   protected readonly categoryOf = categoryOf;
+  protected readonly isCardPurchase = isCardPurchase;
 
   ngOnInit(): void {
     void this.load();
@@ -73,6 +78,7 @@ export class TransactionDetailPage implements OnInit {
         this.facade.getById(this.id()),
         this.accountsFacade.load(),
         this.categoriesFacade.load(),
+        this.creditCardsFacade.load(),
       ]);
       this.transaction.set(transaction);
       this.loadState.set(transaction ? 'ready' : 'not-found');

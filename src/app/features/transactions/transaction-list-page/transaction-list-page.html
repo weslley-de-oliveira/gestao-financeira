@@ -79,11 +79,20 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline" subscriptSizing="dynamic">
-          <mat-label>Conta</mat-label>
+          <mat-label>Conta ou cartão</mat-label>
           <mat-select [formField]="filterForm.accountId">
-            <mat-option value="all">Todas</mat-option>
-            @for (account of accountOptions(); track account.id) {
-              <mat-option [value]="account.id">{{ account.name }}</mat-option>
+            <mat-option value="all">Todos</mat-option>
+            <mat-optgroup label="Contas">
+              @for (account of accountOptions(); track account.id) {
+                <mat-option [value]="account.id">{{ account.name }}</mat-option>
+              }
+            </mat-optgroup>
+            @if (creditCardOptions().length > 0) {
+              <mat-optgroup label="Cartões">
+                @for (card of creditCardOptions(); track card.id) {
+                  <mat-option [value]="card.id">{{ card.name }}</mat-option>
+                }
+              </mat-optgroup>
             }
           </mat-select>
         </mat-form-field>
@@ -210,7 +219,7 @@
               </ng-container>
 
               <ng-container matColumnDef="account">
-                <th mat-header-cell *matHeaderCellDef>Conta</th>
+                <th mat-header-cell *matHeaderCellDef>Conta / cartão</th>
                 <td mat-cell *matCellDef="let transaction">
                   {{ accountLabel(transaction, lookups()) }}
                 </td>
@@ -282,12 +291,14 @@
       <mat-icon>edit</mat-icon>
       <span>Editar</span>
     </a>
-    <button mat-menu-item type="button" (click)="toggleStatus(transaction)">
-      <mat-icon>{{ transaction.status === 'pending' ? 'task_alt' : 'schedule' }}</mat-icon>
-      <span>
-        {{ transaction.status === 'pending' ? 'Marcar como realizada' : 'Marcar como pendente' }}
-      </span>
-    </button>
+    @if (!isCardPurchase(transaction)) {
+      <button mat-menu-item type="button" (click)="toggleStatus(transaction)">
+        <mat-icon>{{ transaction.status === 'pending' ? 'task_alt' : 'schedule' }}</mat-icon>
+        <span>
+          {{ transaction.status === 'pending' ? 'Marcar como realizada' : 'Marcar como pendente' }}
+        </span>
+      </button>
+    }
     <button mat-menu-item type="button" (click)="delete(transaction)">
       <mat-icon>delete</mat-icon>
       <span>Excluir</span>
