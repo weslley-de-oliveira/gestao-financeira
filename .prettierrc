@@ -3,6 +3,7 @@
   "singleQuote": true,
   "plugins": ["prettier-plugin-tailwindcss"],
   "tailwindStylesheet": "./src/styles.css",
+  "tailwindFunctions": ["hlm", "cva", "classes"],
   "overrides": [
     {
       "files": "*.html",
