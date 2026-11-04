@@ -1,0 +1,45 @@
+<mat-toolbar class="topbar">
+  <button
+    matIconButton
+    type="button"
+    aria-label="Alternar menu lateral"
+    (click)="menuToggle.emit()"
+  >
+    <mat-icon>menu</mat-icon>
+  </button>
+  <span class="topbar__title">{{ pageTitle() }}</span>
+
+  <span class="topbar__spacer"></span>
+
+  <mat-form-field class="topbar__period" appearance="outline" subscriptSizing="dynamic">
+    <mat-label>Período</mat-label>
+    <mat-select [value]="selectedPeriod()" (valueChange)="onPeriodChange($event)">
+      @for (option of periodOptions; track option.value) {
+        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <button matIconButton type="button" aria-label="Menu do usuário" [matMenuTriggerFor]="userMenu">
+    <mat-icon>account_circle</mat-icon>
+  </button>
+</mat-toolbar>
+
+<mat-menu #userMenu="matMenu" xPosition="before">
+  <p class="topbar__menu-label">Conta demonstrativa</p>
+  <mat-divider />
+  <a mat-menu-item routerLink="/settings">
+    <mat-icon>settings</mat-icon>
+    <span>Configurações</span>
+  </a>
+  <a mat-menu-item routerLink="/security">
+    <mat-icon>shield_lock</mat-icon>
+    <span>Segurança</span>
+  </a>
+  <mat-divider />
+  <!-- Até existir a autenticação demonstrativa, "Sair" apenas volta para o login. -->
+  <a mat-menu-item routerLink="/login">
+    <mat-icon>logout</mat-icon>
+    <span>Sair</span>
+  </a>
+</mat-menu>

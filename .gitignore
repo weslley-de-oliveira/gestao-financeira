@@ -43,5 +43,3 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 
-# Nx (cache do CLI do Spartan)
-/.nx

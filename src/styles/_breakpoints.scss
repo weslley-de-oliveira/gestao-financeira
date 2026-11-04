@@ -1,0 +1,8 @@
+// Breakpoints compartilhados (mobile-first). Mantenha em sincronia com core/layout/breakpoints.ts.
+$md: 768px;
+
+@mixin md-up {
+  @media (min-width: $md) {
+    @content;
+  }
+}

@@ -17,21 +17,22 @@ O sistema permitirá organizar contas, receitas, despesas, cartões de crédito,
 
 ## Stack atual
 
-| Tecnologia                                                  | Uso                                                           |
-| ----------------------------------------------------------- | ------------------------------------------------------------- |
-| [Angular 22](https://angular.dev)                           | Framework (standalone, zoneless, Signals)                     |
-| TypeScript 6                                                | Linguagem, em strict mode                                     |
-| RxJS 7                                                      | Fluxos assíncronos e HTTP                                     |
-| [Tailwind CSS 4](https://tailwindcss.com)                   | Estilização utilitária e layout                               |
-| [Spartan UI](https://www.spartan.ng)                        | Componentes de interface acessíveis, estilizados com Tailwind |
-| Angular CDK 22                                              | Primitivas de interface (base do Spartan)                     |
-| [JSON Server 0.17](https://github.com/typicode/json-server) | API REST simulada para desenvolvimento                        |
-| concurrently                                                | Execução paralela do Angular e da API simulada                |
-| [Vitest](https://vitest.dev)                                | Testes unitários                                              |
-| angular-eslint + ESLint                                     | Análise estática                                              |
-| Prettier + `prettier-plugin-tailwindcss`                    | Formatação e ordenação de classes do Tailwind                 |
-| Husky + lint-staged                                         | Validação dos arquivos alterados antes do commit              |
-| commitlint                                                  | Validação de mensagens no padrão Conventional Commits         |
+| Tecnologia                                                  | Uso                                                   |
+| ----------------------------------------------------------- | ----------------------------------------------------- |
+| [Angular 22](https://angular.dev)                           | Framework (standalone, zoneless, Signals)             |
+| TypeScript 6                                                | Linguagem, em strict mode                             |
+| RxJS 7                                                      | Fluxos assíncronos e HTTP                             |
+| [Angular Material 22](https://material.angular.dev)         | Componentes de interface (Material Design 3)          |
+| SCSS                                                        | Tema do Material e estilos dos componentes            |
+| Material Symbols                                            | Ícones                                                |
+| Angular CDK 22                                              | Primitivas de interface (base do Material)            |
+| [JSON Server 0.17](https://github.com/typicode/json-server) | API REST simulada para desenvolvimento                |
+| concurrently                                                | Execução paralela do Angular e da API simulada        |
+| [Vitest](https://vitest.dev)                                | Testes unitários                                      |
+| angular-eslint + ESLint                                     | Análise estática                                      |
+| Prettier                                                    | Formatação                                            |
+| Husky + lint-staged                                         | Validação dos arquivos alterados antes do commit      |
+| commitlint                                                  | Validação de mensagens no padrão Conventional Commits |
 
 Outras ferramentas, como Playwright, gráficos e geração de dados fictícios, serão adicionadas conforme as funcionalidades forem implementadas.
 
@@ -71,7 +72,8 @@ db/
   db.json        # Dados da API simulada
 src/
   app/           # Código da aplicação
-  styles.css     # Estilos globais e Tailwind
+  styles.scss    # Tema do Angular Material e estilos globais
+  styles/        # Parciais SCSS compartilhados (breakpoints etc.)
 public/          # Arquivos estáticos
 ```
 

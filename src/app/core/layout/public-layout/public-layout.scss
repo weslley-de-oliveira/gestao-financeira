@@ -1,0 +1,46 @@
+@use 'breakpoints' as bp;
+
+.public-layout {
+  display: flex;
+  min-height: 100svh;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1rem;
+  background: var(--mat-sys-surface-container-low);
+
+  @include bp.md-up {
+    padding: 2.5rem;
+  }
+}
+
+.public-layout__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font: var(--mat-sys-title-large);
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+  }
+}
+
+.public-layout__card {
+  width: 100%;
+  max-width: 24rem;
+  box-sizing: border-box;
+  padding: 1.5rem;
+  border-radius: var(--mat-sys-corner-large);
+  background: var(--mat-sys-surface);
+  box-shadow: var(--mat-sys-level1);
+}
+
+.public-layout__notice {
+  max-width: 24rem;
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  font: var(--mat-sys-body-small);
+  text-align: center;
+}
