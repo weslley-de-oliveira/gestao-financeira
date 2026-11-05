@@ -4,11 +4,13 @@ Aplicação web de gestão financeira pessoal, desenvolvida como projeto de port
 
 Organiza contas, receitas, despesas, transferências, cartões de crédito, faturas, orçamentos e metas financeiras, com dashboard, tema claro/escuro e uma demonstração de criptografia no navegador.
 
+**Demo publicada:** <https://gestao-financeira-tau-five.vercel.app>
+
 > **Aviso:** este é um projeto demonstrativo. Utilize apenas dados fictícios — nunca credenciais, contas ou cartões reais. A API utilizada no desenvolvimento é simulada e não oferece segurança de produção.
 
 ## Demo
 
-A demo publicada roda inteiramente no navegador: os dados ficam no `localStorage` e começam com um conjunto fictício de seis meses de movimentações.
+A [demo publicada](https://gestao-financeira-tau-five.vercel.app) (Vercel, atualizada a cada push na `main`, com preview em cada pull request) roda inteiramente no navegador: os dados ficam no `localStorage` e começam com um conjunto fictício de seis meses de movimentações.
 
 - Entre com **Entrar com a conta de demonstração** (`demo@exemplo.com` / `demo1234`) ou crie uma conta.
 - Para voltar ao estado inicial, use **Restaurar dados iniciais** na tela de login ou em Configurações.
