@@ -1,35 +1,154 @@
+@use '@angular/material' as mat;
 @use 'breakpoints' as bp;
+
+// Barra lateral sempre escura (tons da cor de destaque, `--app-nav-bg`), com texto claro.
+$nav-text: rgb(255 255 255 / 80%);
+$nav-text-strong: #fff;
 
 .shell {
   height: 100%;
+
+  @include mat.sidenav-overrides(
+    (
+      content-background-color: var(--app-page-bg),
+    )
+  );
 }
 
 .shell__sidenav {
-  width: 16rem;
-  border-right: 1px solid var(--mat-sys-outline-variant);
+  display: flex;
+  width: 17rem;
+  flex-direction: column;
+  border-right: 0;
+  background: var(--app-nav-bg);
+  color: $nav-text-strong;
+
+  @include mat.sidenav-overrides(
+    (
+      container-background-color: transparent,
+      container-text-color: $nav-text-strong,
+      container-shape: 0,
+    )
+  );
+
+  @include mat.list-overrides(
+    (
+      list-item-label-text-color: $nav-text,
+      list-item-leading-icon-color: $nav-text,
+      list-item-hover-label-text-color: $nav-text-strong,
+      list-item-hover-leading-icon-color: $nav-text-strong,
+      list-item-focus-label-text-color: $nav-text-strong,
+      list-item-hover-state-layer-color: #fff,
+      list-item-focus-state-layer-color: #fff,
+      list-item-hover-state-layer-opacity: 0.08,
+      list-item-focus-state-layer-opacity: 0.12,
+      list-item-container-shape: 12px,
+      active-indicator-color: rgb(255 255 255 / 14%),
+      active-indicator-shape: 12px,
+    )
+  );
+
+  // O conteúdo interno do mat-sidenav precisa da coluna para o rodapé ficar embaixo.
+  ::ng-deep .mat-drawer-inner-container {
+    display: flex;
+    flex-direction: column;
+  }
 }
 
 .shell__brand {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 1rem 1.25rem;
-  color: inherit;
-  font: var(--mat-sys-title-medium);
+  margin: 0.75rem 0.75rem 0.5rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  color: $nav-text-strong;
+  font:
+    700 1.0625rem / 1.5rem Inter,
+    sans-serif;
+  letter-spacing: -0.01em;
   text-decoration: none;
 
-  mat-icon {
-    color: var(--mat-sys-primary);
-  }
-
   &:focus-visible {
-    outline: 2px solid var(--mat-sys-primary);
-    outline-offset: -2px;
+    outline: 2px solid var(--app-nav-highlight);
+    outline-offset: 2px;
   }
+}
+
+.shell__logo {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 14%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 18%);
+  color: var(--app-nav-highlight);
+}
+
+.shell__nav {
+  flex: 1;
+  padding: 0 0.75rem;
+}
+
+.shell__group {
+  padding: 0;
 }
 
 .shell__group-label {
   margin: 0;
+  padding: 1rem 0.75rem 0.375rem;
+  color: rgb(255 255 255 / 68%);
+  font:
+    600 0.6875rem / 1rem Inter,
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  // O matSubheader do Material fixa a altura; o rótulo usa só o próprio espaçamento.
+  &.mat-mdc-subheader {
+    height: auto;
+  }
+}
+
+.shell__link {
+  margin: 0.125rem 0;
+
+  &.shell__link--active {
+    @include mat.list-overrides(
+      (
+        list-item-label-text-color: $nav-text-strong,
+        list-item-leading-icon-color: var(--app-nav-highlight),
+        list-item-hover-label-text-color: $nav-text-strong,
+        list-item-hover-leading-icon-color: var(--app-nav-highlight),
+      )
+    );
+
+    font-weight: 600;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--app-nav-highlight);
+    outline-offset: -2px;
+  }
+}
+
+.shell__footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem;
+  padding: 0.75rem;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 8%);
+  color: rgb(255 255 255 / 80%);
+  font: var(--mat-sys-body-small);
+
+  mat-icon {
+    flex-shrink: 0;
+    color: var(--app-nav-highlight);
+  }
 }
 
 .shell__content {
@@ -38,10 +157,14 @@
 }
 
 .shell__main {
+  width: 100%;
+  max-width: 82rem;
   flex: 1;
+  box-sizing: border-box;
+  margin: 0 auto;
   padding: 1rem;
 
   @include bp.md-up {
-    padding: 1.5rem;
+    padding: 2rem;
   }
 }

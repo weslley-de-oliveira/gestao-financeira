@@ -24,7 +24,7 @@
     </p>
   }
   @case ('ready') {
-    <form class="category-form" novalidate (submit)="onSubmit($event)">
+    <form class="category-form app-form-card" novalidate (submit)="onSubmit($event)">
       @if (isEdit()) {
         <p class="category-form__info">
           Tipo: <strong>{{ typeLabel() }}</strong> — não muda depois da criação, para manter as

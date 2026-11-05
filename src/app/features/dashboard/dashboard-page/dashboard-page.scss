@@ -56,7 +56,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 0.25rem;
-  padding: 1rem;
+  padding: 1.25rem;
 
   mat-progress-bar {
     margin: 0.75rem 0;
@@ -64,16 +64,48 @@
 }
 
 .summary-card__label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
   color: var(--mat-sys-on-surface-variant);
-  font: var(--mat-sys-label-medium);
+  font: var(--mat-sys-label-large);
+}
+
+// Ícone num quadrado de cantos arredondados, na cor do indicador.
+.summary-card__icon {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--icon-color) 14%, transparent);
+  color: var(--icon-color);
+}
+
+.summary-card__icon--balance,
+.summary-card__icon--result {
+  --icon-color: var(--mat-sys-primary);
+}
+
+.summary-card__icon--income {
+  --icon-color: var(--app-income);
+}
+
+.summary-card__icon--expense {
+  --icon-color: var(--mat-sys-error);
 }
 
 .summary-card__value {
-  font: var(--mat-sys-title-large);
+  font:
+    700 1.625rem / 2rem Inter,
+    sans-serif;
+  letter-spacing: -0.02em;
 }
 
+// Receita usa a cor fixa das séries do gráfico, não a cor de destaque escolhida.
 .summary-card__value--income {
-  color: var(--mat-sys-primary);
+  color: var(--app-income);
 }
 
 .summary-card__value--expense {
@@ -184,7 +216,7 @@
 }
 
 .amount--income {
-  color: var(--mat-sys-primary);
+  color: var(--app-income);
 }
 
 .amount--expense {

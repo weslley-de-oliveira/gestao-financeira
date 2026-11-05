@@ -28,7 +28,7 @@ describe('settings and security pages', () => {
   });
 
   afterEach(() => {
-    document.documentElement.classList.remove('dark-theme', 'compact-density');
+    document.documentElement.className = '';
   });
 
   async function open(url: string): Promise<void> {
@@ -83,6 +83,32 @@ describe('settings and security pages', () => {
       expect(document.documentElement.classList).toContain('dark-theme');
       expect(document.documentElement.classList).toContain('compact-density');
       expect(text()).toContain('salvos apenas neste navegador');
+    });
+
+    it('offers the accent palettes as radio buttons, navy by default', async () => {
+      await open('/settings');
+      const root = harness.routeNativeElement as HTMLElement;
+      const radios = [...root.querySelectorAll<HTMLInputElement>('input[name=accent]')];
+
+      expect(radios.map((radio) => radio.value)).toEqual([
+        'navy',
+        'azure',
+        'cyan',
+        'green',
+        'violet',
+        'rose',
+        'orange',
+      ]);
+      expect(radios.find((radio) => radio.checked)?.value).toBe('navy');
+
+      radios.find((radio) => radio.value === 'green')!.click();
+      TestBed.tick();
+
+      expect(TestBed.inject(PreferencesService).accent()).toBe('green');
+      expect(document.documentElement.classList).toContain('accent-green');
+      expect(
+        root.querySelector('.accent-picker[role=radiogroup]')?.getAttribute('aria-labelledby'),
+      ).toBe('settings-accent-label');
     });
 
     it('ends the session', async () => {

@@ -6,19 +6,22 @@
     [fixedInViewport]="isMobile()"
   >
     <a class="shell__brand" routerLink="/dashboard" (click)="closeSidenavOnMobile()">
-      <mat-icon aria-hidden="true">account_balance</mat-icon>
+      <span class="shell__logo" aria-hidden="true">
+        <mat-icon>account_balance_wallet</mat-icon>
+      </span>
       <span>{{ appName }}</span>
     </a>
 
-    <nav aria-label="Navegação principal">
+    <nav class="shell__nav" aria-label="Navegação principal">
       @for (group of navigationGroups; track group.label) {
-        <mat-nav-list>
+        <mat-nav-list class="shell__group">
           <h2 matSubheader class="shell__group-label">{{ group.label }}</h2>
           @for (item of group.items; track item.path) {
             <a
               mat-list-item
+              class="shell__link"
               [routerLink]="item.path"
-              routerLinkActive
+              routerLinkActive="shell__link--active"
               #link="routerLinkActive"
               ariaCurrentWhenActive="page"
               [activated]="link.isActive"
@@ -31,6 +34,11 @@
         </mat-nav-list>
       }
     </nav>
+
+    <p class="shell__footer">
+      <mat-icon aria-hidden="true">science</mat-icon>
+      Ambiente demonstrativo com dados fictícios
+    </p>
   </mat-sidenav>
 
   <mat-sidenav-content class="shell__content">

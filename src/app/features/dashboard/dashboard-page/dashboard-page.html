@@ -27,7 +27,12 @@
 } @else {
   <section class="dashboard__summary" aria-label="Resumo">
     <mat-card appearance="outlined" class="summary-card">
-      <span class="summary-card__label">Saldo total</span>
+      <span class="summary-card__label">
+        <span class="summary-card__icon summary-card__icon--balance" aria-hidden="true">
+          <mat-icon>account_balance_wallet</mat-icon>
+        </span>
+        Saldo total
+      </span>
       @switch (accountsStatus()) {
         @case ('loading') {
           <mat-progress-bar mode="indeterminate" aria-label="Carregando saldo" />
@@ -52,7 +57,12 @@
     </mat-card>
 
     <mat-card appearance="outlined" class="summary-card">
-      <span class="summary-card__label">Receitas</span>
+      <span class="summary-card__label">
+        <span class="summary-card__icon summary-card__icon--income" aria-hidden="true">
+          <mat-icon>trending_up</mat-icon>
+        </span>
+        Receitas
+      </span>
       @if (transactionsStatus() === 'ready') {
         <strong
           class="summary-card__value"
@@ -67,7 +77,12 @@
     </mat-card>
 
     <mat-card appearance="outlined" class="summary-card">
-      <span class="summary-card__label">Despesas</span>
+      <span class="summary-card__label">
+        <span class="summary-card__icon summary-card__icon--expense" aria-hidden="true">
+          <mat-icon>trending_down</mat-icon>
+        </span>
+        Despesas
+      </span>
       @if (transactionsStatus() === 'ready') {
         <strong
           class="summary-card__value"
@@ -82,7 +97,12 @@
     </mat-card>
 
     <mat-card appearance="outlined" class="summary-card">
-      <span class="summary-card__label">Resultado</span>
+      <span class="summary-card__label">
+        <span class="summary-card__icon summary-card__icon--result" aria-hidden="true">
+          <mat-icon>query_stats</mat-icon>
+        </span>
+        Resultado
+      </span>
       @if (transactionsStatus() === 'ready') {
         <strong class="summary-card__value">{{ summary().net | money }}</strong>
         <span class="summary-card__hint">

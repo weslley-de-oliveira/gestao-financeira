@@ -1,4 +1,39 @@
+@use 'sass:map';
 @use '@angular/material' as mat;
+@use 'breakpoints' as bp;
+@use 'navy-palette';
+
+// Cores de destaque das Configurações (`ACCENT_OPTIONS` em PreferencesService), aplicadas pela
+// classe `.accent-<nome>` no <html>. Sem classe, vale a padrão: azul-marinho.
+$accents: (
+  'azure': mat.$azure-palette,
+  'cyan': mat.$cyan-palette,
+  'green': mat.$green-palette,
+  'violet': mat.$violet-palette,
+  'rose': mat.$rose-palette,
+  'orange': mat.$orange-palette,
+);
+
+// Cores de uma paleta: tokens do Material (só cor; o tema usa light-dark()) e as cores próprias
+// do layout. A barra lateral e o painel do login usam os tons escuros da paleta nos dois temas.
+@mixin accent($palette) {
+  @include mat.theme(
+    (
+      color: (
+        primary: $palette,
+      ),
+    )
+  );
+
+  --app-nav-bg: linear-gradient(180deg, #{map.get($palette, 25)} 0%, #{map.get($palette, 10)} 100%);
+  --app-hero-bg: linear-gradient(
+    145deg,
+    #{map.get($palette, 40)} 0%,
+    #{map.get($palette, 25)} 55%,
+    #{map.get($palette, 10)} 100%
+  );
+  --app-nav-highlight: #{map.get($palette, 80)};
+}
 
 html {
   height: 100%;
@@ -8,23 +43,99 @@ html {
   @include mat.theme(
     (
       color: (
-        primary: mat.$azure-palette,
-        tertiary: mat.$blue-palette,
+        primary: navy-palette.$primary-palette,
       ),
-      typography: Roboto,
+      typography: (
+        plain-family: (
+          Inter,
+          sans-serif,
+        ),
+        brand-family: (
+          Inter,
+          sans-serif,
+        ),
+      ),
       density: 0,
     )
   );
+
+  @include accent(navy-palette.$primary-palette);
+
+  // Azul-marinho de verdade: no tema claro, o primary usa o tom 30 em vez do 40 do Material.
+  --mat-sys-primary: light-dark(
+    #{map.get(navy-palette.$primary-palette, 30)},
+    #{map.get(navy-palette.$primary-palette, 80)}
+  );
+
+  // Títulos com mais peso que o padrão do Material 3.
+  --mat-sys-headline-small: 600 1.5rem / 2rem Inter, sans-serif;
+  --mat-sys-title-large: 600 1.375rem / 1.75rem Inter, sans-serif;
+  --mat-sys-title-medium: 600 1rem / 1.5rem Inter, sans-serif;
+
+  // Superfícies: fundo levemente acinzentado e cartões brancos; no escuro, cartões um tom acima.
+  --app-page-bg: var(--mat-sys-surface-container-low);
+  --app-card-bg: var(--mat-sys-surface-container-lowest);
+  --app-card-border: color-mix(in srgb, var(--mat-sys-outline-variant) 70%, transparent);
+  --app-card-shadow: 0 1px 2px rgb(16 24 40 / 4%), 0 4px 16px rgb(16 24 40 / 6%);
+  --app-radius-card: 16px;
+  --app-radius-field: 12px;
 
   // Cores das séries dos gráficos, separadas dos tokens do Material: os tons escuros padrão
   // (primary/error 80) são claros e pálidos demais para marcas e reprovam no validador de paleta
   // (faixa de luminosidade e croma). Os pares abaixo passam nos dois temas (CVD, contraste).
   --chart-income: light-dark(#005cbb, #4f8ff6);
   --chart-balance: var(--chart-income);
+  // Valores de receita em textos: mesma cor fixa da série, independente da cor de destaque.
+  --app-income: var(--chart-income);
   --chart-expense: light-dark(#ba1a1a, #f2554a);
+
+  // Componentes do Material: campos, cartões e painéis mais arredondados.
+  @include mat.form-field-overrides(
+    (
+      outlined-container-shape: var(--app-radius-field),
+    )
+  );
+  @include mat.card-overrides(
+    (
+      outlined-container-shape: var(--app-radius-card),
+      outlined-container-color: var(--app-card-bg),
+      outlined-outline-color: var(--app-card-border),
+      elevated-container-shape: var(--app-radius-card),
+      filled-container-shape: var(--app-radius-card),
+    )
+  );
+  @include mat.dialog-overrides(
+    (
+      container-shape: 24px,
+    )
+  );
+  @include mat.menu-overrides(
+    (
+      container-shape: var(--app-radius-field),
+    )
+  );
+  @include mat.datepicker-overrides(
+    (
+      calendar-container-shape: var(--app-radius-card),
+    )
+  );
+  @include mat.snack-bar-overrides(
+    (
+      container-shape: var(--app-radius-field),
+    )
+  );
+
+  @each $name, $palette in $accents {
+    &.accent-#{$name} {
+      @include accent($palette);
+    }
+  }
 
   &.dark-theme {
     color-scheme: dark;
+    --app-page-bg: var(--mat-sys-surface);
+    --app-card-bg: var(--mat-sys-surface-container);
+    --app-card-shadow: none;
   }
 
   // Preferência "Compacta" das Configurações (PreferencesService).
@@ -40,9 +151,35 @@ html {
 body {
   height: 100%;
   margin: 0;
-  background: var(--mat-sys-surface);
+  background: var(--app-page-bg);
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-medium);
+  -webkit-font-smoothing: antialiased;
+}
+
+// Cartões contornados com sombra suave (o Material não tem token de sombra para eles).
+.mat-mdc-card-outlined {
+  box-shadow: var(--app-card-shadow);
+}
+
+// Formulários de cadastro e edição sobre um cartão (classe aplicada no <form> de cada tela).
+.app-form-card {
+  box-sizing: border-box;
+  padding: 1.5rem 1.25rem;
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-radius-card);
+  background: var(--app-card-bg);
+  box-shadow: var(--app-card-shadow);
+
+  @include bp.md-up {
+    padding: 2rem;
+  }
+}
+
+// Painéis de seleção e autocomplete acompanham o arredondamento dos campos.
+div.mat-mdc-select-panel,
+div.mat-mdc-autocomplete-panel {
+  border-radius: var(--app-radius-field);
 }
 
 .visually-hidden {

@@ -19,7 +19,7 @@
     </p>
   }
   @case ('ready') {
-    <form class="goal-form" novalidate (submit)="onSubmit($event)">
+    <form class="goal-form app-form-card" novalidate (submit)="onSubmit($event)">
       <mat-form-field appearance="outline">
         <mat-label>Nome da meta</mat-label>
         <input matInput autocomplete="off" [formField]="goalForm.name" />

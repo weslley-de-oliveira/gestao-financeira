@@ -1,4 +1,4 @@
-import { expectAccessible, loginAsDemo, test } from './fixtures';
+import { expect, expectAccessible, loginAsDemo, test } from './fixtures';
 
 const PUBLIC_PAGES = ['/login', '/register'];
 
@@ -44,3 +44,16 @@ test.describe('signed in', () => {
     });
   }
 });
+
+const ACCENTS = ['navy', 'azure', 'cyan', 'green', 'violet', 'rose', 'orange'];
+
+for (const accent of ACCENTS) {
+  test(`the ${accent} accent palette is accessible`, async ({ page }) => {
+    await page.addInitScript((value) => {
+      localStorage.setItem('gf.preferences', JSON.stringify({ accent: value }));
+    }, accent);
+    await loginAsDemo(page);
+    await expect(page.locator('html')).toHaveClass(new RegExp(`accent-${accent}`));
+    await expectAccessible(page);
+  });
+}

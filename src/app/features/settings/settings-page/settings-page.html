@@ -59,6 +59,33 @@
     </div>
 
     <div class="settings__group">
+      <span id="settings-accent-label" class="settings__label">Cor de destaque</span>
+      <div class="accent-picker" role="radiogroup" aria-labelledby="settings-accent-label">
+        @for (option of accentOptions; track option.value) {
+          <label class="accent-picker__option">
+            <input
+              type="radio"
+              name="accent"
+              class="accent-picker__input"
+              [value]="option.value"
+              [checked]="accent() === option.value"
+              (change)="setAccent(option.value)"
+            />
+            <span class="accent-picker__swatch" [style.background]="option.swatch">
+              @if (accent() === option.value) {
+                <mat-icon aria-hidden="true">check</mat-icon>
+              }
+            </span>
+            <span class="accent-picker__label">{{ option.label }}</span>
+          </label>
+        }
+      </div>
+      <span class="settings__hint">
+        Muda botões, links, a barra lateral e destaques, nos temas claro e escuro.
+      </span>
+    </div>
+
+    <div class="settings__group">
       <span id="settings-density-label" class="settings__label">Densidade</span>
       <mat-button-toggle-group
         aria-labelledby="settings-density-label"
@@ -73,7 +100,8 @@
 
     <p class="settings__note">
       <mat-icon aria-hidden="true">info</mat-icon>
-      Tema e densidade ficam salvos apenas neste navegador (localStorage) e não identificam você.
+      Tema, cor e densidade ficam salvos apenas neste navegador (localStorage) e não identificam
+      você.
     </p>
   </mat-card>
 

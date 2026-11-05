@@ -25,7 +25,7 @@
         <a matButton="outlined" routerLink="/categories/new">Criar categoria</a>
       </div>
     } @else {
-      <form class="budget-form" novalidate (submit)="onSubmit($event)">
+      <form class="budget-form app-form-card" novalidate (submit)="onSubmit($event)">
         @if (isEdit()) {
           <p class="budget-form__category">
             <span class="budget-form__label">Categoria</span>

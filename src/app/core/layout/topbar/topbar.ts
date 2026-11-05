@@ -10,7 +10,11 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { PERIOD_OPTIONS, PeriodPreset } from '../../../shared/models/period';
 import { AuthService } from '../../auth/auth.service';
-import { PreferencesService } from '../../preferences/preferences.service';
+import {
+  ACCENT_OPTIONS,
+  AccentPreference,
+  PreferencesService,
+} from '../../preferences/preferences.service';
 import { PeriodService } from '../../services/period.service';
 import { AppTitleStrategy } from '../app-title-strategy';
 
@@ -43,6 +47,18 @@ export class Topbar {
   protected readonly selectedPeriod = this.periodService.selected;
   protected readonly periodOptions = PERIOD_OPTIONS;
   protected readonly isDark = computed(() => this.preferences.effectiveTheme() === 'dark');
+  protected readonly accent = this.preferences.accent;
+  protected readonly accentOptions = ACCENT_OPTIONS;
+  /** Iniciais do primeiro e do último nome, exibidas no avatar. */
+  protected readonly initials = computed(() => {
+    const names = this.currentUser()?.name.trim().split(/\s+/) ?? [];
+    const letters = names.length > 1 ? [names[0], names[names.length - 1]] : names;
+    return letters.map((name) => name.charAt(0).toLocaleUpperCase('pt-BR')).join('');
+  });
+
+  protected setAccent(accent: AccentPreference): void {
+    this.preferences.setAccent(accent);
+  }
 
   protected toggleTheme(): void {
     this.preferences.toggleTheme();

@@ -32,7 +32,7 @@
         <a matButton="filled" routerLink="/accounts/new">Cadastrar conta</a>
       </div>
     } @else {
-      <form class="transaction-form" novalidate (submit)="onSubmit($event)">
+      <form class="transaction-form app-form-card" novalidate (submit)="onSubmit($event)">
         <div class="transaction-form__group">
           <span id="transaction-type-label" class="transaction-form__label">Tipo</span>
           <mat-button-toggle-group

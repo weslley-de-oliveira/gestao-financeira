@@ -1,13 +1,17 @@
 import { TestBed } from '@angular/core/testing';
 import { PREFERENCES_STORAGE_KEY, PreferencesService } from './preferences.service';
 
+function resetRootClasses(): void {
+  document.documentElement.className = '';
+}
+
 describe('PreferencesService', () => {
   let systemDark: boolean;
   let listeners: ((event: { matches: boolean }) => void)[];
 
   beforeEach(() => {
     localStorage.clear();
-    document.documentElement.classList.remove('dark-theme', 'compact-density');
+    resetRootClasses();
     systemDark = false;
     listeners = [];
     // O ambiente de testes não implementa matchMedia: simula a preferência do sistema.
@@ -21,7 +25,7 @@ describe('PreferencesService', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    document.documentElement.classList.remove('dark-theme', 'compact-density');
+    resetRootClasses();
   });
 
   function create(): PreferencesService {
@@ -58,19 +62,33 @@ describe('PreferencesService', () => {
     expect(JSON.parse(localStorage.getItem(PREFERENCES_STORAGE_KEY)!)).toEqual({
       theme: 'dark',
       density: 'compact',
+      accent: 'navy',
     });
   });
 
   it('restores saved preferences and ignores unknown values', () => {
     localStorage.setItem(
       PREFERENCES_STORAGE_KEY,
-      JSON.stringify({ theme: 'neon', density: 'compact', name: 'x' }),
+      JSON.stringify({ theme: 'neon', density: 'compact', accent: 'gold', name: 'x' }),
     );
 
     const service = create();
 
     expect(service.theme()).toBe('system');
     expect(service.density()).toBe('compact');
+    expect(service.accent()).toBe('navy');
+  });
+
+  it('uses navy by default and switches the accent palette class', () => {
+    const service = create();
+    expect(classes()).toContain('accent-navy');
+
+    service.setAccent('rose');
+    TestBed.tick();
+
+    expect(classes()).toContain('accent-rose');
+    expect(classes()).not.toContain('accent-navy');
+    expect(JSON.parse(localStorage.getItem(PREFERENCES_STORAGE_KEY)!).accent).toBe('rose');
   });
 
   it('toggles to the opposite of the applied theme', () => {

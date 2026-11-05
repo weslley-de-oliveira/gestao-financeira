@@ -25,7 +25,7 @@ A demo publicada roda inteiramente no navegador: os dados ficam no `localStorage
 | Cartões e faturas | Limite utilizado e disponível, ciclo de fatura, status, pagamento que não duplica despesas          |
 | Orçamentos        | Limite mensal por categoria com vigências, alerta e consumo do mês                                  |
 | Metas             | Progresso, status, ritmo mensal até o prazo e histórico de aportes                                  |
-| Configurações     | Perfil, tema claro/escuro/sistema e densidade                                                       |
+| Configurações     | Perfil, tema claro/escuro/sistema, cor de destaque (7 paletas) e densidade                          |
 | Segurança         | Laboratório de criptografia (AES-256-GCM + PBKDF2) e exclusão da conta e dos dados                  |
 
 ## Stack

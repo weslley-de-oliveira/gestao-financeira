@@ -19,7 +19,7 @@
     </p>
   }
   @case ('ready') {
-    <form class="account-form" novalidate (submit)="onSubmit($event)">
+    <form class="account-form app-form-card" novalidate (submit)="onSubmit($event)">
       <mat-form-field appearance="outline">
         <mat-label>Nome da conta</mat-label>
         <input matInput [formField]="accountForm.name" />

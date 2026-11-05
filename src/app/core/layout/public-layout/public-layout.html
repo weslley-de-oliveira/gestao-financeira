@@ -1,12 +1,44 @@
 <div class="public-layout">
-  <div class="public-layout__brand">
-    <mat-icon aria-hidden="true">account_balance</mat-icon>
-    <span>{{ appName }}</span>
+  <aside class="public-layout__hero" aria-label="Sobre a aplicação">
+    <div class="public-layout__brand public-layout__brand--hero">
+      <span class="public-layout__logo" aria-hidden="true">
+        <mat-icon>account_balance_wallet</mat-icon>
+      </span>
+      <span>{{ appName }}</span>
+    </div>
+
+    <div class="public-layout__pitch">
+      <h2 class="public-layout__headline">Suas finanças organizadas em um só lugar.</h2>
+      <p class="public-layout__lead">
+        Acompanhe contas, cartões, orçamentos e metas com clareza, mês a mês.
+      </p>
+      <ul class="public-layout__features">
+        @for (feature of features; track feature.text) {
+          <li>
+            <span class="public-layout__feature-icon" aria-hidden="true">
+              <mat-icon>{{ feature.icon }}</mat-icon>
+            </span>
+            {{ feature.text }}
+          </li>
+        }
+      </ul>
+    </div>
+
+    <p class="public-layout__hero-note">Projeto de portfólio · dados 100% fictícios</p>
+  </aside>
+
+  <div class="public-layout__panel">
+    <div class="public-layout__brand public-layout__brand--compact">
+      <span class="public-layout__logo" aria-hidden="true">
+        <mat-icon>account_balance_wallet</mat-icon>
+      </span>
+      <span>{{ appName }}</span>
+    </div>
+
+    <main class="public-layout__card">
+      <router-outlet />
+    </main>
+
+    <p class="public-layout__notice">Ambiente demonstrativo: utilize apenas dados fictícios.</p>
   </div>
-
-  <main class="public-layout__card">
-    <router-outlet />
-  </main>
-
-  <p class="public-layout__notice">Ambiente demonstrativo: utilize apenas dados fictícios.</p>
 </div>

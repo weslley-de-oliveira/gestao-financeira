@@ -1,44 +1,175 @@
 @use 'breakpoints' as bp;
 
 .public-layout {
-  display: flex;
+  display: grid;
   min-height: 100svh;
-  box-sizing: border-box;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  padding: 1rem;
-  background: var(--mat-sys-surface-container-low);
+  background: var(--app-page-bg);
 
   @include bp.md-up {
-    padding: 2.5rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+// Painel de apresentação: só em telas médias e grandes.
+.public-layout__hero {
+  position: relative;
+  display: none;
+  overflow: hidden;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 2.5rem 3rem;
+  background: var(--app-hero-bg);
+  color: #fff;
+
+  // Círculos decorativos.
+  &::before,
+  &::after {
+    position: absolute;
+    border-radius: 50%;
+    background: rgb(255 255 255 / 6%);
+    content: '';
+    pointer-events: none;
+  }
+
+  &::before {
+    top: -8rem;
+    right: -6rem;
+    width: 22rem;
+    height: 22rem;
+  }
+
+  &::after {
+    bottom: -10rem;
+    left: -8rem;
+    width: 26rem;
+    height: 26rem;
+  }
+
+  @include bp.md-up {
+    display: flex;
   }
 }
 
 .public-layout__brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font: var(--mat-sys-title-large);
+  gap: 0.75rem;
+  font:
+    700 1.125rem / 1.5rem Inter,
+    sans-serif;
+  letter-spacing: -0.01em;
+}
 
-  mat-icon {
-    color: var(--mat-sys-primary);
+.public-layout__brand--compact {
+  @include bp.md-up {
+    display: none;
+  }
+
+  .public-layout__logo {
+    background: var(--app-hero-bg);
+    color: #fff;
+  }
+}
+
+.public-layout__logo {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 14%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 20%);
+  color: var(--app-nav-highlight);
+}
+
+.public-layout__pitch {
+  position: relative;
+  max-width: 28rem;
+}
+
+.public-layout__headline {
+  margin: 0 0 1rem;
+  font:
+    700 2.25rem / 2.75rem Inter,
+    sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.public-layout__lead {
+  margin: 0 0 2rem;
+  color: rgb(255 255 255 / 85%);
+  font:
+    400 1.0625rem / 1.625rem Inter,
+    sans-serif;
+}
+
+.public-layout__features {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: rgb(255 255 255 / 92%);
+    font: var(--mat-sys-body-large);
+  }
+}
+
+.public-layout__feature-icon {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 12%);
+  color: var(--app-nav-highlight);
+}
+
+.public-layout__hero-note {
+  position: relative;
+  margin: 0;
+  color: rgb(255 255 255 / 75%);
+  font: var(--mat-sys-body-small);
+}
+
+.public-layout__panel {
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1.5rem 1rem;
+
+  @include bp.md-up {
+    padding: 2.5rem;
   }
 }
 
 .public-layout__card {
   width: 100%;
-  max-width: 24rem;
+  max-width: 26rem;
   box-sizing: border-box;
-  padding: 1.5rem;
-  border-radius: var(--mat-sys-corner-large);
-  background: var(--mat-sys-surface);
-  box-shadow: var(--mat-sys-level1);
+  padding: 1.75rem 1.5rem;
+  border: 1px solid var(--app-card-border);
+  border-radius: 24px;
+  background: var(--app-card-bg);
+  box-shadow: var(--app-card-shadow);
+
+  @include bp.md-up {
+    padding: 2.5rem 2.25rem;
+  }
 }
 
 .public-layout__notice {
-  max-width: 24rem;
+  max-width: 26rem;
   margin: 0;
   color: var(--mat-sys-on-surface-variant);
   font: var(--mat-sys-body-small);

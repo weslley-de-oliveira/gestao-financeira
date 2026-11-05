@@ -20,6 +20,10 @@
     </mat-select>
   </mat-form-field>
 
+  <button matIconButton type="button" aria-label="Cor de destaque" [matMenuTriggerFor]="accentMenu">
+    <mat-icon>palette</mat-icon>
+  </button>
+
   <button
     matIconButton
     type="button"
@@ -29,10 +33,34 @@
     <mat-icon>{{ isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
   </button>
 
-  <button matIconButton type="button" aria-label="Menu do usuário" [matMenuTriggerFor]="userMenu">
-    <mat-icon>account_circle</mat-icon>
+  <button
+    type="button"
+    class="topbar__avatar"
+    [attr.aria-label]="initials() + ', menu do usuário'"
+    [matMenuTriggerFor]="userMenu"
+  >
+    {{ initials() }}
   </button>
 </mat-toolbar>
+
+<mat-menu #accentMenu="matMenu" xPosition="before" class="topbar__accent-menu">
+  <p class="topbar__menu-heading">Cor de destaque</p>
+  @for (option of accentOptions; track option.value) {
+    <button
+      mat-menu-item
+      type="button"
+      role="menuitemradio"
+      [attr.aria-checked]="accent() === option.value"
+      (click)="setAccent(option.value)"
+    >
+      <span class="topbar__swatch" [style.background]="option.swatch" aria-hidden="true"></span>
+      <span>{{ option.label }}</span>
+      @if (accent() === option.value) {
+        <mat-icon class="topbar__check" aria-hidden="true">check</mat-icon>
+      }
+    </button>
+  }
+</mat-menu>
 
 <mat-menu #userMenu="matMenu" xPosition="before">
   @if (currentUser(); as user) {

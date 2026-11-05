@@ -47,9 +47,10 @@
   gap: 0.5rem;
   margin-bottom: 1.5rem;
   padding: 1rem;
-  border-radius: var(--mat-sys-corner-medium);
-  background: var(--mat-sys-secondary-container);
-  color: var(--mat-sys-on-secondary-container);
+  border: 1px solid color-mix(in srgb, var(--mat-sys-primary) 22%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--mat-sys-primary) 6%, var(--app-card-bg));
+  color: var(--mat-sys-on-surface);
 }
 
 .auth-demo__title {

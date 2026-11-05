@@ -26,7 +26,7 @@ Chart.register(
   Tooltip,
   Legend,
 );
-Chart.defaults.font.family = 'Roboto, sans-serif';
+Chart.defaults.font.family = 'Inter, sans-serif';
 
 /** Converte uma variável CSS do tema na cor que o canvas entende. */
 export type ColorResolver = (cssVariable: string) => string;

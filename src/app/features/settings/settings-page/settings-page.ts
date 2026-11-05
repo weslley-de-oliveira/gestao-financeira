@@ -12,6 +12,8 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { confirmRestoreDemoData } from '../../../core/demo/restore-demo-data';
 import {
+  ACCENT_OPTIONS,
+  AccentPreference,
   DensityPreference,
   PreferencesService,
   ThemePreference,
@@ -56,6 +58,8 @@ export class SettingsPage {
   protected readonly user = this.auth.currentUser;
   protected readonly theme = this.preferences.theme;
   protected readonly density = this.preferences.density;
+  protected readonly accent = this.preferences.accent;
+  protected readonly accentOptions = ACCENT_OPTIONS;
 
   private readonly profile = signal<ProfileFormModel>({ name: this.user()?.name ?? '' });
   protected readonly profileForm = form(this.profile, (p) => {
@@ -89,6 +93,10 @@ export class SettingsPage {
 
   protected setTheme(theme: ThemePreference): void {
     this.preferences.setTheme(theme);
+  }
+
+  protected setAccent(accent: AccentPreference): void {
+    this.preferences.setAccent(accent);
   }
 
   protected setDensity(density: DensityPreference): void {

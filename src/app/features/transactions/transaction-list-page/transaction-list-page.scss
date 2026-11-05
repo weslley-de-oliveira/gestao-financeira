@@ -54,7 +54,7 @@
 }
 
 .summary-card__value--income {
-  color: var(--mat-sys-primary);
+  color: var(--app-income);
 }
 
 .summary-card__value--expense {
@@ -209,7 +209,7 @@
 }
 
 .amount--income {
-  color: var(--mat-sys-primary);
+  color: var(--app-income);
 }
 
 .amount--expense {
