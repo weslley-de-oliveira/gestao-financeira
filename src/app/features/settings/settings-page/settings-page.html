@@ -96,6 +96,23 @@
     <p class="settings__hint">Fixas nesta versão da demonstração.</p>
   </mat-card>
 
+  @if (demoData) {
+    <mat-card appearance="outlined" class="settings__section">
+      <h2 class="settings__section-title">Dados da demonstração</h2>
+      <p class="settings__hint">
+        Nesta demonstração, todos os dados (fictícios) ficam salvos apenas neste navegador.
+        Restaurar apaga o que foi criado ou alterado, inclusive contas de acesso, volta aos dados
+        iniciais e encerra a sessão.
+      </p>
+      <div class="settings__actions">
+        <button matButton="outlined" type="button" (click)="restoreDemoData()">
+          <mat-icon>restart_alt</mat-icon>
+          Restaurar dados iniciais
+        </button>
+      </div>
+    </mat-card>
+  }
+
   <mat-card appearance="outlined" class="settings__section">
     <h2 class="settings__section-title">Sessão</h2>
     <p class="settings__hint">

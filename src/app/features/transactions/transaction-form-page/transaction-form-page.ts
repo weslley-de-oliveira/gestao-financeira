@@ -10,7 +10,7 @@ import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
-import { TODAY } from '../../../core/services/period.service';
+import { TODAY } from '../../../core/services/today';
 import { MoneyMaskDirective } from '../../../shared/directives/money-mask.directive';
 import {
   EDITABLE_TRANSACTION_TYPES,

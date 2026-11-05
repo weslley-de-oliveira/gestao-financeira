@@ -3,17 +3,20 @@ import { FormField, form, maxLength, required, submit, validate } from '@angular
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
+import { confirmRestoreDemoData } from '../../../core/demo/restore-demo-data';
 import {
   DensityPreference,
   PreferencesService,
   ThemePreference,
 } from '../../../core/preferences/preferences.service';
+import { DemoData } from '../../../data-access/repositories/demo-data';
 import { USER_NAME_MAX_LENGTH } from '../../../shared/models/user';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 
@@ -21,7 +24,10 @@ interface ProfileFormModel {
   name: string;
 }
 
-/** Perfil, preferências visuais (locais ao navegador), regionais fixas e encerrar sessão. */
+/**
+ * Perfil, preferências visuais (locais ao navegador), regionais fixas, dados da demo publicada e
+ * encerrar sessão.
+ */
 @Component({
   imports: [
     FormField,
@@ -43,6 +49,9 @@ export class SettingsPage {
   private readonly preferences = inject(PreferencesService);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
+  /** Presente só na demo publicada (dados no navegador). */
+  protected readonly demoData = inject(DemoData, { optional: true });
 
   protected readonly user = this.auth.currentUser;
   protected readonly theme = this.preferences.theme;
@@ -90,6 +99,14 @@ export class SettingsPage {
     await this.auth.logout();
     await this.router.navigateByUrl('/login');
     this.notify('Sessão encerrada.');
+  }
+
+  protected async restoreDemoData(): Promise<void> {
+    if (this.demoData && (await confirmRestoreDemoData(this.dialog, this.demoData))) {
+      await this.auth.logout();
+      await this.router.navigateByUrl('/login');
+      this.notify('Dados da demonstração restaurados.');
+    }
   }
 
   private notify(message: string): void {

@@ -9,7 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { TODAY } from '../../../core/services/period.service';
+import { TODAY } from '../../../core/services/today';
 import { openConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { IsoDatePipe } from '../../../shared/pipes/iso-date.pipe';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';

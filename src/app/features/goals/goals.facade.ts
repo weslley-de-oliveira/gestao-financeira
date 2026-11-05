@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { SessionCleanup } from '../../core/auth/session-cleanup';
-import { TODAY } from '../../core/services/period.service';
+import { TODAY } from '../../core/services/today';
 import { GoalChanges, GoalRepository } from '../../data-access/repositories/goal.repository';
 import { Goal, GoalContribution, GoalWithProgress } from '../../shared/models/goal';
 import { toIsoDate } from '../../shared/utils/date';

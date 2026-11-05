@@ -12,7 +12,7 @@ import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { TODAY } from '../../../core/services/period.service';
+import { TODAY } from '../../../core/services/today';
 import { IconAvatar } from '../../../shared/components/icon-avatar/icon-avatar';
 import { openConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { MoneyMaskDirective } from '../../../shared/directives/money-mask.directive';

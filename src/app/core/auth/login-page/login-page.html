@@ -1,6 +1,27 @@
 <h1 class="auth-form__title">Entrar</h1>
 <p class="auth-form__subtitle">Acesse sua conta demonstrativa.</p>
 
+@if (demoData) {
+  <section class="auth-demo" aria-labelledby="auth-demo-title">
+    <h2 id="auth-demo-title" class="auth-demo__title">
+      <mat-icon aria-hidden="true">science</mat-icon>
+      Demonstração
+    </h2>
+    <p class="auth-demo__text">
+      Os dados são fictícios e ficam salvos só neste navegador. Conta pronta para explorar:
+      <strong>{{ demoCredentials.email }}</strong> / <strong>{{ demoCredentials.password }}</strong>
+    </p>
+    <button
+      matButton="tonal"
+      type="button"
+      [disabled]="loginForm().submitting()"
+      (click)="loginAsDemo()"
+    >
+      Entrar com a conta de demonstração
+    </button>
+  </section>
+}
+
 <form class="auth-form" novalidate (submit)="onSubmit($event)">
   <mat-form-field appearance="outline">
     <mat-label>E-mail</mat-label>
@@ -45,3 +66,12 @@
 <p class="auth-form__footer">
   Ainda não tem conta? <a routerLink="/register">Criar conta demonstrativa</a>
 </p>
+
+@if (demoData) {
+  <p class="auth-form__footer">
+    <button matButton type="button" (click)="restoreDemoData()">
+      <mat-icon>restart_alt</mat-icon>
+      Restaurar dados iniciais
+    </button>
+  </p>
+}

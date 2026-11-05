@@ -1,5 +1,5 @@
 import { Provider } from '@angular/core';
-import { TODAY } from '../app/core/services/period.service';
+import { TODAY } from '../app/core/services/today';
 import { PBKDF2_ITERATIONS } from '../app/core/security/password-hasher';
 import { AccountRepository } from '../app/data-access/repositories/account.repository';
 import { BudgetRepository } from '../app/data-access/repositories/budget.repository';

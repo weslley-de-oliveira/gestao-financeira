@@ -38,3 +38,30 @@
     color: var(--mat-sys-primary);
   }
 }
+
+// Aviso da demo publicada, só na tela de login.
+.auth-demo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border-radius: var(--mat-sys-corner-medium);
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+}
+
+.auth-demo__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font: var(--mat-sys-title-small);
+}
+
+.auth-demo__text {
+  margin: 0;
+  font: var(--mat-sys-body-medium);
+  overflow-wrap: anywhere;
+}

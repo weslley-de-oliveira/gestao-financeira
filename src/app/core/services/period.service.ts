@@ -1,12 +1,7 @@
-import { Injectable, InjectionToken, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { DateRange, PeriodPreset, periodRange } from '../../shared/models/period';
 import { SessionCleanup } from '../auth/session-cleanup';
-
-/** Fonte da data atual; substituída nos testes para fixar o "hoje". */
-export const TODAY = new InjectionToken<() => Date>('TODAY', {
-  factory: () => () => new Date(),
-});
-
+import { TODAY } from './today';
 /** Período global selecionado na topbar, consumido pelas telas que filtram por data. */
 @Injectable({ providedIn: 'root' })
 export class PeriodService {

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
-import { TODAY } from '../../core/services/period.service';
+import { TODAY } from '../../core/services/today';
 import { AccountRepository } from '../../data-access/repositories/account.repository';
 import { CreditCardRepository } from '../../data-access/repositories/credit-card.repository';
 import { TransactionRepository } from '../../data-access/repositories/transaction.repository';

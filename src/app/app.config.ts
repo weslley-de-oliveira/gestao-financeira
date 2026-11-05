@@ -14,23 +14,8 @@ import { provideRouter, TitleStrategy, withComponentInputBinding } from '@angula
 import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
 import { PreferencesService } from './core/preferences/preferences.service';
-import { HttpUserDataRepository } from './data-access/repositories/http-user-data.repository';
-import { UserDataRepository } from './data-access/repositories/user-data.repository';
 import { AppTitleStrategy } from './core/layout/app-title-strategy';
-import { AccountRepository } from './data-access/repositories/account.repository';
-import { BudgetRepository } from './data-access/repositories/budget.repository';
-import { CategoryRepository } from './data-access/repositories/category.repository';
-import { CreditCardRepository } from './data-access/repositories/credit-card.repository';
-import { GoalRepository } from './data-access/repositories/goal.repository';
-import { HttpAccountRepository } from './data-access/repositories/http-account.repository';
-import { HttpBudgetRepository } from './data-access/repositories/http-budget.repository';
-import { HttpCategoryRepository } from './data-access/repositories/http-category.repository';
-import { HttpCreditCardRepository } from './data-access/repositories/http-credit-card.repository';
-import { HttpGoalRepository } from './data-access/repositories/http-goal.repository';
-import { HttpTransactionRepository } from './data-access/repositories/http-transaction.repository';
-import { HttpUserRepository } from './data-access/repositories/http-user.repository';
-import { TransactionRepository } from './data-access/repositories/transaction.repository';
-import { UserRepository } from './data-access/repositories/user.repository';
+import { provideDataAccess } from './data-access/data-access.providers';
 
 registerLocaleData(localePt, 'pt-BR');
 
@@ -43,14 +28,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => inject(AuthService).restoreSession()),
     // Aplica tema e densidade salvos antes da primeira renderização.
     provideAppInitializer(() => void inject(PreferencesService)),
-    { provide: UserRepository, useClass: HttpUserRepository },
-    { provide: UserDataRepository, useClass: HttpUserDataRepository },
-    { provide: AccountRepository, useClass: HttpAccountRepository },
-    { provide: CategoryRepository, useClass: HttpCategoryRepository },
-    { provide: TransactionRepository, useClass: HttpTransactionRepository },
-    { provide: CreditCardRepository, useClass: HttpCreditCardRepository },
-    { provide: BudgetRepository, useClass: HttpBudgetRepository },
-    { provide: GoalRepository, useClass: HttpGoalRepository },
+    provideDataAccess(),
     { provide: TitleStrategy, useExisting: AppTitleStrategy },
     { provide: LOCALE_ID, useValue: 'pt-BR' },
     { provide: DEFAULT_CURRENCY_CODE, useValue: 'BRL' },

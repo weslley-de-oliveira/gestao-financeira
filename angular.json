@@ -55,6 +55,27 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "demo": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/app/data-access/data-access.providers.ts",
+                  "with": "src/app/data-access/data-access.providers.demo.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -67,6 +88,9 @@
             },
             "development": {
               "buildTarget": "gestao-financeira:build:development"
+            },
+            "demo": {
+              "buildTarget": "gestao-financeira:build:demo"
             }
           },
           "defaultConfiguration": "development"
@@ -77,7 +101,12 @@
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html",
+              "e2e/**/*.ts",
+              "playwright.config.ts"
+            ]
           }
         }
       }

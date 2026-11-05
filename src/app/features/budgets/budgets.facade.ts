@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { SessionCleanup } from '../../core/auth/session-cleanup';
-import { TODAY } from '../../core/services/period.service';
+import { TODAY } from '../../core/services/today';
 import { BudgetRepository } from '../../data-access/repositories/budget.repository';
 import { CategoryRepository } from '../../data-access/repositories/category.repository';
 import { Budget } from '../../shared/models/budget';

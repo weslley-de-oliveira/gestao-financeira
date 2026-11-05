@@ -1,4 +1,4 @@
-import { Category } from '../../../shared/models/category';
+import type { Category } from '../../../shared/models/category';
 
 export type DefaultCategory = Pick<Category, 'name' | 'type' | 'icon' | 'color'>;
 
