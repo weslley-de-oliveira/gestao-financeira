@@ -27,7 +27,7 @@ export class LoginPage {
   private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
-  /** Presente só na demo publicada (dados no navegador). */
+  /** Presente só na build de demo (dados no navegador): habilita a restauração dos dados. */
   protected readonly demoData = inject(DemoData, { optional: true });
   protected readonly demoCredentials = DEMO_CREDENTIALS;
 

@@ -22,7 +22,10 @@ class FakeDemoData extends DemoData {
   }
 }
 
-/** Ações exclusivas da demo publicada: entrar com a conta pronta e restaurar os dados. */
+/**
+ * Conta de demonstração (nas duas builds) e restauração dos dados iniciais (só na build de demo,
+ * com os dados no navegador).
+ */
 describe('demo actions', () => {
   let harness: RouterTestingHarness;
   let loader: HarnessLoader;
@@ -64,11 +67,12 @@ describe('demo actions', () => {
     await harness.fixture.whenStable();
   }
 
-  it('hides the demo actions outside the published demo', async () => {
+  it('shows the shared demo account but hides the data restore outside the demo build', async () => {
     await setup([]);
     await open('/login');
 
-    expect(text()).not.toContain('Demonstração');
+    expect(text()).toContain(`${DEMO_CREDENTIALS.email} / ${DEMO_CREDENTIALS.password}`);
+    expect(text()).toContain('compartilhada');
     expect(await loader.getAllHarnesses(MatButtonHarness.with({ text: /Restaurar/ }))).toEqual([]);
 
     await signInTestUser();
