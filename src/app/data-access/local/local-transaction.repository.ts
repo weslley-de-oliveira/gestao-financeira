@@ -13,6 +13,7 @@ import {
   TransactionTotals,
 } from '../../shared/models/transaction-query';
 import { toTransaction, toTransactionDto } from '../dto/transaction.dto';
+import { TransactionSource } from '../repositories/transaction-source';
 import { TransactionChanges, TransactionRepository } from '../repositories/transaction.repository';
 import { LocalCollection, LocalDatabase } from './local-database';
 
@@ -21,7 +22,7 @@ import { LocalCollection, LocalDatabase } from './local-database';
  * completa, com as mesmas regras da API.
  */
 @Injectable()
-export class LocalTransactionRepository extends TransactionRepository {
+export class LocalTransactionRepository extends TransactionRepository implements TransactionSource {
   private readonly transactions = new LocalCollection(inject(LocalDatabase), 'transactions');
 
   listByUser(userId: string): Observable<Transaction[]> {

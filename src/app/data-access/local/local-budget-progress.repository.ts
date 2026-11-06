@@ -5,13 +5,13 @@ import { BudgetProgress } from '../../shared/models/budget';
 import { IsoMonth } from '../../shared/utils/month';
 import { BudgetProgressRepository } from '../repositories/budget-progress.repository';
 import { BudgetRepository } from '../repositories/budget.repository';
-import { TransactionRepository } from '../repositories/transaction.repository';
+import { TransactionSource } from '../repositories/transaction-source';
 
 /** Consumo calculado no navegador (demo e testes), com as mesmas regras do servidor. */
 @Injectable()
 export class LocalBudgetProgressRepository extends BudgetProgressRepository {
   private readonly budgets = inject(BudgetRepository);
-  private readonly transactions = inject(TransactionRepository);
+  private readonly transactions = inject(TransactionSource);
 
   listByMonth(userId: string, month: IsoMonth): Observable<BudgetProgress[]> {
     return defer(async () => {

@@ -63,7 +63,7 @@ describe('TransactionsFacade', () => {
     const created = await facade.create(expense);
 
     expect(repository.records).toEqual([expect.objectContaining({ ...expense, userId })]);
-    expect(facade.transactions()).toEqual([created]);
+    expect(await facade.getById(created.id)).toEqual(created);
   });
 
   it('validates the accounts and the category against the user data', async () => {
@@ -128,7 +128,6 @@ describe('TransactionsFacade', () => {
     await facade.delete(created.id);
 
     expect(repository.records).toHaveLength(0);
-    expect(facade.transactions()).toEqual([]);
     expect((await accounts.getById('account-1'))?.currentBalance).toBe(100_000);
   });
 
@@ -159,7 +158,7 @@ describe('TransactionsFacade', () => {
     seedTransactions('someone-else', { id: 'other' });
 
     await expect(facade.delete('other')).rejects.toBeInstanceOf(TransactionNotFoundError);
-    await facade.load();
-    expect(facade.transactions()).toEqual([]);
+    expect(await facade.getById('other')).toBeNull();
+    expect((await facade.recent({}, 10)).count).toBe(0);
   });
 });

@@ -1,8 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { EMPTY, Observable, expand, map, reduce, retry, throwError, timer } from 'rxjs';
-import { InvoicePaymentError } from '../../features/invoices/domain/invoice-rules';
+import { Observable, map, retry, throwError, timer } from 'rxjs';
+import {
+  InvoicePaymentError,
+  PaidInvoiceError,
+} from '../../features/invoices/domain/invoice-rules';
 import {
   InvalidTransactionInputError,
   TransactionInput,
@@ -31,9 +34,6 @@ import type {
 /** Espera antes de repetir um pagamento cuja resposta se perdeu (rede ou API acordando). */
 export const PAYMENT_RETRY_DELAY_MS = 1000;
 
-/** Maior página aceita pela API. */
-const PAGE_SIZE = 100;
-
 /** Vínculos com conta, cartão e categoria: o servidor confere se existem e estão ativos. */
 const LINKS = ['accountId', 'creditCardId', 'destinationAccountId', 'categoryId'] as const;
 
@@ -47,20 +47,6 @@ export class ApiTransactionRepository extends TransactionRepository {
   private readonly baseUrl = inject(API_BASE_URL);
   private readonly url = `${this.baseUrl}/transactions`;
   private readonly session = inject(SessionUser);
-
-  /**
-   * Todas as transações da sessão, percorrendo as páginas do cursor: os filtros e os saldos do
-   * app são calculados sobre a lista completa.
-   */
-  listByUser(): Observable<Transaction[]> {
-    return this.page(null).pipe(
-      expand((page) => (page.nextCursor ? this.page(page.nextCursor) : EMPTY)),
-      reduce<ApiTransactionPage, Transaction[]>(
-        (all, page) => [...all, ...page.items.map((item) => this.toTransaction(item))],
-        [],
-      ),
-    );
-  }
 
   query(_userId: string, request: TransactionPageRequest): Observable<TransactionPage> {
     const params: Record<string, string | number> = {
@@ -93,7 +79,7 @@ export class ApiTransactionRepository extends TransactionRepository {
   create(transaction: NewRecord<Transaction>): Observable<Transaction> {
     return this.http.post<ApiTransaction>(this.url, toCreateBody(transaction)).pipe(
       map((item) => this.toTransaction(item)),
-      toDomainError(invalidLink),
+      toDomainError(transactionError),
     );
   }
 
@@ -123,14 +109,15 @@ export class ApiTransactionRepository extends TransactionRepository {
       .patch<ApiTransaction>(`${this.url}/${encodeURIComponent(id)}`, body, ifMatch(version))
       .pipe(
         map((item) => this.toTransaction(item)),
-        toDomainError(invalidLink),
+        toDomainError(transactionError),
       );
   }
 
   delete(id: string): Observable<void> {
-    return this.http
-      .delete<unknown>(`${this.url}/${encodeURIComponent(id)}`)
-      .pipe(map(() => undefined));
+    return this.http.delete<unknown>(`${this.url}/${encodeURIComponent(id)}`).pipe(
+      map(() => undefined),
+      toDomainError(transactionError),
+    );
   }
 
   /**
@@ -165,14 +152,6 @@ export class ApiTransactionRepository extends TransactionRepository {
       throw new Error('Invoice payment without card or month');
     }
     return `${this.baseUrl}/credit-cards/${encodeURIComponent(creditCardId)}/invoices/${invoiceMonth}/payment`;
-  }
-
-  private page(cursor: string | null): Observable<ApiTransactionPage> {
-    const params: Record<string, string | number> = { limit: PAGE_SIZE };
-    if (cursor) {
-      params['cursor'] = cursor;
-    }
-    return this.http.get<ApiTransactionPage>(this.url, { params });
   }
 
   private toTransaction(item: ApiTransaction): Transaction {
@@ -234,8 +213,17 @@ function toCreateBody(transaction: NewRecord<Transaction>): ApiCreateEntry | Api
   };
 }
 
-/** Vínculo recusado (inexistente, arquivado ou incompatível): o formulário marca o campo. */
-function invalidLink(problem: ApiProblemError): Error | null {
+/** Tipo do 409 de compra numa fatura já paga (`type` do Problem Details). */
+export const PAID_INVOICE_PROBLEM = '/problems/paid-invoice';
+
+/**
+ * Vínculo recusado (inexistente, arquivado ou incompatível): o formulário marca o campo. Compra
+ * de fatura já paga vira `PaidInvoiceError`, que as telas explicam.
+ */
+function transactionError(problem: ApiProblemError): Error | null {
+  if (problem.status === 409 && problem.type === PAID_INVOICE_PROBLEM) {
+    return new PaidInvoiceError();
+  }
   const field = LINKS.find((link) => link === problem.field);
   return problem.status === 422 && field
     ? new InvalidTransactionInputError(field satisfies keyof TransactionInput)

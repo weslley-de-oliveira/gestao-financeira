@@ -153,3 +153,11 @@ export type InvoiceSummary = Omit<Invoice, 'purchases'> & { purchaseCount: numbe
 export function toInvoiceSummary({ purchases, ...invoice }: Invoice): InvoiceSummary {
   return { ...invoice, purchaseCount: purchases.length };
 }
+
+/** A compra pertence a uma fatura já paga; é preciso desfazer o pagamento antes de alterá-la. */
+export class PaidInvoiceError extends Error {
+  constructor() {
+    super('The invoice of this purchase is already paid');
+    this.name = 'PaidInvoiceError';
+  }
+}

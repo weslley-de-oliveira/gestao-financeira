@@ -12,13 +12,19 @@ export interface ApiProblemField {
  */
 export class ApiProblemError extends Error {
   readonly status: number;
+  /** Tipo do problema; `about:blank` quando o status já basta. */
+  readonly type: string;
   readonly title: string;
   readonly fields: readonly ApiProblemField[];
 
-  constructor(problem: Pick<ApiProblemDetails, 'status' | 'title' | 'detail' | 'errors'>) {
+  constructor(
+    problem: Pick<ApiProblemDetails, 'status' | 'title' | 'detail' | 'errors'> &
+      Partial<Pick<ApiProblemDetails, 'type'>>,
+  ) {
     super(problem.detail);
     this.name = 'ApiProblemError';
     this.status = problem.status;
+    this.type = problem.type ?? 'about:blank';
     this.title = problem.title;
     this.fields = (problem.errors ?? []).map(({ field, message }) => ({
       field: field.replace(/^(body|params|query)\./, ''),

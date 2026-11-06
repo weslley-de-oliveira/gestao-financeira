@@ -12,7 +12,10 @@ import {
   InsufficientGoalBalanceError,
   InvalidGoalInputError,
 } from '../../features/goals/domain/goal-rules';
-import { InvoicePaymentError } from '../../features/invoices/domain/invoice-rules';
+import {
+  InvoicePaymentError,
+  PaidInvoiceError,
+} from '../../features/invoices/domain/invoice-rules';
 import { InvalidTransactionInputError } from '../../features/transactions/domain/transaction-rules';
 import { Goal } from '../../shared/models/goal';
 import { Transaction } from '../../shared/models/transaction';
@@ -107,6 +110,30 @@ describe('API refusals as domain errors', () => {
     const error = await saved.catch((reason: unknown) => reason);
     expect(error).toBeInstanceOf(InvalidTransactionInputError);
     expect(error).toMatchObject({ field: 'categoryId' });
+  });
+
+  it('turns the conflict of a paid invoice into PaidInvoiceError, on save and on delete', async () => {
+    const repository = TestBed.inject(ApiTransactionRepository);
+    const paidInvoice = () =>
+      http
+        .match(() => true)[0]
+        .flush(
+          {
+            type: '/problems/paid-invoice',
+            title: 'Conflito',
+            status: 409,
+            detail: 'A fatura já foi paga.',
+          },
+          { status: 409, statusText: 'Conflict' },
+        );
+
+    const saved = firstValueFrom(repository.update('t1', { amount: 1 }));
+    paidInvoice();
+    await expect(saved).rejects.toBeInstanceOf(PaidInvoiceError);
+
+    const deleted = firstValueFrom(repository.delete('t1'));
+    paidInvoice();
+    await expect(deleted).rejects.toBeInstanceOf(PaidInvoiceError);
   });
 
   it('keeps other transaction refusals as ApiProblemError, with the server reason', async () => {

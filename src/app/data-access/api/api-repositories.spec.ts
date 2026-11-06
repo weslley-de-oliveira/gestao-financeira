@@ -209,18 +209,6 @@ describe('API repositories', () => {
   });
 
   describe('transactions', () => {
-    it('follows the cursor until the last page', async () => {
-      const list = firstValueFrom(TestBed.inject(ApiTransactionRepository).listByUser());
-      http
-        .expectOne('/api/v1/transactions?limit=100')
-        .flush({ items: [apiTransaction({ id: 'a' })], nextCursor: 'c1' });
-      http
-        .expectOne('/api/v1/transactions?limit=100&cursor=c1')
-        .flush({ items: [apiTransaction({ id: 'b' })], nextCursor: null });
-
-      expect((await list).map((item) => item.id)).toEqual(['a', 'b']);
-    });
-
     it('asks for one page with the filters, the sort and the cursor', async () => {
       const page = firstValueFrom(
         TestBed.inject(ApiTransactionRepository).query(USER_ID, {

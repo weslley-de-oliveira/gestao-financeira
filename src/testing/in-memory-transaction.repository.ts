@@ -1,5 +1,6 @@
 import { NewRecord, withIdentity } from '../app/data-access/repositories/new-record';
 import { Injectable } from '@angular/core';
+import { TransactionSource } from '../app/data-access/repositories/transaction-source';
 import { Observable, map, of, throwError } from 'rxjs';
 import {
   TransactionChanges,
@@ -19,7 +20,10 @@ import {
 
 /** Repositório de transações em memória, para testes sem API. */
 @Injectable()
-export class InMemoryTransactionRepository extends TransactionRepository {
+export class InMemoryTransactionRepository
+  extends TransactionRepository
+  implements TransactionSource
+{
   readonly records: Transaction[] = [];
 
   listByUser(userId: string): Observable<Transaction[]> {

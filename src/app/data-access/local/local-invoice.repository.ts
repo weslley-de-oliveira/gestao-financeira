@@ -13,7 +13,7 @@ import { Transaction } from '../../shared/models/transaction';
 import { toIsoDate } from '../../shared/utils/date';
 import { CreditCardRepository } from '../repositories/credit-card.repository';
 import { InvoiceRepository } from '../repositories/invoice.repository';
-import { TransactionRepository } from '../repositories/transaction.repository';
+import { TransactionSource } from '../repositories/transaction-source';
 
 /**
  * Faturas calculadas no navegador (demo e testes), a partir do cartão e das transações da pessoa,
@@ -22,7 +22,7 @@ import { TransactionRepository } from '../repositories/transaction.repository';
 @Injectable()
 export class LocalInvoiceRepository extends InvoiceRepository {
   private readonly creditCards = inject(CreditCardRepository);
-  private readonly transactions = inject(TransactionRepository);
+  private readonly transactions = inject(TransactionSource);
   private readonly today = inject(TODAY);
 
   listByCard(userId: string, creditCardId: string): Observable<InvoiceSummary[]> {

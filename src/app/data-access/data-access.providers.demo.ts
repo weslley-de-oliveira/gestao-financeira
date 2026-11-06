@@ -22,6 +22,7 @@ import { DashboardRepository } from './repositories/dashboard.repository';
 import { DemoData } from './repositories/demo-data';
 import { GoalRepository } from './repositories/goal.repository';
 import { InvoiceRepository } from './repositories/invoice.repository';
+import { TransactionSource } from './repositories/transaction-source';
 import { TransactionRepository } from './repositories/transaction.repository';
 import { UserDataRepository } from './repositories/user-data.repository';
 import { UserRepository } from './repositories/user.repository';
@@ -39,7 +40,10 @@ export function provideDataAccess(): Provider[] {
     { provide: UserDataRepository, useClass: LocalUserDataRepository },
     { provide: AccountRepository, useClass: LocalAccountRepository },
     { provide: CategoryRepository, useClass: LocalCategoryRepository },
-    { provide: TransactionRepository, useClass: LocalTransactionRepository },
+    LocalTransactionRepository,
+    { provide: TransactionRepository, useExisting: LocalTransactionRepository },
+    // Só a demo tem a lista completa: saldos, faturas e orçamentos são calculados no navegador.
+    { provide: TransactionSource, useExisting: LocalTransactionRepository },
     { provide: CreditCardRepository, useClass: LocalCreditCardRepository },
     { provide: InvoiceRepository, useClass: LocalInvoiceRepository },
     { provide: BudgetRepository, useClass: LocalBudgetRepository },

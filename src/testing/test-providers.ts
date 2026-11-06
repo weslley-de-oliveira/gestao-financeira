@@ -14,6 +14,7 @@ import { LocalInvoiceRepository } from '../app/data-access/local/local-invoice.r
 import { BudgetProgressRepository } from '../app/data-access/repositories/budget-progress.repository';
 import { InvoiceRepository } from '../app/data-access/repositories/invoice.repository';
 import { GoalRepository } from '../app/data-access/repositories/goal.repository';
+import { TransactionSource } from '../app/data-access/repositories/transaction-source';
 import { TransactionRepository } from '../app/data-access/repositories/transaction.repository';
 import { UserDataRepository } from '../app/data-access/repositories/user-data.repository';
 import { UserRepository } from '../app/data-access/repositories/user.repository';
@@ -45,6 +46,7 @@ export const TEST_PROVIDERS: Provider[] = [
   { provide: CategoryRepository, useExisting: InMemoryCategoryRepository },
   InMemoryTransactionRepository,
   { provide: TransactionRepository, useExisting: InMemoryTransactionRepository },
+  { provide: TransactionSource, useExisting: InMemoryTransactionRepository },
   InMemoryCreditCardRepository,
   { provide: CreditCardRepository, useExisting: InMemoryCreditCardRepository },
   InMemoryBudgetRepository,

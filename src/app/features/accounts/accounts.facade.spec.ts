@@ -3,7 +3,7 @@ import { throwError } from 'rxjs';
 import { InMemoryAccountRepository } from '../../../testing/in-memory-account.repository';
 import { TEST_PROVIDERS } from '../../../testing/test-providers';
 import { AuthService } from '../../core/auth/auth.service';
-import { TransactionRepository } from '../../data-access/repositories/transaction.repository';
+import { TransactionSource } from '../../data-access/repositories/transaction-source';
 import { AccountNotFoundError, AccountsFacade } from './accounts.facade';
 import { AccountInput, InvalidAccountInputError } from './domain/account-input';
 
@@ -63,7 +63,7 @@ describe('AccountsFacade', () => {
   it('uses the balance computed by the server, without loading the transactions', async () => {
     await facade.create(input);
     repository.records[0].currentBalance = 98_765;
-    const listTransactions = vi.spyOn(TestBed.inject(TransactionRepository), 'listByUser');
+    const listTransactions = vi.spyOn(TestBed.inject(TransactionSource), 'listByUser');
 
     await facade.load();
 

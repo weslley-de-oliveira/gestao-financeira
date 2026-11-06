@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { SessionCleanup } from '../../core/auth/session-cleanup';
 import { AccountRepository } from '../../data-access/repositories/account.repository';
-import { TransactionRepository } from '../../data-access/repositories/transaction.repository';
+import { TransactionSource } from '../../data-access/repositories/transaction-source';
 import { Account, AccountWithBalance } from '../../shared/models/account';
 import { BalanceMovement, calculateBalance } from './domain/account-balance';
 import { AccountInput, normalizeAccountInput } from './domain/account-input';
@@ -22,7 +22,8 @@ export class AccountNotFoundError extends Error {
 @Injectable({ providedIn: 'root' })
 export class AccountsFacade {
   private readonly repository = inject(AccountRepository);
-  private readonly transactions = inject(TransactionRepository);
+  /** Lista completa, só na demonstração e nos testes; a API já devolve os valores calculados. */
+  private readonly transactions = inject(TransactionSource, { optional: true });
   private readonly auth = inject(AuthService);
   private readonly _accounts = signal<AccountWithBalance[]>([]);
   /** Transações do último carregamento, usadas para calcular os saldos. */
@@ -105,11 +106,11 @@ export class AccountsFacade {
   }
 
   /**
-   * Transações para calcular os saldos que o repositório não trouxe prontos. A API já devolve o
-   * saldo de cada conta, e a lista completa de transações não precisa ser carregada.
+   * Transações para calcular os saldos que o repositório não trouxe prontos (demo e testes). A API
+   * já devolve o saldo de cada conta, e a lista completa nunca é carregada.
    */
   private async movementsFor(accounts: readonly Account[]): Promise<readonly BalanceMovement[]> {
-    return accounts.every((account) => account.currentBalance !== undefined)
+    return !this.transactions || accounts.every((account) => account.currentBalance !== undefined)
       ? []
       : firstValueFrom(this.transactions.listByUser(this.userId()));
   }
