@@ -73,6 +73,27 @@ describe('TransactionListStore', () => {
     expect(store.totals().count).toBe(4);
   });
 
+  it('does not lose "has any transaction" when the first answer is superseded', async () => {
+    // O período muda antes de a primeira consulta responder: a resposta dela é descartada.
+    const first = store.searchFor({}, 'date-desc', 2);
+    await store.searchFor({ range: { start: '2026-11-04', end: '2026-11-30' } }, 'date-desc', 2);
+    await first;
+
+    expect(store.hasAny()).toBe(true);
+    expect(store.totals().count).toBe(2);
+  });
+
+  it('still loads the totals of new filters when their first answer was superseded', async () => {
+    await store.searchFor({}, 'date-desc', 2);
+
+    const discarded = store.searchFor({ type: 'expense' }, 'date-desc', 2);
+    await store.searchFor({ type: 'expense' }, 'amount-desc', 2);
+    await discarded;
+
+    expect(store.totals().count).toBe(4);
+    expect(descriptions()).toEqual(['T2', 'T5']);
+  });
+
   it('after a deletion, refreshes the page and goes back when it became empty', async () => {
     await store.searchFor({}, 'date-desc', 2);
     await store.goTo(1);
