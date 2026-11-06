@@ -81,8 +81,8 @@ describe('LocalDatabase and local repositories', () => {
       .sort()
       .at(-1);
 
-    // O seed vai até novembro de 2026; dois meses depois, até janeiro de 2027.
-    expect(latest?.startsWith('2027-01')).toBe(true);
+    // O seed vai até maio de 2027 (a última parcela do notebook); dois meses depois, até julho.
+    expect(latest?.startsWith('2027-07')).toBe(true);
   });
 
   it('keeps changes in localStorage for the next visit', async () => {

@@ -3,7 +3,9 @@ import seedJson from '../../../../db/db.seed.json';
 import { PasswordHasher } from '../../core/security/password-hasher';
 import { calculateBalance } from '../../features/accounts/domain/account-balance';
 import { DEFAULT_CATEGORIES } from '../../features/categories/domain/default-categories';
+import { invoiceCycleFor } from '../../features/credit-cards/domain/invoice-cycle';
 import { buildInvoice, listInvoices } from '../../features/invoices/domain/invoice-rules';
+import { shiftMonth } from '../../shared/utils/month';
 import { toTransaction } from './dto/transaction.dto';
 import { DEMO_CREDENTIALS } from './demo-credentials';
 import { DemoSeed, toLocalCollections } from './demo-seed';
@@ -88,7 +90,8 @@ describe('db/db.seed.json', () => {
       if (transaction.creditCardId && transaction.type === 'expense') {
         expect(transaction.status, label).toBe('completed');
       }
-      if (transaction.date > anchor) {
+      // Lançamentos futuros ficam previstos; parcelas futuras são compras já feitas (realizadas).
+      if (transaction.date > anchor && !transaction.installmentGroupId) {
         expect(transaction.status, label).toBe('pending');
       }
     }
@@ -106,6 +109,30 @@ describe('db/db.seed.json', () => {
         expect(payment.accountId).toBe(card.paymentAccountId);
       }
       expect(invoices.some((invoice) => invoice.status === 'overdue')).toBe(false);
+    }
+  });
+
+  it('has installment purchases with one installment per invoice, some still to come', () => {
+    const groups = new Map<string, typeof transactions>();
+    for (const transaction of transactions) {
+      if (transaction.installmentGroupId) {
+        const group = groups.get(transaction.installmentGroupId) ?? [];
+        groups.set(transaction.installmentGroupId, [...group, transaction]);
+      }
+    }
+    expect(groups.size).toBe(2);
+    for (const parcels of groups.values()) {
+      const [first] = parcels;
+      const card = seed.creditCards.find((item) => item.id === first.creditCardId)!;
+      const sorted = [...parcels].sort(
+        (a, b) => (a.installmentNumber ?? 0) - (b.installmentNumber ?? 0),
+      );
+      expect(sorted.map((parcel) => parcel.installmentNumber)).toEqual(
+        Array.from({ length: first.installmentCount ?? 0 }, (_, index) => index + 1),
+      );
+      const months = sorted.map((parcel) => invoiceCycleFor(card, parcel.date).referenceMonth);
+      months.slice(1).forEach((month, index) => expect(month).toBe(shiftMonth(months[index], 1)));
+      expect(sorted.some((parcel) => parcel.date > anchor)).toBe(true);
     }
   });
 
