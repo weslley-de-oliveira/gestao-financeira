@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from '../app/data-access/repositories/new-record';
 import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import {
@@ -20,7 +21,8 @@ export class InMemoryCategoryRepository extends CategoryRepository {
     return of(category ? clone(category) : null);
   }
 
-  create(category: Category): Observable<Category> {
+  create(input: NewRecord<Category>): Observable<Category> {
+    const category = withIdentity<Category>(input);
     this.records.push(clone(category));
     return of(clone(category));
   }

@@ -1,3 +1,4 @@
+import { NewRecord } from '../../data-access/repositories/new-record';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -74,13 +75,11 @@ export class BudgetsFacade {
   async create(input: BudgetInput): Promise<Budget> {
     const normalized = normalizeBudgetInput(input);
     await this.assertCategory(normalized.categoryId);
-    const budget: Budget = {
-      id: crypto.randomUUID(),
+    const budget: NewRecord<Budget> = {
       userId: this.userId(),
       categoryId: normalized.categoryId,
       limits: [{ month: this.currentMonth(), amount: normalized.limitAmount }],
       alertThreshold: normalized.alertThreshold,
-      createdAt: new Date().toISOString(),
     };
     return this.store(await firstValueFrom(this.repository.create(budget)));
   }

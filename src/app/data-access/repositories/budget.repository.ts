@@ -1,3 +1,4 @@
+import { NewRecord } from './new-record';
 import { Observable } from 'rxjs';
 import { Budget } from '../../shared/models/budget';
 
@@ -10,7 +11,8 @@ export abstract class BudgetRepository {
   /** Retorna `null` quando o orçamento não existe. */
   abstract findById(id: string): Observable<Budget | null>;
 
-  abstract create(budget: Budget): Observable<Budget>;
+  /** Grava o registro novo; o id e a data de criação são definidos ao gravar. */
+  abstract create(budget: NewRecord<Budget>): Observable<Budget>;
 
   abstract update(id: string, changes: BudgetChanges): Observable<Budget>;
 

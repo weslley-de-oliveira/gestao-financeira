@@ -1,3 +1,4 @@
+import { NewRecord } from './new-record';
 import { Observable } from 'rxjs';
 import { CreditCard } from '../../shared/models/credit-card';
 
@@ -10,7 +11,8 @@ export abstract class CreditCardRepository {
   /** Retorna `null` quando o cartão não existe. */
   abstract findById(id: string): Observable<CreditCard | null>;
 
-  abstract create(card: CreditCard): Observable<CreditCard>;
+  /** Grava o registro novo; o id e a data de criação são definidos ao gravar. */
+  abstract create(card: NewRecord<CreditCard>): Observable<CreditCard>;
 
   abstract update(id: string, changes: CreditCardChanges): Observable<CreditCard>;
 }

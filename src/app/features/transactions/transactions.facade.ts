@@ -1,3 +1,4 @@
+import { NewRecord } from '../../data-access/repositories/new-record';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -85,12 +86,10 @@ export class TransactionsFacade {
   async create(input: TransactionInput): Promise<Transaction> {
     const normalized = normalizeTransactionInput(input);
     await this.validate(normalized);
-    const transaction: Transaction = {
+    const transaction: NewRecord<Transaction> = {
       ...normalized,
       invoiceMonth: null,
-      id: crypto.randomUUID(),
       userId: this.userId(),
-      createdAt: new Date().toISOString(),
     };
     return this.store(await firstValueFrom(this.repository.create(transaction)));
   }

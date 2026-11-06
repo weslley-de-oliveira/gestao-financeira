@@ -1,3 +1,4 @@
+import { NewRecord } from './new-record';
 import { Observable } from 'rxjs';
 import { Transaction } from '../../shared/models/transaction';
 
@@ -10,7 +11,8 @@ export abstract class TransactionRepository {
   /** Retorna `null` quando a transação não existe. */
   abstract findById(id: string): Observable<Transaction | null>;
 
-  abstract create(transaction: Transaction): Observable<Transaction>;
+  /** Grava o registro novo; o id e a data de criação são definidos ao gravar. */
+  abstract create(transaction: NewRecord<Transaction>): Observable<Transaction>;
 
   abstract update(id: string, changes: TransactionChanges): Observable<Transaction>;
 

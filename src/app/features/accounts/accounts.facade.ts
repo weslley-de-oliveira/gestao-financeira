@@ -1,3 +1,4 @@
+import { NewRecord } from '../../data-access/repositories/new-record';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -74,12 +75,7 @@ export class AccountsFacade {
   }
 
   async create(input: AccountInput): Promise<AccountWithBalance> {
-    const account: Account = {
-      ...normalizeAccountInput(input),
-      id: crypto.randomUUID(),
-      userId: this.userId(),
-      createdAt: new Date().toISOString(),
-    };
+    const account: NewRecord<Account> = { ...normalizeAccountInput(input), userId: this.userId() };
     return this.store(await firstValueFrom(this.repository.create(account)));
   }
 

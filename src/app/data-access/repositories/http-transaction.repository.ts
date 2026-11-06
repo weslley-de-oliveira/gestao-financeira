@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from './new-record';
 import { HttpClient, HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
@@ -28,7 +29,8 @@ export class HttpTransactionRepository extends TransactionRepository {
     );
   }
 
-  create(transaction: Transaction): Observable<Transaction> {
+  create(input: NewRecord<Transaction>): Observable<Transaction> {
+    const transaction = withIdentity<Transaction>(input);
     return this.http
       .post<TransactionDto>(this.url, toTransactionDto(transaction))
       .pipe(map(toTransaction));

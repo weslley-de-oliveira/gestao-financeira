@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from '../app/data-access/repositories/new-record';
 import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import {
@@ -20,7 +21,8 @@ export class InMemoryCreditCardRepository extends CreditCardRepository {
     return of(card ? clone(card) : null);
   }
 
-  create(card: CreditCard): Observable<CreditCard> {
+  create(input: NewRecord<CreditCard>): Observable<CreditCard> {
+    const card = withIdentity<CreditCard>(input);
     this.records.push(clone(card));
     return of(clone(card));
   }

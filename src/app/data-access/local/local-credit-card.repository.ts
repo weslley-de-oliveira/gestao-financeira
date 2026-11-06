@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from '../repositories/new-record';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { CreditCard } from '../../shared/models/credit-card';
@@ -18,7 +19,8 @@ export class LocalCreditCardRepository extends CreditCardRepository {
     return this.creditCards.findById(id).pipe(map((dto) => (dto ? toCreditCard(dto) : null)));
   }
 
-  create(card: CreditCard): Observable<CreditCard> {
+  create(input: NewRecord<CreditCard>): Observable<CreditCard> {
+    const card = withIdentity<CreditCard>(input);
     return this.creditCards.insert(toCreditCardDto(card)).pipe(map(toCreditCard));
   }
 

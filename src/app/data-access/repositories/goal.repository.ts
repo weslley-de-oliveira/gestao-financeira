@@ -1,3 +1,4 @@
+import { NewRecord } from './new-record';
 import { Observable } from 'rxjs';
 import { Goal } from '../../shared/models/goal';
 
@@ -10,7 +11,8 @@ export abstract class GoalRepository {
   /** Retorna `null` quando a meta não existe. */
   abstract findById(id: string): Observable<Goal | null>;
 
-  abstract create(goal: Goal): Observable<Goal>;
+  /** Grava o registro novo; o id e a data de criação são definidos ao gravar. */
+  abstract create(goal: NewRecord<Goal>): Observable<Goal>;
 
   abstract update(id: string, changes: GoalChanges): Observable<Goal>;
 }

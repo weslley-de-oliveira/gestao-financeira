@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from './new-record';
 import { HttpClient, HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
@@ -28,7 +29,8 @@ export class HttpCreditCardRepository extends CreditCardRepository {
     );
   }
 
-  create(card: CreditCard): Observable<CreditCard> {
+  create(input: NewRecord<CreditCard>): Observable<CreditCard> {
+    const card = withIdentity<CreditCard>(input);
     return this.http.post<CreditCardDto>(this.url, toCreditCardDto(card)).pipe(map(toCreditCard));
   }
 

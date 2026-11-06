@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from '../app/data-access/repositories/new-record';
 import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { GoalChanges, GoalRepository } from '../app/data-access/repositories/goal.repository';
@@ -17,7 +18,8 @@ export class InMemoryGoalRepository extends GoalRepository {
     return of(goal ? clone(goal) : null);
   }
 
-  create(goal: Goal): Observable<Goal> {
+  create(input: NewRecord<Goal>): Observable<Goal> {
+    const goal = withIdentity<Goal>(input);
     this.records.push(clone(goal));
     return of(clone(goal));
   }

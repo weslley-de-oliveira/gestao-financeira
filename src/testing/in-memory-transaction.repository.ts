@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from '../app/data-access/repositories/new-record';
 import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import {
@@ -20,7 +21,8 @@ export class InMemoryTransactionRepository extends TransactionRepository {
     return of(transaction ? clone(transaction) : null);
   }
 
-  create(transaction: Transaction): Observable<Transaction> {
+  create(input: NewRecord<Transaction>): Observable<Transaction> {
+    const transaction = withIdentity<Transaction>(input);
     this.records.push(clone(transaction));
     return of(clone(transaction));
   }

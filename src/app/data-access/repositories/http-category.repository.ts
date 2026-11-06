@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from './new-record';
 import { HttpClient, HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
@@ -28,7 +29,8 @@ export class HttpCategoryRepository extends CategoryRepository {
     );
   }
 
-  create(category: Category): Observable<Category> {
+  create(input: NewRecord<Category>): Observable<Category> {
+    const category = withIdentity<Category>(input);
     return this.http.post<CategoryDto>(this.url, toCategoryDto(category)).pipe(map(toCategory));
   }
 

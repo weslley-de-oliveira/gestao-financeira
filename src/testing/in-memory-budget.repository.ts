@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from '../app/data-access/repositories/new-record';
 import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { BudgetChanges, BudgetRepository } from '../app/data-access/repositories/budget.repository';
@@ -17,7 +18,8 @@ export class InMemoryBudgetRepository extends BudgetRepository {
     return of(budget ? clone(budget) : null);
   }
 
-  create(budget: Budget): Observable<Budget> {
+  create(input: NewRecord<Budget>): Observable<Budget> {
+    const budget = withIdentity<Budget>(input);
     this.records.push(clone(budget));
     return of(clone(budget));
   }

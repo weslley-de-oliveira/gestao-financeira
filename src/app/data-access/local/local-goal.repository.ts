@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from '../repositories/new-record';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { Goal } from '../../shared/models/goal';
@@ -18,7 +19,8 @@ export class LocalGoalRepository extends GoalRepository {
     return this.goals.findById(id).pipe(map((dto) => (dto ? toGoal(dto) : null)));
   }
 
-  create(goal: Goal): Observable<Goal> {
+  create(input: NewRecord<Goal>): Observable<Goal> {
+    const goal = withIdentity<Goal>(input);
     return this.goals.insert(toGoalDto(goal)).pipe(map(toGoal));
   }
 

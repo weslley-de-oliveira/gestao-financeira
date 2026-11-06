@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from './new-record';
 import { HttpClient, HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
@@ -28,7 +29,8 @@ export class HttpGoalRepository extends GoalRepository {
     );
   }
 
-  create(goal: Goal): Observable<Goal> {
+  create(input: NewRecord<Goal>): Observable<Goal> {
+    const goal = withIdentity<Goal>(input);
     return this.http.post<GoalDto>(this.url, toGoalDto(goal)).pipe(map(toGoal));
   }
 

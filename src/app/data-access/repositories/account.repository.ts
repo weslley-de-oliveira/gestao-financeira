@@ -1,3 +1,4 @@
+import { NewRecord } from './new-record';
 import { Observable } from 'rxjs';
 import { Account } from '../../shared/models/account';
 
@@ -10,7 +11,8 @@ export abstract class AccountRepository {
   /** Retorna `null` quando a conta não existe. */
   abstract findById(id: string): Observable<Account | null>;
 
-  abstract create(account: Account): Observable<Account>;
+  /** Grava o registro novo; o id e a data de criação são definidos ao gravar. */
+  abstract create(account: NewRecord<Account>): Observable<Account>;
 
   abstract update(id: string, changes: AccountChanges): Observable<Account>;
 }

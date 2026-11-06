@@ -1,3 +1,4 @@
+import { NewRecord } from './new-record';
 import { Observable } from 'rxjs';
 import { Category } from '../../shared/models/category';
 
@@ -10,7 +11,8 @@ export abstract class CategoryRepository {
   /** Retorna `null` quando a categoria não existe. */
   abstract findById(id: string): Observable<Category | null>;
 
-  abstract create(category: Category): Observable<Category>;
+  /** Grava o registro novo; o id e a data de criação são definidos ao gravar. */
+  abstract create(category: NewRecord<Category>): Observable<Category>;
 
   abstract update(id: string, changes: CategoryChanges): Observable<Category>;
 }

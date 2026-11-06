@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from './new-record';
 import { HttpClient, HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
@@ -28,7 +29,8 @@ export class HttpBudgetRepository extends BudgetRepository {
     );
   }
 
-  create(budget: Budget): Observable<Budget> {
+  create(input: NewRecord<Budget>): Observable<Budget> {
+    const budget = withIdentity<Budget>(input);
     return this.http.post<BudgetDto>(this.url, toBudgetDto(budget)).pipe(map(toBudget));
   }
 

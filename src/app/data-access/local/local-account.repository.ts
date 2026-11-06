@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from '../repositories/new-record';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { Account } from '../../shared/models/account';
@@ -18,7 +19,8 @@ export class LocalAccountRepository extends AccountRepository {
     return this.accounts.findById(id).pipe(map((dto) => (dto ? toAccount(dto) : null)));
   }
 
-  create(account: Account): Observable<Account> {
+  create(input: NewRecord<Account>): Observable<Account> {
+    const account = withIdentity<Account>(input);
     return this.accounts.insert(toAccountDto(account)).pipe(map(toAccount));
   }
 

@@ -1,3 +1,4 @@
+import { NewRecord } from '../../data-access/repositories/new-record';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -83,12 +84,7 @@ export class CreditCardsFacade {
   async create(input: CreditCardInput): Promise<CreditCardWithUsage> {
     const normalized = normalizeCreditCardInput(input);
     await this.assertPaymentAccount(normalized);
-    const card: CreditCard = {
-      ...normalized,
-      id: crypto.randomUUID(),
-      userId: this.userId(),
-      createdAt: new Date().toISOString(),
-    };
+    const card: NewRecord<CreditCard> = { ...normalized, userId: this.userId() };
     return this.store(await firstValueFrom(this.repository.create(card)));
   }
 

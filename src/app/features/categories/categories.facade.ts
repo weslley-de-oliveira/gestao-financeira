@@ -1,3 +1,4 @@
+import { NewRecord } from '../../data-access/repositories/new-record';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -66,12 +67,10 @@ export class CategoriesFacade {
   async create(input: CategoryInput): Promise<Category> {
     const normalized = normalizeCategoryInput(input);
     await this.ensureUniqueName(normalized);
-    const category: Category = {
+    const category: NewRecord<Category> = {
       ...normalized,
-      id: crypto.randomUUID(),
       userId: this.userId(),
       isDefault: false,
-      createdAt: new Date().toISOString(),
     };
     return this.store(await firstValueFrom(this.repository.create(category)));
   }
@@ -110,18 +109,10 @@ export class CategoriesFacade {
   }
 
   private createDefaults(userId: string): Promise<Category[]> {
-    const createdAt = new Date().toISOString();
     return Promise.all(
       DEFAULT_CATEGORIES.map((item) =>
         firstValueFrom(
-          this.repository.create({
-            ...item,
-            id: crypto.randomUUID(),
-            userId,
-            isDefault: true,
-            isArchived: false,
-            createdAt,
-          }),
+          this.repository.create({ ...item, userId, isDefault: true, isArchived: false }),
         ),
       ),
     );

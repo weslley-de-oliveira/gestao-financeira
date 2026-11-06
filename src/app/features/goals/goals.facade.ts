@@ -1,3 +1,4 @@
+import { NewRecord } from '../../data-access/repositories/new-record';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -69,14 +70,12 @@ export class GoalsFacade {
   async create(input: GoalInput): Promise<GoalWithProgress> {
     const normalized = normalizeGoalInput(input);
     this.assertDeadline(normalized.deadline);
-    const goal: Goal = {
+    const goal: NewRecord<Goal> = {
       ...normalized,
-      id: crypto.randomUUID(),
       userId: this.userId(),
       contributions: [],
       isPaused: false,
       isArchived: false,
-      createdAt: new Date().toISOString(),
     };
     return this.store(await firstValueFrom(this.repository.create(goal)));
   }

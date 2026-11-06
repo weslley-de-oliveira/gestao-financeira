@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from './new-record';
 import { HttpClient, HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, map, of, throwError } from 'rxjs';
@@ -28,7 +29,8 @@ export class HttpAccountRepository extends AccountRepository {
     );
   }
 
-  create(account: Account): Observable<Account> {
+  create(input: NewRecord<Account>): Observable<Account> {
+    const account = withIdentity<Account>(input);
     return this.http.post<AccountDto>(this.url, toAccountDto(account)).pipe(map(toAccount));
   }
 
