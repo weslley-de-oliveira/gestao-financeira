@@ -8,6 +8,12 @@ import {
   TransactionInput,
 } from '../../features/transactions/domain/transaction-rules';
 import { Transaction } from '../../shared/models/transaction';
+import {
+  TransactionFilters,
+  TransactionPage,
+  TransactionPageRequest,
+  TransactionTotals,
+} from '../../shared/models/transaction-query';
 import { NewRecord } from '../repositories/new-record';
 import { TransactionChanges, TransactionRepository } from '../repositories/transaction.repository';
 import { API_BASE_URL } from './api.config';
@@ -19,6 +25,7 @@ import type {
   ApiInvoice,
   ApiTransaction,
   ApiTransactionPage,
+  ApiTransactionSummary,
 } from './api-types';
 
 /** Espera antes de repetir um pagamento cuja resposta se perdeu (rede ou API acordando). */
@@ -53,6 +60,27 @@ export class ApiTransactionRepository extends TransactionRepository {
         [],
       ),
     );
+  }
+
+  query(_userId: string, request: TransactionPageRequest): Observable<TransactionPage> {
+    const params: Record<string, string | number> = {
+      ...filterParams(request.filters),
+      sort: request.sort,
+      limit: request.limit,
+      ...(request.cursor && { cursor: request.cursor }),
+    };
+    return this.http.get<ApiTransactionPage>(this.url, { params }).pipe(
+      map((page) => ({
+        items: page.items.map((item) => this.toTransaction(item)),
+        nextCursor: page.nextCursor,
+      })),
+    );
+  }
+
+  summarize(_userId: string, filters: TransactionFilters): Observable<TransactionTotals> {
+    return this.http.get<ApiTransactionSummary>(`${this.url}/summary`, {
+      params: filterParams(filters),
+    });
   }
 
   findById(id: string): Observable<Transaction | null> {
@@ -150,6 +178,28 @@ export class ApiTransactionRepository extends TransactionRepository {
   private toTransaction(item: ApiTransaction): Transaction {
     return toTransactionModel(item, this.session.id());
   }
+}
+
+/** Filtros na query string da listagem e do resumo; os ausentes ficam de fora. */
+function filterParams({
+  range,
+  type,
+  status,
+  accountId,
+  creditCardId,
+  categoryId,
+  search,
+}: TransactionFilters): Record<string, string> {
+  const q = search?.trim();
+  return {
+    ...(range && { from: range.start, to: range.end }),
+    ...(type && { type }),
+    ...(status && { status }),
+    ...(accountId && { accountId }),
+    ...(creditCardId && { creditCardId }),
+    ...(categoryId && { categoryId }),
+    ...(q && { q }),
+  };
 }
 
 /** Corpo do `POST /transactions`: transferência ou lançamento em conta/cartão. */

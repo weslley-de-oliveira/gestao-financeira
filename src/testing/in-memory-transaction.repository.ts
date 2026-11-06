@@ -1,11 +1,21 @@
 import { NewRecord, withIdentity } from '../app/data-access/repositories/new-record';
 import { Injectable } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, map, of, throwError } from 'rxjs';
 import {
   TransactionChanges,
   TransactionRepository,
 } from '../app/data-access/repositories/transaction.repository';
+import {
+  pageTransactions,
+  totalTransactions,
+} from '../app/features/transactions/domain/transaction-query';
 import { Transaction } from '../app/shared/models/transaction';
+import {
+  TransactionFilters,
+  TransactionPage,
+  TransactionPageRequest,
+  TransactionTotals,
+} from '../app/shared/models/transaction-query';
 
 /** Repositório de transações em memória, para testes sem API. */
 @Injectable()
@@ -14,6 +24,14 @@ export class InMemoryTransactionRepository extends TransactionRepository {
 
   listByUser(userId: string): Observable<Transaction[]> {
     return of(this.records.filter((transaction) => transaction.userId === userId).map(clone));
+  }
+
+  query(userId: string, request: TransactionPageRequest): Observable<TransactionPage> {
+    return this.listByUser(userId).pipe(map((all) => pageTransactions(all, request)));
+  }
+
+  summarize(userId: string, filters: TransactionFilters): Observable<TransactionTotals> {
+    return this.listByUser(userId).pipe(map((all) => totalTransactions(all, filters)));
   }
 
   findById(id: string): Observable<Transaction | null> {

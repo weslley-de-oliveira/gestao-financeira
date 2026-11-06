@@ -216,6 +216,47 @@ describe('API repositories', () => {
       expect((await list).map((item) => item.id)).toEqual(['a', 'b']);
     });
 
+    it('asks for one page with the filters, the sort and the cursor', async () => {
+      const page = firstValueFrom(
+        TestBed.inject(ApiTransactionRepository).query(USER_ID, {
+          filters: {
+            range: { start: '2026-11-01', end: '2026-11-30' },
+            type: 'expense',
+            creditCardId: CARD_ID,
+            search: '  mercado ',
+          },
+          sort: 'amount-desc',
+          cursor: 'c1',
+          limit: 25,
+        }),
+      );
+      http
+        .expectOne(
+          `/api/v1/transactions?from=2026-11-01&to=2026-11-30&type=expense&creditCardId=${CARD_ID}&q=mercado&sort=amount-desc&limit=25&cursor=c1`,
+        )
+        .flush({ items: [apiTransaction({ id: 'a' })], nextCursor: 'c2' });
+
+      const { items, nextCursor } = await page;
+      expect(items.map((item) => [item.id, item.userId])).toEqual([['a', USER_ID]]);
+      expect(nextCursor).toBe('c2');
+    });
+
+    it('asks for the totals of the filtered transactions, without sort or page', async () => {
+      const totals = { count: 3, income: 0, expense: 30_000, net: -30_000, pendingCount: 1 };
+      const summary = firstValueFrom(
+        TestBed.inject(ApiTransactionRepository).summarize(USER_ID, {
+          accountId: ACCOUNT_ID,
+          status: 'pending',
+          search: '   ',
+        }),
+      );
+      http
+        .expectOne(`/api/v1/transactions/summary?status=pending&accountId=${ACCOUNT_ID}`)
+        .flush(totals);
+
+      expect(await summary).toEqual(totals);
+    });
+
     it('creates a card purchase without an account and a transfer without a category', async () => {
       const repository = TestBed.inject(ApiTransactionRepository);
       const base: Omit<Transaction, 'id' | 'createdAt'> = {
