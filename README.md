@@ -89,6 +89,7 @@ npm run start:demo
 | `npm run start:demo`   | Inicia a versão da demo (localStorage, sem API)          |
 | `npm run db:reset`     | Restaura os dados locais da API a partir do seed         |
 | `npm run seed`         | Gera novamente `db/db.seed.json` com dados fictícios     |
+| `npm run api:types`    | Gera os tipos do contrato a partir do OpenAPI da API     |
 | `npm run build`        | Gera o build de produção em `dist/`                      |
 | `npm run build:demo`   | Gera o build da demo publicada                           |
 | `npm test`             | Executa os testes unitários com Vitest                   |

@@ -19,6 +19,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "seed": "node scripts/seed.mjs",
+    "api:types": "node scripts/api-types.mjs",
     "prepare": "husky"
   },
   "private": true,
