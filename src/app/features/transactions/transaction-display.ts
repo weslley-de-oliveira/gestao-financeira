@@ -5,6 +5,7 @@ import {
   Transaction,
   TransactionType,
   isCardPurchase,
+  isInstallment,
   isInvoicePayment,
 } from '../../shared/models/transaction';
 
@@ -59,9 +60,26 @@ export function accountLabel(transaction: Transaction, lookups: TransactionLooku
     : account(transaction.accountId);
 }
 
-/** Pagamentos de fatura só são criados e desfeitos pela tela de Faturas. */
-export function isEditable(transaction: Pick<Transaction, 'type'>): boolean {
-  return !isInvoicePayment(transaction);
+/**
+ * Pagamentos de fatura só são criados e desfeitos pela tela de Faturas; parcelas só mudam pela
+ * compra parcelada (no detalhe da parcela).
+ */
+export function isEditable(transaction: Pick<Transaction, 'type' | 'installmentGroupId'>): boolean {
+  return !isInvoicePayment(transaction) && !isInstallment(transaction);
+}
+
+/** Parcelas não são excluídas sozinhas: exclui-se a compra parcelada inteira. */
+export function canDelete(transaction: Pick<Transaction, 'installmentGroupId'>): boolean {
+  return !isInstallment(transaction);
+}
+
+/** "Parcela 3 de 10" numa parcela; `null` nas demais transações. */
+export function installmentLabel(
+  transaction: Pick<Transaction, 'installmentNumber' | 'installmentCount'>,
+): string | null {
+  return transaction.installmentNumber && transaction.installmentCount
+    ? `Parcela ${transaction.installmentNumber} de ${transaction.installmentCount}`
+    : null;
 }
 
 /** Compras no cartão e pagamentos de fatura são sempre realizados. */

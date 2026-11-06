@@ -9,6 +9,7 @@ import { LocalCreditCardRepository } from './local/local-credit-card.repository'
 import { LocalDashboardRepository } from './local/local-dashboard.repository';
 import { LocalDatabase } from './local/local-database';
 import { LocalGoalRepository } from './local/local-goal.repository';
+import { LocalInstallmentPurchaseRepository } from './local/local-installment-purchase.repository';
 import { LocalInvoiceRepository } from './local/local-invoice.repository';
 import { LocalTransactionRepository } from './local/local-transaction.repository';
 import { LocalUserDataRepository } from './local/local-user-data.repository';
@@ -21,6 +22,7 @@ import { CreditCardRepository } from './repositories/credit-card.repository';
 import { DashboardRepository } from './repositories/dashboard.repository';
 import { DemoData } from './repositories/demo-data';
 import { GoalRepository } from './repositories/goal.repository';
+import { InstallmentPurchaseRepository } from './repositories/installment-purchase.repository';
 import { InvoiceRepository } from './repositories/invoice.repository';
 import { TransactionSource } from './repositories/transaction-source';
 import { TransactionRepository } from './repositories/transaction.repository';
@@ -46,6 +48,7 @@ export function provideDataAccess(): Provider[] {
     { provide: TransactionSource, useExisting: LocalTransactionRepository },
     { provide: CreditCardRepository, useClass: LocalCreditCardRepository },
     { provide: InvoiceRepository, useClass: LocalInvoiceRepository },
+    { provide: InstallmentPurchaseRepository, useClass: LocalInstallmentPurchaseRepository },
     { provide: BudgetRepository, useClass: LocalBudgetRepository },
     { provide: BudgetProgressRepository, useClass: LocalBudgetProgressRepository },
     { provide: GoalRepository, useClass: LocalGoalRepository },

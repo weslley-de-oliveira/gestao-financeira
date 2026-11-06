@@ -16,6 +16,7 @@ import {
   InvoicePaymentError,
   PaidInvoiceError,
 } from '../../features/invoices/domain/invoice-rules';
+import { InstallmentNotEditableError } from '../../features/installments/domain/installment-rules';
 import { InvalidTransactionInputError } from '../../features/transactions/domain/transaction-rules';
 import { Goal } from '../../shared/models/goal';
 import { Transaction } from '../../shared/models/transaction';
@@ -134,6 +135,18 @@ describe('API refusals as domain errors', () => {
     const deleted = firstValueFrom(repository.delete('t1'));
     paidInvoice();
     await expect(deleted).rejects.toBeInstanceOf(PaidInvoiceError);
+  });
+
+  it('turns the conflict of an installment changed alone into InstallmentNotEditableError', async () => {
+    const deleted = firstValueFrom(TestBed.inject(ApiTransactionRepository).delete('t1'));
+    http
+      .match(() => true)[0]
+      .flush(
+        { type: '/problems/installment', title: 'Conflito', status: 409, detail: 'É uma parcela.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+
+    await expect(deleted).rejects.toBeInstanceOf(InstallmentNotEditableError);
   });
 
   it('keeps other transaction refusals as ApiProblemError, with the server reason', async () => {

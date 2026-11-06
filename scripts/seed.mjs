@@ -296,6 +296,49 @@ for (let offset = -(HISTORY_MONTHS - 1); offset <= 0; offset++) {
   }));
 }
 
+/**
+ * Compra parcelada no cartão: uma parcela por fatura, no mesmo dia dos meses seguintes (com dias
+ * até 28 e o fechamento até o dia 28, cada parcela cai na fatura seguinte à da anterior). A sobra
+ * dos centavos fica na 1ª parcela, como na API. As parcelas futuras são o que mostra a reserva do
+ * limite e as faturas que ainda virão.
+ */
+function installmentPurchase({ month, day, description, total, count, categoryName, card }) {
+  const installmentGroupId = faker.string.uuid();
+  const base = Math.floor(total / count);
+  for (let index = 0; index < count; index += 1) {
+    transaction({
+      type: 'expense',
+      description,
+      amount: base + (index === 0 ? total - base * count : 0),
+      date: isoDate(monthAfter(month, index), day),
+      creditCardId: card.id,
+      categoryId: category(categoryName),
+      installmentGroupId,
+      installmentNumber: index + 1,
+      installmentCount: count,
+    });
+  }
+}
+
+installmentPurchase({
+  month: monthAt(-3),
+  day: 12,
+  description: 'Notebook',
+  total: 420_000,
+  count: 10,
+  categoryName: 'Compras',
+  card: mainCard,
+});
+installmentPurchase({
+  month: monthAt(-1),
+  day: 8,
+  description: 'Passagens aéreas',
+  total: 186_090,
+  count: 6,
+  categoryName: 'Lazer',
+  card: travelCard,
+});
+
 // Pagamentos das faturas já vencidas; a fatura fechada mais recente fica para a demo pagar.
 for (const creditCard of creditCards) {
   const totals = new Map();

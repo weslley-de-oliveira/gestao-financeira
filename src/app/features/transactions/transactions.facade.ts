@@ -12,9 +12,11 @@ import {
   Transaction,
   TransactionStatus,
   isCardPurchase,
+  isInstallment,
   isInvoicePayment,
 } from '../../shared/models/transaction';
 import { TransactionFilters } from '../../shared/models/transaction-query';
+import { InstallmentNotEditableError } from '../installments/domain/installment-rules';
 import { PaidInvoiceError, isInvoicePaidFor } from '../invoices/domain/invoice-rules';
 import {
   InvalidTransactionInputError,
@@ -91,7 +93,7 @@ export class TransactionsFacade {
   /** `version`: o `updatedAt` do registro quando o formulário o carregou. */
   async update(id: string, input: TransactionInput, version?: string): Promise<Transaction> {
     const normalized = normalizeTransactionInput(input);
-    const previous = await this.getOwned(id);
+    const previous = await this.getEditable(id);
     if (isInvoicePayment(previous)) {
       throw new InvalidTransactionInputError('type');
     }
@@ -101,7 +103,7 @@ export class TransactionsFacade {
 
   /** Compras no cartão e pagamentos de fatura são sempre realizados. */
   async setStatus(id: string, status: TransactionStatus): Promise<Transaction> {
-    const transaction = await this.getOwned(id);
+    const transaction = await this.getEditable(id);
     if ((isCardPurchase(transaction) || isInvoicePayment(transaction)) && status !== 'completed') {
       throw new InvalidTransactionInputError('status');
     }
@@ -113,7 +115,7 @@ export class TransactionsFacade {
    * um pagamento de fatura desfaz o pagamento; uma compra de fatura paga não pode ser excluída.
    */
   async delete(id: string): Promise<void> {
-    const transaction = await this.getOwned(id);
+    const transaction = await this.getEditable(id);
     if (isCardPurchase(transaction)) {
       await this.assertInvoicesOpen([transaction]);
     }
@@ -153,10 +155,14 @@ export class TransactionsFacade {
     }
   }
 
-  private async getOwned(id: string): Promise<Transaction> {
+  /** Transação do usuário que pode mudar por aqui: uma parcela só muda pela compra parcelada. */
+  private async getEditable(id: string): Promise<Transaction> {
     const transaction = await this.getById(id);
     if (!transaction) {
       throw new TransactionNotFoundError();
+    }
+    if (isInstallment(transaction)) {
+      throw new InstallmentNotEditableError();
     }
     return transaction;
   }

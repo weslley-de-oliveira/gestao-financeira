@@ -171,7 +171,6 @@
 
 .invoice__item-date {
   color: var(--mat-sys-on-surface-variant);
-  font: var(--mat-sys-body-small);
 }
 
 .invoice__item-description {
@@ -242,4 +241,10 @@
 
 .invoice__history-total {
   text-align: right;
+}
+
+// "Parcela 3 de 10", abaixo da descrição da compra.
+.invoice__item-installment {
+  display: block;
+  color: var(--mat-sys-on-surface-variant);
 }

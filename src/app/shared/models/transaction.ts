@@ -63,6 +63,13 @@ export interface Transaction {
   createdAt: string;
   /** Versão do registro na API, enviada no `If-Match` das edições; ausente na demo. */
   updatedAt?: string;
+  /**
+   * Parcela de uma compra parcelada no cartão: a compra (o mesmo id em todas as parcelas), o número
+   * da parcela e o total de parcelas. Ausentes (ou `null`) nas demais transações.
+   */
+  installmentGroupId?: string | null;
+  installmentNumber?: number | null;
+  installmentCount?: number | null;
 }
 
 /** Compra no cartão de crédito: despesa sem conta, lançada na fatura do cartão. */
@@ -72,4 +79,9 @@ export function isCardPurchase(transaction: Pick<Transaction, 'type' | 'creditCa
 
 export function isInvoicePayment(transaction: Pick<Transaction, 'type'>): boolean {
   return transaction.type === 'invoice-payment';
+}
+
+/** Parcela de uma compra parcelada: só muda pela compra inteira. */
+export function isInstallment(transaction: Pick<Transaction, 'installmentGroupId'>): boolean {
+  return !!transaction.installmentGroupId;
 }

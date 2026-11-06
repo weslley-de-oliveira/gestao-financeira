@@ -22,6 +22,10 @@ export interface TransactionDto {
   status: TransactionStatus;
   notes: string | null;
   createdAt: string;
+  /** Só nas parcelas de uma compra parcelada. */
+  installmentGroupId?: string | null;
+  installmentNumber?: number | null;
+  installmentCount?: number | null;
 }
 
 export function toTransaction(dto: TransactionDto): Transaction {
@@ -40,6 +44,11 @@ export function toTransaction(dto: TransactionDto): Transaction {
     status: dto.status ?? 'completed',
     notes: dto.notes ?? null,
     createdAt: dto.createdAt,
+    ...(dto.installmentGroupId && {
+      installmentGroupId: dto.installmentGroupId,
+      installmentNumber: dto.installmentNumber ?? null,
+      installmentCount: dto.installmentCount ?? null,
+    }),
   };
 }
 

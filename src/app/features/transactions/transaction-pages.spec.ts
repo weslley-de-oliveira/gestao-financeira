@@ -23,6 +23,7 @@ import { seedTransactions } from '../../../testing/transaction-fixtures';
 import { appConfig } from '../../app.config';
 import { PeriodService } from '../../core/services/period.service';
 import { Transaction } from '../../shared/models/transaction';
+import { InstallmentPurchasesFacade } from '../installments/installment-purchases.facade';
 
 describe('transaction pages', () => {
   let harness: RouterTestingHarness;
@@ -339,6 +340,90 @@ describe('transaction pages', () => {
       await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/transactions'));
       expect(records()).toHaveLength(0);
     });
+
+    describe('installment', () => {
+      async function installmentPurchase() {
+        seedCreditCards(userId, { name: 'Roxinho' });
+        return TestBed.inject(InstallmentPurchasesFacade).create({
+          description: 'Geladeira',
+          amount: 30_000,
+          date: '2026-11-10',
+          creditCardId: 'card-1',
+          categoryId: 'category-1',
+          installmentCount: 3,
+          notes: null,
+        });
+      }
+
+      it('shows the installment number and manages only the whole purchase', async () => {
+        const purchase = await installmentPurchase();
+        await open(`/transactions/${purchase.installments[1].id}`);
+
+        expect(text()).toContain('Parcela 2 de 3');
+        expect(text()).toMatch(/compra de R\$\s300,00 em 3x/);
+        const buttons = await loader.getAllHarnesses(MatButtonHarness);
+        const labels = await Promise.all(buttons.map((button) => button.getText()));
+        expect(labels).toEqual(
+          expect.arrayContaining(['edit Editar a compra', 'delete Excluir a compra']),
+        );
+        expect(labels).not.toContain('delete Excluir');
+        expect(labels).not.toContain('edit Editar');
+      });
+
+      it('renames every installment from the detail', async () => {
+        const purchase = await installmentPurchase();
+        await open(`/transactions/${purchase.installments[0].id}`);
+
+        await (await loader.getHarness(MatButtonHarness.with({ text: /Editar a compra/ }))).click();
+        const dialog = await TestbedHarnessEnvironment.documentRootLoader(
+          harness.fixture,
+        ).getHarness(MatDialogHarness);
+        const description = await dialog.getHarness(MatInputHarness.with({ placeholder: '' }));
+        await description.setValue('Geladeira duplex');
+        await (await dialog.getHarness(MatButtonHarness.with({ text: 'Salvar' }))).click();
+        await harness.fixture.whenStable();
+
+        await vi.waitFor(() =>
+          expect(records().map((record) => record.description)).toEqual([
+            'Geladeira duplex',
+            'Geladeira duplex',
+            'Geladeira duplex',
+          ]),
+        );
+      });
+
+      it('deletes the whole purchase after confirmation', async () => {
+        const purchase = await installmentPurchase();
+        await open(`/transactions/${purchase.installments[2].id}`);
+
+        await (
+          await loader.getHarness(MatButtonHarness.with({ text: /Excluir a compra/ }))
+        ).click();
+        await confirmDialog('Excluir a compra');
+
+        await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/transactions'));
+        expect(records()).toHaveLength(0);
+      });
+
+      it('lists the installments with their number, without the delete action', async () => {
+        await installmentPurchase();
+        await open('/transactions');
+
+        expect(text()).toContain('Despesa · Parcela 1 de 3');
+        const menu = await loader.getHarness(MatMenuHarness);
+        await menu.open();
+        const items = await Promise.all((await menu.getItems()).map((item) => item.getText()));
+        expect(items.join(' ')).not.toContain('Excluir');
+        expect(items.join(' ')).not.toContain('Editar');
+      });
+
+      it('does not open an installment in the transaction form', async () => {
+        const purchase = await installmentPurchase();
+        await open(`/transactions/${purchase.installments[0].id}/edit`);
+
+        expect(text()).toContain('Esta transação é uma parcela de uma compra parcelada');
+      });
+    });
   });
 
   describe('form', () => {
@@ -498,6 +583,34 @@ describe('transaction pages', () => {
           status: 'completed',
           amount: 350_000,
         }),
+      ]);
+    });
+
+    it('registers a card purchase in installments, with a preview of the values', async () => {
+      seedCreditCards(userId, { name: 'Roxinho', lastFourDigits: '4321' });
+      await open('/transactions/new');
+      const groups = await loader.getAllHarnesses(MatButtonToggleGroupHarness);
+      await (await groups[1].getToggles({ text: 'Cartão de crédito' }))[0].check();
+
+      await (await input('Descrição')).setValue('Geladeira');
+      await (await input('Valor')).setValue('10000');
+      await (await select('Cartão')).clickOptions({ text: /Roxinho/ });
+      await (await select('Categoria')).clickOptions({ text: 'Lazer' });
+      await (await select('Parcelas')).clickOptions({ text: '3x' });
+
+      const hints = await (await field('Parcelas')).getTextHints();
+      expect(hints.map((hint) => hint.replace(/\s+/g, ' '))).toEqual([
+        '1ª de R$ 33,34 e as demais de R$ 33,33; a última na fatura de fevereiro de 2027.',
+      ]);
+
+      await save();
+
+      expect(
+        records().map(({ installmentNumber, amount, date }) => [installmentNumber, amount, date]),
+      ).toEqual([
+        [1, 3_334, '2026-11-15'],
+        [2, 3_333, '2026-12-15'],
+        [3, 3_333, '2027-01-15'],
       ]);
     });
 

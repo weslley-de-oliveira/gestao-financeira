@@ -20,6 +20,14 @@
     </p>
     <a matButton="outlined" routerLink="/invoices">Ver faturas</a>
   }
+  @case ('installment') {
+    <p class="transaction-form__message" role="alert">
+      Esta transação é uma parcela de uma compra parcelada. Descrição, categoria e observações mudam
+      pela compra, no detalhe da parcela; para mudar valor, parcelas, cartão ou data, exclua a
+      compra e registre de novo.
+    </p>
+    <a matButton="outlined" [routerLink]="['/transactions', id()]">Ver a parcela</a>
+  }
   @case ('error') {
     <p class="transaction-form__message" role="alert">
       Não foi possível carregar os dados. Tente novamente em instantes.
@@ -115,6 +123,22 @@
                 <mat-error>{{ error.message }}</mat-error>
               }
             </mat-form-field>
+            @if (!isEdit()) {
+              <mat-form-field appearance="outline">
+                <mat-label>Parcelas</mat-label>
+                <mat-select [formField]="transactionForm.installments">
+                  @for (count of installmentOptions; track count) {
+                    <mat-option [value]="count">
+                      {{ count === 1 ? 'À vista' : count + 'x' }}
+                    </mat-option>
+                  }
+                </mat-select>
+                <mat-hint>{{ installmentHint() }}</mat-hint>
+                @if (transactionForm.installments().errors()[0]; as error) {
+                  <mat-error>{{ error.message }}</mat-error>
+                }
+              </mat-form-field>
+            }
           } @else {
             <mat-form-field appearance="outline">
               <mat-label>{{ isTransfer() ? 'Conta de origem' : 'Conta' }}</mat-label>

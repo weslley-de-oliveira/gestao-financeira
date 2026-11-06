@@ -50,7 +50,9 @@ import {
   accountLabel,
   byId,
   canChangeStatus,
+  canDelete,
   categoryOf,
+  installmentLabel,
   isEditable,
 } from '../transaction-display';
 import { TransactionListStore } from './transaction-list-store';
@@ -264,7 +266,18 @@ export class TransactionListPage implements OnInit {
   }
 
   protected typeLabel(transaction: Transaction): string {
-    return TRANSACTION_TYPE_LABELS[transaction.type];
+    const installment = installmentLabel(transaction);
+    return installment
+      ? `${TRANSACTION_TYPE_LABELS[transaction.type]} · ${installment}`
+      : TRANSACTION_TYPE_LABELS[transaction.type];
+  }
+
+  protected installmentLabel(transaction: Transaction): string | null {
+    return installmentLabel(transaction);
+  }
+
+  protected canDelete(transaction: Transaction): boolean {
+    return canDelete(transaction);
   }
 
   protected sign(transaction: Transaction): string {
