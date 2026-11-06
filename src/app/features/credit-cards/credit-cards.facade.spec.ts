@@ -3,7 +3,7 @@ import { seedAccounts } from '../../../testing/account-fixtures';
 import { signInTestUser } from '../../../testing/auth-fixtures';
 import { InMemoryCreditCardRepository } from '../../../testing/in-memory-credit-card.repository';
 import { TEST_PROVIDERS } from '../../../testing/test-providers';
-import { TransactionRepository } from '../../data-access/repositories/transaction.repository';
+import { TransactionSource } from '../../data-access/repositories/transaction-source';
 import { seedTransactions } from '../../../testing/transaction-fixtures';
 import { CreditCardNotFoundError, CreditCardsFacade } from './credit-cards.facade';
 import { CreditCardInput, InvalidCreditCardInputError } from './domain/credit-card-input';
@@ -73,7 +73,7 @@ describe('CreditCardsFacade', () => {
       amount: 1_000,
     };
     repository.records[0].usage = { usedLimit: 40_000, availableLimit: 260_000, nextInvoice };
-    const listTransactions = vi.spyOn(TestBed.inject(TransactionRepository), 'listByUser');
+    const listTransactions = vi.spyOn(TestBed.inject(TransactionSource), 'listByUser');
 
     await facade.load();
 

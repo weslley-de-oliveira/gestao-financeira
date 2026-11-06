@@ -5,10 +5,12 @@ import { firstValueFrom } from 'rxjs';
 import { Goal } from '../../shared/models/goal';
 import { Transaction } from '../../shared/models/transaction';
 import { ApiAccountRepository } from './api-account.repository';
+import { ApiBudgetProgressRepository } from './api-budget-progress.repository';
 import { ApiBudgetRepository } from './api-budget.repository';
 import { ApiCategoryRepository } from './api-category.repository';
 import { ApiDashboardRepository } from './api-dashboard.repository';
 import { ApiGoalRepository } from './api-goal.repository';
+import { ApiInvoiceRepository } from './api-invoice.repository';
 import { SessionUser } from './api-http';
 import { ApiTransactionRepository } from './api-transaction.repository';
 import { API_BASE_URL } from './api.config';
@@ -90,8 +92,10 @@ describe('API repositories', () => {
         ApiCategoryRepository,
         ApiTransactionRepository,
         ApiBudgetRepository,
+        ApiBudgetProgressRepository,
         ApiGoalRepository,
         ApiDashboardRepository,
+        ApiInvoiceRepository,
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -196,24 +200,54 @@ describe('API repositories', () => {
         color: '#2e7d32',
         isDefault: false,
         isArchived: true,
+        transactionCount: 7,
         createdAt: '2026-11-01T12:00:00.000Z',
       });
 
-      expect((await updated).isArchived).toBe(true);
+      expect(await updated).toMatchObject({ isArchived: true, transactionCount: 7 });
     });
   });
 
   describe('transactions', () => {
-    it('follows the cursor until the last page', async () => {
-      const list = firstValueFrom(TestBed.inject(ApiTransactionRepository).listByUser());
+    it('asks for one page with the filters, the sort and the cursor', async () => {
+      const page = firstValueFrom(
+        TestBed.inject(ApiTransactionRepository).query(USER_ID, {
+          filters: {
+            range: { start: '2026-11-01', end: '2026-11-30' },
+            type: 'expense',
+            creditCardId: CARD_ID,
+            search: '  mercado ',
+          },
+          sort: 'amount-desc',
+          cursor: 'c1',
+          limit: 25,
+        }),
+      );
       http
-        .expectOne('/api/v1/transactions?limit=100')
-        .flush({ items: [apiTransaction({ id: 'a' })], nextCursor: 'c1' });
-      http
-        .expectOne('/api/v1/transactions?limit=100&cursor=c1')
-        .flush({ items: [apiTransaction({ id: 'b' })], nextCursor: null });
+        .expectOne(
+          `/api/v1/transactions?from=2026-11-01&to=2026-11-30&type=expense&creditCardId=${CARD_ID}&q=mercado&sort=amount-desc&limit=25&cursor=c1`,
+        )
+        .flush({ items: [apiTransaction({ id: 'a' })], nextCursor: 'c2' });
 
-      expect((await list).map((item) => item.id)).toEqual(['a', 'b']);
+      const { items, nextCursor } = await page;
+      expect(items.map((item) => [item.id, item.userId])).toEqual([['a', USER_ID]]);
+      expect(nextCursor).toBe('c2');
+    });
+
+    it('asks for the totals of the filtered transactions, without sort or page', async () => {
+      const totals = { count: 3, income: 0, expense: 30_000, net: -30_000, pendingCount: 1 };
+      const summary = firstValueFrom(
+        TestBed.inject(ApiTransactionRepository).summarize(USER_ID, {
+          accountId: ACCOUNT_ID,
+          status: 'pending',
+          search: '   ',
+        }),
+      );
+      http
+        .expectOne(`/api/v1/transactions/summary?status=pending&accountId=${ACCOUNT_ID}`)
+        .flush(totals);
+
+      expect(await summary).toEqual(totals);
     });
 
     it('creates a card purchase without an account and a transfer without a category', async () => {
@@ -330,6 +364,56 @@ describe('API repositories', () => {
       const undone = firstValueFrom(repository.undoInvoicePayment({ ...payment, userId: USER_ID }));
       http.expectOne({ url, method: 'DELETE' }).flush({ payment: null } as Partial<ApiInvoice>);
       await expect(undone).resolves.toBeUndefined();
+    });
+  });
+
+  describe('invoices', () => {
+    const cycle = {
+      referenceMonth: '2026-11',
+      start: '2026-10-05',
+      end: '2026-11-04',
+      closingDate: '2026-11-05',
+      dueDate: '2026-11-12',
+      creditCardId: CARD_ID,
+      total: 25_000,
+      status: 'paid' as const,
+      payment: apiTransaction({
+        id: 'payment',
+        type: 'invoice-payment',
+        creditCardId: CARD_ID,
+        invoiceMonth: '2026-11',
+        categoryId: null,
+      }),
+    };
+
+    it('lists the invoices of the card computed by the server', async () => {
+      const list = firstValueFrom(
+        TestBed.inject(ApiInvoiceRepository).listByCard(USER_ID, CARD_ID),
+      );
+      http
+        .expectOne(`/api/v1/credit-cards/${CARD_ID}/invoices`)
+        .flush([{ ...cycle, purchaseCount: 1 }]);
+
+      const [invoice] = await list;
+      expect(invoice).toMatchObject({ referenceMonth: '2026-11', purchaseCount: 1, total: 25_000 });
+      expect(invoice.payment).toMatchObject({ id: 'payment', userId: USER_ID });
+    });
+
+    it('loads one invoice with its purchases, and null for an unknown card', async () => {
+      const repository = TestBed.inject(ApiInvoiceRepository);
+      const found = firstValueFrom(repository.findByMonth(USER_ID, CARD_ID, '2026-11'));
+      http
+        .expectOne(`/api/v1/credit-cards/${CARD_ID}/invoices/2026-11`)
+        .flush({ ...cycle, purchases: [apiTransaction({ id: 'p1', accountId: null })] });
+      const missing = firstValueFrom(repository.findByMonth(USER_ID, 'outro', '2026-11'));
+      http
+        .expectOne('/api/v1/credit-cards/outro/invoices/2026-11')
+        .flush({ status: 404 }, { status: 404, statusText: 'Not Found' });
+
+      expect((await found)?.purchases.map((purchase) => [purchase.id, purchase.userId])).toEqual([
+        ['p1', USER_ID],
+      ]);
+      expect(await missing).toBeNull();
     });
   });
 
@@ -485,6 +569,40 @@ describe('API repositories', () => {
       request.flush(apiBudget);
 
       expect((await updated).limits).toEqual(apiBudget.limits);
+    });
+
+    it('reads the consumption of the month computed by the server', async () => {
+      const budget = (id: string, progress: ApiBudget['progress']): ApiBudget => ({
+        id,
+        categoryId: CATEGORY_ID,
+        alertThreshold: 80,
+        limitAmount: 90_000,
+        limits: [{ month: '2026-11', amount: 90_000 }],
+        progress,
+        createdAt: '2026-11-01T12:00:00.000Z',
+        updatedAt: '2026-11-01T12:00:00.000Z',
+      });
+      const progress = {
+        month: '2026-11',
+        limit: 90_000,
+        spent: 81_000,
+        pending: 5_000,
+        available: 9_000,
+        percent: 90,
+        state: 'warning' as const,
+      };
+
+      const list = firstValueFrom(
+        TestBed.inject(ApiBudgetProgressRepository).listByMonth(USER_ID, '2026-11'),
+      );
+      http
+        .expectOne('/api/v1/budgets?month=2026-11')
+        .flush([budget('b1', progress), budget('b2', null)]);
+
+      const [item, ...rest] = await list;
+      expect(rest).toEqual([]);
+      expect(item).toMatchObject(progress);
+      expect(item.budget).toMatchObject({ id: 'b1', userId: USER_ID });
     });
   });
 

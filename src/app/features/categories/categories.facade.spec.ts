@@ -3,6 +3,7 @@ import { throwError } from 'rxjs';
 import { signInTestUser } from '../../../testing/auth-fixtures';
 import { InMemoryCategoryRepository } from '../../../testing/in-memory-category.repository';
 import { TEST_PROVIDERS } from '../../../testing/test-providers';
+import { seedTransactions } from '../../../testing/transaction-fixtures';
 import { CategoriesFacade, CategoryNotFoundError } from './categories.facade';
 import { CategoryInput, DuplicateCategoryNameError } from './domain/category-rules';
 import { DEFAULT_CATEGORIES } from './domain/default-categories';
@@ -36,6 +37,21 @@ describe('CategoriesFacade', () => {
     expect(repository.records).toHaveLength(DEFAULT_CATEGORIES.length);
     expect(repository.records.every((c) => c.userId === userId && c.isDefault)).toBe(true);
     expect(facade.categories()).toHaveLength(DEFAULT_CATEGORIES.length);
+  });
+
+  it('loads each category with how many transactions use it', async () => {
+    const created = await facade.create(input);
+    seedTransactions(
+      userId,
+      { categoryId: created.id, date: '2025-01-10' },
+      { categoryId: created.id, status: 'pending' },
+    );
+
+    await facade.load();
+
+    expect(facade.categories().find((category) => category.id === created.id)).toMatchObject({
+      transactionCount: 2,
+    });
   });
 
   it('does not recreate defaults when the user already has categories', async () => {

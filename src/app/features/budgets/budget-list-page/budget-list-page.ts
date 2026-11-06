@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, input } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, input, untracked } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -20,9 +20,8 @@ import { Category } from '../../../shared/models/category';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 import { formatMonth, isIsoMonth, shiftMonth, toIsoMonth } from '../../../shared/utils/month';
 import { CategoriesFacade } from '../../categories/categories.facade';
-import { TransactionsFacade } from '../../transactions/transactions.facade';
 import { BudgetsFacade } from '../budgets.facade';
-import { budgetProgress, progressBarValue, summarizeBudgets } from '../domain/budget-rules';
+import { progressBarValue, summarizeBudgets } from '../domain/budget-rules';
 
 /** Orçamentos do mês escolhido (`/budgets?month=yyyy-MM`; sem parâmetro, o mês atual). */
 @Component({
@@ -42,7 +41,6 @@ import { budgetProgress, progressBarValue, summarizeBudgets } from '../domain/bu
 })
 export class BudgetListPage implements OnInit {
   private readonly facade = inject(BudgetsFacade);
-  private readonly transactionsFacade = inject(TransactionsFacade);
   private readonly categoriesFacade = inject(CategoriesFacade);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
@@ -62,7 +60,7 @@ export class BudgetListPage implements OnInit {
   protected readonly status = computed(() => {
     const statuses = [
       this.facade.status(),
-      this.transactionsFacade.status(),
+      this.facade.progressStatus(),
       this.categoriesFacade.status(),
     ];
     return statuses.includes('error')
@@ -74,15 +72,9 @@ export class BudgetListPage implements OnInit {
   protected readonly hasBudgets = computed(() => this.facade.budgets().length > 0);
 
   /** Orçamentos que valem no mês, dos mais consumidos para os menos. */
-  protected readonly progress = computed(() => {
-    const month = this.selectedMonth();
-    const transactions = this.transactionsFacade.transactions();
-    return this.facade
-      .budgets()
-      .map((budget) => budgetProgress(budget, transactions, month))
-      .filter((item): item is BudgetProgress => item !== null)
-      .sort((a, b) => b.percent - a.percent);
-  });
+  protected readonly progress = computed(() =>
+    [...this.facade.progress()].sort((a, b) => b.percent - a.percent),
+  );
   protected readonly summary = computed(() => summarizeBudgets(this.progress()));
   private readonly categories = computed(
     () => new Map(this.categoriesFacade.categories().map((category) => [category.id, category])),
@@ -92,13 +84,22 @@ export class BudgetListPage implements OnInit {
   protected readonly stateIcons = BUDGET_STATE_ICONS;
   protected readonly progressBarValue = progressBarValue;
 
+  constructor() {
+    // O consumo é do mês escolhido: carrega de novo a cada troca.
+    effect(() => {
+      const month = this.selectedMonth();
+      untracked(() => void this.facade.loadProgress(month));
+    });
+  }
+
   ngOnInit(): void {
-    this.reload();
+    void this.facade.load();
+    void this.categoriesFacade.load();
   }
 
   protected reload(): void {
     void this.facade.load();
-    void this.transactionsFacade.load();
+    void this.facade.loadProgress(this.selectedMonth());
     void this.categoriesFacade.load();
   }
 

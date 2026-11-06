@@ -11,6 +11,7 @@ export type ApiAccount = Schemas['Account'];
 export type ApiCategory = Schemas['Category'];
 export type ApiTransaction = Schemas['Transaction'];
 export type ApiTransactionPage = Schemas['TransactionPage'];
+export type ApiTransactionSummary = Schemas['TransactionSummary'];
 export type ApiCreateEntry = Schemas['CreateEntryInput'];
 export type ApiCreateTransfer = Schemas['CreateTransferInput'];
 export type ApiCreditCard = Schemas['CreditCard'];

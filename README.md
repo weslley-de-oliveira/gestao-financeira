@@ -18,18 +18,18 @@ A [demo publicada](https://gestao-financeira-tau-five.vercel.app) (Vercel, atual
 
 ## Funcionalidades
 
-| Tela              | Destaques                                                                                           |
-| ----------------- | --------------------------------------------------------------------------------------------------- |
-| Login e cadastro  | Sessão em cookie HttpOnly (API) ou criptografada no navegador (demo, PBKDF2), com os guards de rota |
-| Dashboard         | Resumo do período, receitas × despesas, evolução do saldo, transações recentes, orçamentos e metas  |
-| Contas            | Busca e filtros, saldo atual calculado, arquivamento                                                |
-| Transações        | Receitas, despesas e transferências, pendentes, compras no cartão, filtros por período e paginação  |
-| Categorias        | Conjunto padrão, personalização, prevenção de duplicidade                                           |
-| Cartões e faturas | Limite utilizado e disponível, ciclo de fatura, status, pagamento que não duplica despesas          |
-| Orçamentos        | Limite mensal por categoria com vigências, alerta e consumo do mês                                  |
-| Metas             | Progresso, status, ritmo mensal até o prazo e histórico de aportes                                  |
-| Configurações     | Perfil, tema claro/escuro/sistema, cor de destaque (7 paletas) e densidade                          |
-| Segurança         | Troca de senha, laboratório de criptografia (AES-256-GCM + PBKDF2) e exclusão da conta              |
+| Tela              | Destaques                                                                                                            |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Login e cadastro  | Sessão em cookie HttpOnly (API) ou criptografada no navegador (demo, PBKDF2), com os guards de rota                  |
+| Dashboard         | Resumo do período, receitas × despesas, evolução do saldo, transações recentes, orçamentos e metas                   |
+| Contas            | Busca e filtros, saldo atual calculado, arquivamento                                                                 |
+| Transações        | Receitas, despesas e transferências, pendentes, compras no cartão, busca, filtros, ordenação e paginação no servidor |
+| Categorias        | Conjunto padrão, personalização, prevenção de duplicidade                                                            |
+| Cartões e faturas | Limite utilizado e disponível, ciclo de fatura, status, pagamento que não duplica despesas                           |
+| Orçamentos        | Limite mensal por categoria com vigências, alerta e consumo do mês                                                   |
+| Metas             | Progresso, status, ritmo mensal até o prazo e histórico de aportes                                                   |
+| Configurações     | Perfil, tema claro/escuro/sistema, cor de destaque (7 paletas) e densidade                                           |
+| Segurança         | Troca de senha, laboratório de criptografia (AES-256-GCM + PBKDF2) e exclusão da conta                               |
 
 ## Stack
 
@@ -105,8 +105,8 @@ O `npm run e2e:api` sobe uma instância própria da API (porta 3334) a partir do
 
 A aplicação segue uma arquitetura orientada a funcionalidades (`core`, `shared`, `features` e `data-access`). As telas consomem facades, que usam contratos de repositório; as implementações ficam em `data-access`:
 
-- **API** (`data-access/api/`): a API real, com os tipos do contrato gerados do OpenAPI (`npm run api:types`). Um interceptor converte as recusas da API (Problem Details) nos erros que as telas já exibem e, numa sessão expirada, leva ao login. O dashboard vem pronto do servidor (`GET /v1/dashboard`), sem baixar as transações; as edições enviam `If-Match` com a versão que o formulário carregou (alterada em outra aba → aviso, sem sobrescrever); o pagamento de fatura envia `Idempotency-Key` e repete uma vez, com a mesma chave, se a resposta se perder.
-- **localStorage** (`data-access/local/`): usada na demo publicada. A configuração `demo` do Angular troca as implementações por `fileReplacements`, sem mudar nenhuma tela ou regra de negócio.
+- **API** (`data-access/api/`): a API real, com os tipos do contrato gerados do OpenAPI (`npm run api:types`). Um interceptor converte as recusas da API (Problem Details) nos erros que as telas já exibem e, numa sessão expirada, leva ao login. Nenhuma tela baixa a lista completa de transações: a listagem pede uma página por vez (filtros, ordenação e cursor no servidor) e os totais em `GET /v1/transactions/summary`; dashboard, faturas, consumo dos orçamentos, saldos, uso dos cartões e uso das categorias vêm calculados do servidor. As edições enviam `If-Match` com a versão que o formulário carregou (alterada em outra aba → aviso, sem sobrescrever); o pagamento de fatura envia `Idempotency-Key` e repete uma vez, com a mesma chave, se a resposta se perder.
+- **localStorage** (`data-access/local/`): usada na demo (`ng build -c demo`) e nos E2E. A configuração `demo` troca as implementações por `fileReplacements`, sem mudar nenhuma tela ou regra de negócio; os mesmos cálculos são feitos no navegador, sobre a lista completa (`TransactionSource`). Esse contrato só é registrado na demo e nos testes: na build publicada, nada consegue baixar a lista completa.
 
 ```text
 db/
@@ -127,7 +127,7 @@ vercel.json      # Build publicada, rewrite de /api para a API, fallback da SPA 
 
 - **Testes unitários e de componentes** (Vitest + harnesses do Material): regras de domínio, facades, repositórios, formulários e telas, inclusive a validação do seed contra as regras do app.
 - **E2E** (Playwright, contra a build de demo): login, cadastro, navegação, lançamento de transação, pagamento de fatura, persistência e restauração dos dados. O relógio do navegador é fixado na data de referência do seed para resultados determinísticos.
-- **E2E contra a API real** (`npm run e2e:api`): sessão em cookie (restauração, expiração e saída), saldo calculado pelo servidor, dashboard numa chamada só, troca de senha e exclusão da conta com senha. Na CI, com Postgres e o seed da API.
+- **E2E contra a API real** (`npm run e2e:api`): sessão em cookie (restauração, expiração e saída), saldo calculado pelo servidor, dashboard numa chamada só, listagem de transações paginada, ordenada e totalizada no servidor (sem baixar a lista completa), troca de senha e exclusão da conta com senha. Na CI, com Postgres e o seed da API.
 - **Acessibilidade**: axe-core (WCAG 2.0/2.1 A e AA) em todas as telas principais, nos temas claro e escuro.
 - **Responsividade**: navegação pelo menu recolhido e ausência de rolagem horizontal num celular (Pixel 7).
 - **CI**: cada push na `main` e cada pull request passam por formatação, lint, testes unitários, build e E2E (demo e API real).

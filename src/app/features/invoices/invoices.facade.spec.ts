@@ -63,7 +63,34 @@ describe('InvoicesFacade', () => {
       categoryId: null,
       status: 'completed',
     });
-    expect(TestBed.inject(TransactionsFacade).transactions()).toContainEqual(payment);
+    expect(records()).toContainEqual(payment);
+  });
+
+  it('loads the invoices of the card and the one of the month, with its purchases', async () => {
+    await facade.select('card-1', '2026-11');
+
+    expect(facade.status()).toBe('ready');
+    expect(facade.invoices().map((invoice) => [invoice.referenceMonth, invoice.status])).toEqual([
+      ['2026-12', 'open'],
+      ['2026-11', 'overdue'],
+    ]);
+    expect(facade.invoices()[1].purchaseCount).toBe(1);
+    expect(facade.invoice()?.purchases.map((purchase) => purchase.description)).toEqual(['Sapato']);
+  });
+
+  it('opens the invoice that is open today when no month is chosen', async () => {
+    await facade.select('card-1');
+
+    expect(facade.invoice()?.referenceMonth).toBe('2026-12');
+  });
+
+  it('refreshes the selected invoice after paying it', async () => {
+    await facade.select('card-1', '2026-11');
+
+    await facade.pay('card-1', '2026-11');
+
+    expect(facade.invoice()?.status).toBe('paid');
+    expect(facade.invoices()[1].payment?.amount).toBe(20_000);
   });
 
   it('debits the account and releases the limit without counting a new expense', async () => {

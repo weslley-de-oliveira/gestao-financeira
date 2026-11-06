@@ -1,11 +1,11 @@
 import { NewRecord } from '../../data-access/repositories/new-record';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
-import { SessionCleanup } from '../../core/auth/session-cleanup';
 import { AccountRepository } from '../../data-access/repositories/account.repository';
 import { CategoryRepository } from '../../data-access/repositories/category.repository';
 import { CreditCardRepository } from '../../data-access/repositories/credit-card.repository';
+import { TransactionSource } from '../../data-access/repositories/transaction-source';
 import { TransactionRepository } from '../../data-access/repositories/transaction.repository';
 import { CreditCard } from '../../shared/models/credit-card';
 import {
@@ -14,7 +14,8 @@ import {
   isCardPurchase,
   isInvoicePayment,
 } from '../../shared/models/transaction';
-import { isInvoicePaidFor } from '../invoices/domain/invoice-rules';
+import { TransactionFilters } from '../../shared/models/transaction-query';
+import { PaidInvoiceError, isInvoicePaidFor } from '../invoices/domain/invoice-rules';
 import {
   InvalidTransactionInputError,
   TransactionInput,
@@ -22,7 +23,7 @@ import {
   normalizeTransactionInput,
 } from './domain/transaction-rules';
 
-export type LoadStatus = 'loading' | 'ready' | 'error';
+export { PaidInvoiceError } from '../invoices/domain/invoice-rules';
 
 export class TransactionNotFoundError extends Error {
   constructor() {
@@ -31,20 +32,13 @@ export class TransactionNotFoundError extends Error {
   }
 }
 
-/** A compra pertence a uma fatura já paga; é preciso desfazer o pagamento antes de alterá-la. */
-export class PaidInvoiceError extends Error {
-  constructor() {
-    super('The invoice of this purchase is already paid');
-    this.name = 'PaidInvoiceError';
-  }
-}
-
 type CardPurchaseRef = Pick<Transaction, 'type' | 'creditCardId' | 'date'>;
 
 /**
- * Casos de uso das transações do usuário logado. Carrega todas as transações do usuário;
- * período, filtros e paginação são aplicados na tela. Pagamentos de fatura são criados pela
- * facade de Faturas; aqui eles só podem ser excluídos (o que desfaz o pagamento).
+ * Casos de uso das transações do usuário logado. As telas pedem só o que exibem (uma página, as
+ * recentes, os totais); a lista completa nunca é carregada na build publicada. Pagamentos de
+ * fatura são criados pela facade de Faturas; aqui eles só podem ser excluídos (o que desfaz o
+ * pagamento).
  */
 @Injectable({ providedIn: 'root' })
 export class TransactionsFacade {
@@ -53,28 +47,28 @@ export class TransactionsFacade {
   private readonly categories = inject(CategoryRepository);
   private readonly creditCards = inject(CreditCardRepository);
   private readonly auth = inject(AuthService);
-  private readonly _transactions = signal<Transaction[]>([]);
-  private readonly _status = signal<LoadStatus>('loading');
+  /**
+   * Lista completa, só na demonstração e nos testes, para conferir a fatura paga antes de gravar.
+   * Na API, o servidor faz a checagem e responde 409 (`PaidInvoiceError`).
+   */
+  private readonly source = inject(TransactionSource, { optional: true });
 
-  readonly transactions = this._transactions.asReadonly();
-  readonly status = this._status.asReadonly();
-
-  constructor() {
-    // Ao encerrar a sessão, nada do usuário anterior fica em memória.
-    inject(SessionCleanup).register(() => {
-      this._transactions.set([]);
-      this._status.set('loading');
-    });
-  }
-
-  async load(): Promise<void> {
-    this._status.set('loading');
-    try {
-      this._transactions.set(await firstValueFrom(this.repository.listByUser(this.userId())));
-      this._status.set('ready');
-    } catch {
-      this._status.set('error');
-    }
+  /**
+   * As transações mais recentes que passam nos filtros e quantas são no total (por exemplo, as de
+   * uma conta ou de um cartão), sem carregar a lista completa.
+   */
+  async recent(
+    filters: TransactionFilters,
+    limit: number,
+  ): Promise<{ items: Transaction[]; count: number }> {
+    const userId = this.userId();
+    const [page, totals] = await Promise.all([
+      firstValueFrom(
+        this.repository.query(userId, { filters, sort: 'date-desc', cursor: null, limit }),
+      ),
+      firstValueFrom(this.repository.summarize(userId, filters)),
+    ]);
+    return { items: page.items, count: totals.count };
   }
 
   /** Retorna `null` se a transação não existir ou pertencer a outro usuário. */
@@ -91,7 +85,7 @@ export class TransactionsFacade {
       invoiceMonth: null,
       userId: this.userId(),
     };
-    return this.store(await firstValueFrom(this.repository.create(transaction)));
+    return firstValueFrom(this.repository.create(transaction));
   }
 
   /** `version`: o `updatedAt` do registro quando o formulário o carregou. */
@@ -102,7 +96,7 @@ export class TransactionsFacade {
       throw new InvalidTransactionInputError('type');
     }
     await this.validate(normalized, previous);
-    return this.store(await firstValueFrom(this.repository.update(id, normalized, version)));
+    return firstValueFrom(this.repository.update(id, normalized, version));
   }
 
   /** Compras no cartão e pagamentos de fatura são sempre realizados. */
@@ -111,7 +105,7 @@ export class TransactionsFacade {
     if ((isCardPurchase(transaction) || isInvoicePayment(transaction)) && status !== 'completed') {
       throw new InvalidTransactionInputError('status');
     }
-    return this.store(await firstValueFrom(this.repository.update(id, { status })));
+    return firstValueFrom(this.repository.update(id, { status }));
   }
 
   /**
@@ -124,7 +118,6 @@ export class TransactionsFacade {
       await this.assertInvoicesOpen([transaction]);
     }
     await firstValueFrom(this.repository.delete(id));
-    this._transactions.update((transactions) => transactions.filter((item) => item.id !== id));
   }
 
   /** Referências válidas e, para compras no cartão, faturas (nova e anterior) ainda não pagas. */
@@ -144,13 +137,13 @@ export class TransactionsFacade {
     cards?: readonly CreditCard[],
   ): Promise<void> {
     const purchases = items.filter(isCardPurchase);
-    if (purchases.length === 0) {
+    if (purchases.length === 0 || !this.source) {
       return;
     }
     const userId = this.userId();
     const [creditCards, transactions] = await Promise.all([
       cards ?? firstValueFrom(this.creditCards.listByUser(userId)),
-      firstValueFrom(this.repository.listByUser(userId)),
+      firstValueFrom(this.source.listByUser(userId)),
     ]);
     for (const purchase of purchases) {
       const card = creditCards.find((item) => item.id === purchase.creditCardId);
@@ -165,15 +158,6 @@ export class TransactionsFacade {
     if (!transaction) {
       throw new TransactionNotFoundError();
     }
-    return transaction;
-  }
-
-  private store(transaction: Transaction): Transaction {
-    this._transactions.update((transactions) =>
-      transactions.some((item) => item.id === transaction.id)
-        ? transactions.map((item) => (item.id === transaction.id ? transaction : item))
-        : [...transactions, transaction],
-    );
     return transaction;
   }
 

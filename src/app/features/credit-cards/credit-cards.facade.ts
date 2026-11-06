@@ -6,7 +6,7 @@ import { SessionCleanup } from '../../core/auth/session-cleanup';
 import { TODAY } from '../../core/services/today';
 import { AccountRepository } from '../../data-access/repositories/account.repository';
 import { CreditCardRepository } from '../../data-access/repositories/credit-card.repository';
-import { TransactionRepository } from '../../data-access/repositories/transaction.repository';
+import { TransactionSource } from '../../data-access/repositories/transaction-source';
 import { CreditCard, CreditCardWithUsage } from '../../shared/models/credit-card';
 import { Transaction } from '../../shared/models/transaction';
 import { toIsoDate } from '../../shared/utils/date';
@@ -34,7 +34,8 @@ export class CreditCardNotFoundError extends Error {
 export class CreditCardsFacade {
   private readonly repository = inject(CreditCardRepository);
   private readonly accounts = inject(AccountRepository);
-  private readonly transactions = inject(TransactionRepository);
+  /** Lista completa, só na demonstração e nos testes; a API já devolve os valores calculados. */
+  private readonly transactions = inject(TransactionSource, { optional: true });
   private readonly auth = inject(AuthService);
   private readonly today = inject(TODAY);
   private readonly _cards = signal<CreditCardWithUsage[]>([]);
@@ -129,11 +130,11 @@ export class CreditCardsFacade {
   }
 
   /**
-   * Transações para calcular o uso dos cartões que o repositório não trouxe pronto. A API já
-   * devolve o uso de cada cartão, e a lista completa de transações não precisa ser carregada.
+   * Transações para calcular o uso dos cartões que o repositório não trouxe pronto (demo e
+   * testes). A API já devolve o uso de cada cartão, e a lista completa nunca é carregada.
    */
   private async purchasesFor(cards: readonly CreditCard[]): Promise<readonly Transaction[]> {
-    return cards.every((card) => card.usage !== undefined)
+    return !this.transactions || cards.every((card) => card.usage !== undefined)
       ? []
       : firstValueFrom(this.transactions.listByUser(this.userId()));
   }

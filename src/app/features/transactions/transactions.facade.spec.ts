@@ -63,7 +63,7 @@ describe('TransactionsFacade', () => {
     const created = await facade.create(expense);
 
     expect(repository.records).toEqual([expect.objectContaining({ ...expense, userId })]);
-    expect(facade.transactions()).toEqual([created]);
+    expect(await facade.getById(created.id)).toEqual(created);
   });
 
   it('validates the accounts and the category against the user data', async () => {
@@ -128,15 +128,37 @@ describe('TransactionsFacade', () => {
     await facade.delete(created.id);
 
     expect(repository.records).toHaveLength(0);
-    expect(facade.transactions()).toEqual([]);
     expect((await accounts.getById('account-1'))?.currentBalance).toBe(100_000);
+  });
+
+  it('returns the most recent transactions of an account and how many there are', async () => {
+    seedTransactions(
+      userId,
+      { description: 'Antiga', date: '2026-10-01' },
+      { description: 'Nova', date: '2026-11-12' },
+      { description: 'Do meio', date: '2026-11-01', accountId: 'account-2' },
+      {
+        description: 'Transferência',
+        date: '2026-11-02',
+        type: 'transfer',
+        accountId: 'account-2',
+        destinationAccountId: 'account-1',
+        categoryId: null,
+      },
+    );
+    seedTransactions('someone-else', { description: 'De outra pessoa' });
+
+    const { items, count } = await facade.recent({ accountId: 'account-1' }, 2);
+
+    expect(items.map((item) => item.description)).toEqual(['Nova', 'Transferência']);
+    expect(count).toBe(3);
   });
 
   it('does not touch transactions of other users', async () => {
     seedTransactions('someone-else', { id: 'other' });
 
     await expect(facade.delete('other')).rejects.toBeInstanceOf(TransactionNotFoundError);
-    await facade.load();
-    expect(facade.transactions()).toEqual([]);
+    expect(await facade.getById('other')).toBeNull();
+    expect((await facade.recent({}, 10)).count).toBe(0);
   });
 });

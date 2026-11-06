@@ -6,7 +6,7 @@ import { Account } from '../../shared/models/account';
 import { provideDataAccess } from '../data-access.providers.demo';
 import { AccountRepository } from '../repositories/account.repository';
 import { DemoData } from '../repositories/demo-data';
-import { TransactionRepository } from '../repositories/transaction.repository';
+import { LocalTransactionRepository } from './local-transaction.repository';
 import { UserDataRepository } from '../repositories/user-data.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { DEMO_CREDENTIALS } from './demo-credentials';
@@ -45,7 +45,7 @@ describe('LocalDatabase and local repositories', () => {
     });
     return {
       accounts: TestBed.inject(AccountRepository),
-      transactions: TestBed.inject(TransactionRepository),
+      transactions: TestBed.inject(LocalTransactionRepository),
       users: TestBed.inject(UserRepository),
       userData: TestBed.inject(UserDataRepository),
       demoData: TestBed.inject(DemoData),

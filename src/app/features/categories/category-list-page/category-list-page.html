@@ -64,7 +64,7 @@
               <div class="category-row__main">
                 <span class="category-row__name">{{ category.name }}</span>
                 <span class="category-row__usage">
-                  @switch (usage().get(category.id) ?? 0) {
+                  @switch (category.transactionCount ?? 0) {
                     @case (0) {
                       Nenhuma transação
                     }
@@ -72,7 +72,7 @@
                       1 transação
                     }
                     @default {
-                      {{ usage().get(category.id) }} transações
+                      {{ category.transactionCount }} transações
                     }
                   }
                 </span>

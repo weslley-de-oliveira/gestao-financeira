@@ -8,6 +8,7 @@ import { IconAvatar } from '../../../shared/components/icon-avatar/icon-avatar';
 import { CARD_BRAND_LABELS, CreditCardWithUsage } from '../../../shared/models/credit-card';
 import { IsoDatePipe } from '../../../shared/pipes/iso-date.pipe';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
+import { Transaction } from '../../../shared/models/transaction';
 import { AccountsFacade } from '../../accounts/accounts.facade';
 import { TransactionsFacade } from '../../transactions/transactions.facade';
 import { CreditCardArchiveAction } from '../credit-card-archive';
@@ -48,15 +49,9 @@ export class CreditCardDetailPage implements OnInit {
   protected readonly brandLabels = CARD_BRAND_LABELS;
   protected readonly usagePercent = usagePercent;
 
-  /** Compras do cartão, das mais recentes para as mais antigas. */
-  private readonly purchases = computed(() =>
-    this.transactionsFacade
-      .transactions()
-      .filter((transaction) => transaction.creditCardId === this.id())
-      .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)),
-  );
-  protected readonly recentPurchases = computed(() => this.purchases().slice(0, RECENT_PURCHASES));
-  protected readonly purchaseCount = computed(() => this.purchases().length);
+  /** Compras (e pagamentos de fatura) mais recentes do cartão. */
+  protected readonly recentPurchases = signal<Transaction[]>([]);
+  protected readonly purchaseCount = signal(0);
   protected readonly paymentAccountName = computed(() => {
     const id = this.card()?.paymentAccountId;
     return this.accountsFacade.accounts().find((account) => account.id === id)?.name ?? '—';
@@ -69,12 +64,14 @@ export class CreditCardDetailPage implements OnInit {
   protected async load(): Promise<void> {
     this.loadState.set('loading');
     try {
-      const [card] = await Promise.all([
+      const [card, purchases] = await Promise.all([
         this.facade.getById(this.id()),
-        this.transactionsFacade.load(),
+        this.transactionsFacade.recent({ creditCardId: this.id() }, RECENT_PURCHASES),
         this.accountsFacade.load(),
       ]);
       this.card.set(card);
+      this.recentPurchases.set(purchases.items);
+      this.purchaseCount.set(purchases.count);
       this.loadState.set(card ? 'ready' : 'not-found');
     } catch {
       this.loadState.set('error');

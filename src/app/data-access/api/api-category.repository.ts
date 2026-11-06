@@ -58,6 +58,7 @@ export class ApiCategoryRepository extends CategoryRepository {
       isArchived: item.isArchived,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
+      transactionCount: item.transactionCount,
     };
   }
 }

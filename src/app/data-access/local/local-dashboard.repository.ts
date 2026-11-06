@@ -24,7 +24,7 @@ import {
   DashboardRepository,
 } from '../repositories/dashboard.repository';
 import { GoalRepository } from '../repositories/goal.repository';
-import { TransactionRepository } from '../repositories/transaction.repository';
+import { TransactionSource } from '../repositories/transaction-source';
 
 /**
  * Dashboard calculado no navegador (demo e testes), a partir das contas, transações, orçamentos e
@@ -33,7 +33,7 @@ import { TransactionRepository } from '../repositories/transaction.repository';
 @Injectable()
 export class LocalDashboardRepository extends DashboardRepository {
   private readonly accounts = inject(AccountRepository);
-  private readonly transactions = inject(TransactionRepository);
+  private readonly transactions = inject(TransactionSource);
   private readonly budgets = inject(BudgetRepository);
   private readonly goals = inject(GoalRepository);
   private readonly today = inject(TODAY);

@@ -1,14 +1,28 @@
 import { NewRecord } from './new-record';
 import { Observable } from 'rxjs';
 import { Transaction } from '../../shared/models/transaction';
+import {
+  TransactionFilters,
+  TransactionPage,
+  TransactionPageRequest,
+  TransactionTotals,
+} from '../../shared/models/transaction-query';
 
 export type TransactionChanges = Partial<
   Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
 >;
 
-/** Contrato de acesso às transações: na API (`data-access/api`) ou no `localStorage` (demo). */
+/**
+ * Contrato de acesso às transações: na API (`data-access/api`) ou no `localStorage` (demo). As
+ * consultas são sempre por página ou totais; a lista completa fica em `TransactionSource`, que só
+ * existe na demonstração e nos testes.
+ */
 export abstract class TransactionRepository {
-  abstract listByUser(userId: string): Observable<Transaction[]>;
+  /** Uma página das transações do usuário que passam nos filtros, na ordenação pedida. */
+  abstract query(userId: string, request: TransactionPageRequest): Observable<TransactionPage>;
+
+  /** Quantidade e totais de todas as transações do usuário que passam nos filtros. */
+  abstract summarize(userId: string, filters: TransactionFilters): Observable<TransactionTotals>;
 
   /** Retorna `null` quando a transação não existe. */
   abstract findById(id: string): Observable<Transaction | null>;
