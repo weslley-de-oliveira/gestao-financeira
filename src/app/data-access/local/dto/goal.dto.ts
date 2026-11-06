@@ -1,6 +1,6 @@
-import { ContributionType, Goal } from '../../shared/models/goal';
+import { ContributionType, Goal } from '../../../shared/models/goal';
 
-/** Formato do recurso `goals` na API. Valores em centavos inteiros e datas `yyyy-MM-dd`. */
+/** Registro de `goals` no `localStorage` da demo (e no seed). Centavos e datas `yyyy-MM-dd`. */
 export interface GoalDto {
   id: string;
   userId: string;

@@ -4,7 +4,7 @@ import { PasswordHasher } from '../../core/security/password-hasher';
 import { calculateBalance } from '../../features/accounts/domain/account-balance';
 import { DEFAULT_CATEGORIES } from '../../features/categories/domain/default-categories';
 import { buildInvoice, listInvoices } from '../../features/invoices/domain/invoice-rules';
-import { toTransaction } from '../dto/transaction.dto';
+import { toTransaction } from './dto/transaction.dto';
 import { DEMO_CREDENTIALS } from './demo-credentials';
 import { DemoSeed, toLocalCollections } from './demo-seed';
 

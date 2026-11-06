@@ -1,13 +1,13 @@
-import { AccountDto } from '../dto/account.dto';
-import { BudgetDto } from '../dto/budget.dto';
-import { CategoryDto } from '../dto/category.dto';
-import { CreditCardDto } from '../dto/credit-card.dto';
-import { GoalDto } from '../dto/goal.dto';
-import { TransactionDto } from '../dto/transaction.dto';
-import { UserDto } from '../dto/user.dto';
+import { AccountDto } from './dto/account.dto';
+import { BudgetDto } from './dto/budget.dto';
+import { CategoryDto } from './dto/category.dto';
+import { CreditCardDto } from './dto/credit-card.dto';
+import { GoalDto } from './dto/goal.dto';
+import { TransactionDto } from './dto/transaction.dto';
+import { UserDto } from './dto/user.dto';
 import { SeedMeta, monthsSinceAnchor, shiftSeedDates } from './seed-dates';
 
-/** Coleções persistidas, no mesmo formato da API (DTOs). */
+/** Coleções persistidas no `localStorage` da demo, no formato dos registros (`dto/`). */
 export interface LocalCollections {
   users: UserDto[];
   accounts: AccountDto[];
@@ -18,7 +18,7 @@ export interface LocalCollections {
   goals: GoalDto[];
 }
 
-/** Formato de `db/db.seed.json`. A coleção `invoices` não é usada: as faturas são calculadas. */
+/** Formato de `db/db.seed.json`: as coleções e a data de referência. */
 export interface DemoSeed extends LocalCollections {
   meta: SeedMeta;
 }

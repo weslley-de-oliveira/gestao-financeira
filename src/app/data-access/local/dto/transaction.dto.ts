@@ -1,6 +1,10 @@
-import { Transaction, TransactionStatus, TransactionType } from '../../shared/models/transaction';
+import {
+  Transaction,
+  TransactionStatus,
+  TransactionType,
+} from '../../../shared/models/transaction';
 
-/** Formato do recurso `transactions` na API. Valor em centavos inteiros e data `yyyy-MM-dd`. */
+/** Registro de `transactions` no `localStorage` da demo (e no seed). Centavos e data `yyyy-MM-dd`. */
 export interface TransactionDto {
   id: string;
   userId: string;

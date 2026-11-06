@@ -1,6 +1,6 @@
-import { Category, CategoryType } from '../../shared/models/category';
+import { Category, CategoryType } from '../../../shared/models/category';
 
-/** Formato do recurso `categories` na API. */
+/** Registro de `categories` no `localStorage` da demo (e no seed). */
 export interface CategoryDto {
   id: string;
   userId: string;

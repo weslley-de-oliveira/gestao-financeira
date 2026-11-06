@@ -12,7 +12,7 @@ import {
   TransactionPageRequest,
   TransactionTotals,
 } from '../../shared/models/transaction-query';
-import { toTransaction, toTransactionDto } from '../dto/transaction.dto';
+import { toTransaction, toTransactionDto } from './dto/transaction.dto';
 import { TransactionSource } from '../repositories/transaction-source';
 import { TransactionChanges, TransactionRepository } from '../repositories/transaction.repository';
 import { LocalCollection, LocalDatabase } from './local-database';

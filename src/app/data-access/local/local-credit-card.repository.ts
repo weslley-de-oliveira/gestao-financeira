@@ -2,7 +2,7 @@ import { NewRecord, withIdentity } from '../repositories/new-record';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { CreditCard } from '../../shared/models/credit-card';
-import { toCreditCard, toCreditCardDto } from '../dto/credit-card.dto';
+import { toCreditCard, toCreditCardDto } from './dto/credit-card.dto';
 import { CreditCardChanges, CreditCardRepository } from '../repositories/credit-card.repository';
 import { LocalCollection, LocalDatabase } from './local-database';
 

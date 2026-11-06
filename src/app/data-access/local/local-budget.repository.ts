@@ -2,7 +2,7 @@ import { NewRecord, withIdentity } from '../repositories/new-record';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { Budget } from '../../shared/models/budget';
-import { toBudget, toBudgetDto } from '../dto/budget.dto';
+import { toBudget, toBudgetDto } from './dto/budget.dto';
 import { BudgetChanges, BudgetRepository } from '../repositories/budget.repository';
 import { LocalCollection, LocalDatabase } from './local-database';
 
