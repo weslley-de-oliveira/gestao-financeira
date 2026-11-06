@@ -10,6 +10,10 @@ import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
+import {
+  STALE_RECORD_MESSAGE,
+  StaleRecordError,
+} from '../../../core/interceptors/stale-record-error';
 import { TODAY } from '../../../core/services/today';
 import { MoneyMaskDirective } from '../../../shared/directives/money-mask.directive';
 import {
@@ -87,6 +91,8 @@ export class TransactionFormPage implements OnInit {
   protected readonly isCardPurchase = computed(() => isCardPurchaseModel(this.model()));
   protected readonly loadState = signal<LoadState>('loading');
   protected readonly errorMessage = signal<string | null>(null);
+  /** Versão do registro carregado (`updatedAt`), enviada no `If-Match` ao salvar. */
+  private version: string | undefined;
 
   protected readonly accountOptions = computed(() => {
     const original = this.original();
@@ -141,12 +147,18 @@ export class TransactionFormPage implements OnInit {
       const input = toTransactionInput(field().value());
       const id = this.id();
       try {
-        const saved = id ? await this.facade.update(id, input) : await this.facade.create(input);
+        const saved = id
+          ? await this.facade.update(id, input, this.version)
+          : await this.facade.create(input);
         this.snackBar.open(id ? 'Transação atualizada.' : 'Transação registrada.', 'Fechar', {
           duration: 4000,
         });
         await this.router.navigate(id ? ['/transactions', saved.id] : ['/transactions']);
       } catch (error) {
+        if (error instanceof StaleRecordError) {
+          this.errorMessage.set(STALE_RECORD_MESSAGE);
+          return undefined;
+        }
         const message =
           error instanceof InvalidTransactionInputError ? REFERENCE_ERRORS[error.field] : undefined;
         if (error instanceof InvalidTransactionInputError && message) {
@@ -184,6 +196,7 @@ export class TransactionFormPage implements OnInit {
         return;
       }
       this.original.set(transaction);
+      this.version = transaction?.updatedAt;
       this.model.set(transaction ? toTransactionFormModel(transaction) : this.prefilledModel());
       this.loadState.set('ready');
     } catch {

@@ -61,6 +61,8 @@ export interface Transaction {
   status: TransactionStatus;
   notes: string | null;
   createdAt: string;
+  /** Versão do registro na API, enviada no `If-Match` das edições; ausente na demo. */
+  updatedAt?: string;
 }
 
 /** Compra no cartão de crédito: despesa sem conta, lançada na fatura do cartão. */

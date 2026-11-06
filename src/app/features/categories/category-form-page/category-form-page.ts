@@ -9,6 +9,10 @@ import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
+import {
+  STALE_RECORD_MESSAGE,
+  StaleRecordError,
+} from '../../../core/interceptors/stale-record-error';
 import { ColorSelect } from '../../../shared/components/appearance-select/color-select';
 import { IconSelect } from '../../../shared/components/appearance-select/icon-select';
 import {
@@ -57,6 +61,8 @@ export class CategoryFormPage implements OnInit {
   protected readonly isDefault = signal(false);
   protected readonly loadState = signal<LoadState>('ready');
   protected readonly errorMessage = signal<string | null>(null);
+  /** Versão do registro carregado (`updatedAt`), enviada no `If-Match` ao salvar. */
+  private version: string | undefined;
   protected readonly typeLabel = computed(() => CATEGORY_TYPE_LABELS[this.model().type]);
 
   protected readonly iconOptions = CATEGORY_ICONS;
@@ -78,12 +84,18 @@ export class CategoryFormPage implements OnInit {
       const value = field().value();
       const id = this.id();
       try {
-        const saved = id ? await this.facade.update(id, value) : await this.facade.create(value);
+        const saved = id
+          ? await this.facade.update(id, value, this.version)
+          : await this.facade.create(value);
         this.snackBar.open(id ? 'Categoria atualizada.' : 'Categoria criada.', 'Fechar', {
           duration: 4000,
         });
         await this.router.navigate(['/categories'], { queryParams: { type: saved.type } });
       } catch (error) {
+        if (error instanceof StaleRecordError) {
+          this.errorMessage.set(STALE_RECORD_MESSAGE);
+          return undefined;
+        }
         if (error instanceof DuplicateCategoryNameError) {
           return {
             kind: 'duplicate',
@@ -104,6 +116,7 @@ export class CategoryFormPage implements OnInit {
       if (category) {
         this.model.set(toCategoryFormModel(category));
         this.isDefault.set(category.isDefault);
+        this.version = category.updatedAt;
       }
       this.loadState.set(category ? 'ready' : 'not-found');
     } catch {

@@ -94,14 +94,15 @@ export class TransactionsFacade {
     return this.store(await firstValueFrom(this.repository.create(transaction)));
   }
 
-  async update(id: string, input: TransactionInput): Promise<Transaction> {
+  /** `version`: o `updatedAt` do registro quando o formulário o carregou. */
+  async update(id: string, input: TransactionInput, version?: string): Promise<Transaction> {
     const normalized = normalizeTransactionInput(input);
     const previous = await this.getOwned(id);
     if (isInvoicePayment(previous)) {
       throw new InvalidTransactionInputError('type');
     }
     await this.validate(normalized, previous);
-    return this.store(await firstValueFrom(this.repository.update(id, normalized)));
+    return this.store(await firstValueFrom(this.repository.update(id, normalized, version)));
   }
 
   /** Compras no cartão e pagamentos de fatura são sempre realizados. */

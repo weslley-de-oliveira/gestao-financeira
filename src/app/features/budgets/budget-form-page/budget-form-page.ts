@@ -8,6 +8,10 @@ import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
+import {
+  STALE_RECORD_MESSAGE,
+  StaleRecordError,
+} from '../../../core/interceptors/stale-record-error';
 import { TODAY } from '../../../core/services/today';
 import { MoneyMaskDirective } from '../../../shared/directives/money-mask.directive';
 import { ALERT_THRESHOLD_OPTIONS, Budget } from '../../../shared/models/budget';
@@ -59,6 +63,8 @@ export class BudgetFormPage implements OnInit {
   protected readonly isEdit = computed(() => this.id() !== undefined);
   protected readonly loadState = signal<LoadState>('loading');
   protected readonly errorMessage = signal<string | null>(null);
+  /** Versão do registro carregado (`updatedAt`), enviada no `If-Match` ao salvar. */
+  private version: string | undefined;
   protected readonly currentMonthLabel = formatMonth(toIsoMonth(this.today()));
   protected readonly thresholdOptions = ALERT_THRESHOLD_OPTIONS;
 
@@ -91,12 +97,16 @@ export class BudgetFormPage implements OnInit {
       const input = toBudgetInput(field().value());
       const id = this.id();
       try {
-        await (id ? this.facade.update(id, input) : this.facade.create(input));
+        await (id ? this.facade.update(id, input, this.version) : this.facade.create(input));
         this.snackBar.open(id ? 'Orçamento atualizado.' : 'Orçamento criado.', 'Fechar', {
           duration: 4000,
         });
         await this.router.navigate(['/budgets']);
       } catch (error) {
+        if (error instanceof StaleRecordError) {
+          this.errorMessage.set(STALE_RECORD_MESSAGE);
+          return undefined;
+        }
         if (error instanceof DuplicateBudgetError) {
           return {
             kind: 'duplicate',
@@ -134,6 +144,7 @@ export class BudgetFormPage implements OnInit {
         return;
       }
       this.original.set(budget);
+      this.version = budget?.updatedAt;
       this.model.set(budget ? toBudgetFormModel(budget) : this.prefilledModel());
       this.loadState.set('ready');
     } catch {

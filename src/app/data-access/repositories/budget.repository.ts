@@ -14,7 +14,8 @@ export abstract class BudgetRepository {
   /** Grava o registro novo; o id e a data de criação são definidos ao gravar. */
   abstract create(budget: NewRecord<Budget>): Observable<Budget>;
 
-  abstract update(id: string, changes: BudgetChanges): Observable<Budget>;
+  /** `version`: o `updatedAt` do registro quando o formulário o carregou (concorrência otimista). */
+  abstract update(id: string, changes: BudgetChanges, version?: string): Observable<Budget>;
 
   abstract delete(id: string): Observable<void>;
 }

@@ -10,7 +10,7 @@ import { Goal, GoalContribution } from '../../shared/models/goal';
 import { GoalChanges, GoalRepository } from '../repositories/goal.repository';
 import { NewRecord } from '../repositories/new-record';
 import { API_BASE_URL } from './api.config';
-import { SessionUser, nullWhenNotFound, pick, toDomainError } from './api-http';
+import { ifMatch, nullWhenNotFound, pick, SessionUser, toDomainError } from './api-http';
 import type { ApiGoal } from './api-types';
 
 const FIELDS = [
@@ -55,9 +55,13 @@ export class ApiGoalRepository extends GoalRepository {
     );
   }
 
-  update(id: string, changes: GoalChanges): Observable<Goal> {
+  update(id: string, changes: GoalChanges, version?: string): Observable<Goal> {
     return this.http
-      .patch<ApiGoal>(this.goalUrl(id), pick(changes, [...FIELDS, 'isPaused', 'isArchived']))
+      .patch<ApiGoal>(
+        this.goalUrl(id),
+        pick(changes, [...FIELDS, 'isPaused', 'isArchived']),
+        ifMatch(version),
+      )
       .pipe(
         map((item) => this.toGoal(item)),
         toDomainError(goalProblem),
@@ -116,6 +120,7 @@ export class ApiGoalRepository extends GoalRepository {
       isPaused: item.isPaused,
       isArchived: item.isArchived,
       createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
     };
   }
 }

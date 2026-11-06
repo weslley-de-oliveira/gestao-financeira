@@ -9,6 +9,10 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
+import {
+  STALE_RECORD_MESSAGE,
+  StaleRecordError,
+} from '../../../core/interceptors/stale-record-error';
 import { ACCOUNT_ICONS, ACCOUNT_TYPES, ACCOUNT_TYPE_LABELS } from '../../../shared/models/account';
 import { ColorSelect } from '../../../shared/components/appearance-select/color-select';
 import { IconSelect } from '../../../shared/components/appearance-select/icon-select';
@@ -56,6 +60,8 @@ export class AccountFormPage implements OnInit {
   protected readonly isEdit = computed(() => this.id() !== undefined);
   protected readonly loadState = signal<LoadState>('ready');
   protected readonly errorMessage = signal<string | null>(null);
+  /** Versão do registro carregado (`updatedAt`), enviada no `If-Match` ao salvar. */
+  private version: string | undefined;
   protected readonly cancelLink = computed(() => {
     const id = this.id();
     return id ? ['/accounts', id] : ['/accounts'];
@@ -82,12 +88,18 @@ export class AccountFormPage implements OnInit {
       const input = toAccountInput(field().value());
       const id = this.id();
       try {
-        const saved = id ? await this.facade.update(id, input) : await this.facade.create(input);
+        const saved = id
+          ? await this.facade.update(id, input, this.version)
+          : await this.facade.create(input);
         this.snackBar.open(id ? 'Conta atualizada.' : 'Conta criada.', 'Fechar', {
           duration: 4000,
         });
         await this.router.navigate(['/accounts', saved.id]);
-      } catch {
+      } catch (error) {
+        if (error instanceof StaleRecordError) {
+          this.errorMessage.set(STALE_RECORD_MESSAGE);
+          return undefined;
+        }
         this.errorMessage.set('Não foi possível salvar a conta. Tente novamente em instantes.');
       }
       return undefined;
@@ -100,6 +112,7 @@ export class AccountFormPage implements OnInit {
       const account = await this.facade.getById(id);
       if (account) {
         this.model.set(toAccountFormModel(account));
+        this.version = account.updatedAt;
       }
       this.loadState.set(account ? 'ready' : 'not-found');
     } catch {

@@ -148,6 +148,31 @@ describe('API repositories', () => {
     });
   });
 
+  describe('optimistic concurrency', () => {
+    it('reads the version and sends it back as If-Match when saving', async () => {
+      const repository = TestBed.inject(ApiAccountRepository);
+      const found = firstValueFrom(repository.findById(ACCOUNT_ID));
+      http.expectOne(`/api/v1/accounts/${ACCOUNT_ID}`).flush(apiAccount);
+      const account = await found;
+      expect(account?.updatedAt).toBe(apiAccount.updatedAt);
+
+      const saved = firstValueFrom(
+        repository.update(ACCOUNT_ID, { name: 'Conta nova' }, account?.updatedAt),
+      );
+      const request = http.expectOne({ url: `/api/v1/accounts/${ACCOUNT_ID}`, method: 'PATCH' });
+      expect(request.request.headers.get('If-Match')).toBe(`"${Date.parse(apiAccount.updatedAt)}"`);
+      request.flush({ ...apiAccount, name: 'Conta nova' });
+      await saved;
+
+      // Sem versão (ex.: arquivar pela lista), a edição vale sobre a versão atual.
+      const archived = firstValueFrom(repository.update(ACCOUNT_ID, { isArchived: true }));
+      const archive = http.expectOne({ url: `/api/v1/accounts/${ACCOUNT_ID}`, method: 'PATCH' });
+      expect(archive.request.headers.has('If-Match')).toBe(false);
+      archive.flush({ ...apiAccount, isArchived: true });
+      await archived;
+    });
+  });
+
   describe('categories', () => {
     it('updates only the editable fields (never the type)', async () => {
       const updated = firstValueFrom(

@@ -40,6 +40,8 @@ export interface CreditCard {
   color: string;
   isArchived: boolean;
   createdAt: string;
+  /** Versão do registro na API, enviada no `If-Match` das edições; ausente na demo. */
+  updatedAt?: string;
   /**
    * Uso do limite já calculado pelo servidor (API). Ausente nos repositórios locais: a facade
    * calcula pelas transações.

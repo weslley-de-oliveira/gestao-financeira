@@ -8,6 +8,10 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
+import {
+  STALE_RECORD_MESSAGE,
+  StaleRecordError,
+} from '../../../core/interceptors/stale-record-error';
 import { ColorSelect } from '../../../shared/components/appearance-select/color-select';
 import { IconSelect } from '../../../shared/components/appearance-select/icon-select';
 import { MoneyMaskDirective } from '../../../shared/directives/money-mask.directive';
@@ -50,6 +54,8 @@ export class GoalFormPage implements OnInit {
   protected readonly isEdit = computed(() => this.id() !== undefined);
   protected readonly loadState = signal<LoadState>('loading');
   protected readonly errorMessage = signal<string | null>(null);
+  /** Versão do registro carregado (`updatedAt`), enviada no `If-Match` ao salvar. */
+  private version: string | undefined;
   protected readonly cancelLink = computed(() => {
     const id = this.id();
     return id ? ['/goals', id] : ['/goals'];
@@ -77,10 +83,16 @@ export class GoalFormPage implements OnInit {
       const input = toGoalInput(field().value());
       const id = this.id();
       try {
-        const saved = id ? await this.facade.update(id, input) : await this.facade.create(input);
+        const saved = id
+          ? await this.facade.update(id, input, this.version)
+          : await this.facade.create(input);
         this.snackBar.open(id ? 'Meta atualizada.' : 'Meta criada.', 'Fechar', { duration: 4000 });
         await this.router.navigate(['/goals', saved.id]);
       } catch (error) {
+        if (error instanceof StaleRecordError) {
+          this.errorMessage.set(STALE_RECORD_MESSAGE);
+          return undefined;
+        }
         if (error instanceof InvalidGoalInputError && error.field === 'deadline') {
           return {
             kind: 'pastDeadline',
@@ -111,6 +123,7 @@ export class GoalFormPage implements OnInit {
       const goal = await this.facade.getById(id);
       if (goal) {
         this.model.set(toGoalFormModel(goal));
+        this.version = goal.updatedAt;
       }
       this.loadState.set(goal ? 'ready' : 'not-found');
     } catch {

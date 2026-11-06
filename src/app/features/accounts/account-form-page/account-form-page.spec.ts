@@ -7,12 +7,14 @@ import { MatInputHarness } from '@angular/material/input/testing';
 import { MatSelectHarness } from '@angular/material/select/testing';
 import { MatSlideToggleHarness } from '@angular/material/slide-toggle/testing';
 import { Router } from '@angular/router';
+import { throwError } from 'rxjs';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { seedAccounts } from '../../../../testing/account-fixtures';
 import { signInTestUser } from '../../../../testing/auth-fixtures';
 import { InMemoryAccountRepository } from '../../../../testing/in-memory-account.repository';
 import { TEST_PROVIDERS } from '../../../../testing/test-providers';
 import { appConfig } from '../../../app.config';
+import { StaleRecordError } from '../../../core/interceptors/stale-record-error';
 
 describe('AccountFormPage', () => {
   let harness: RouterTestingHarness;
@@ -136,6 +138,28 @@ describe('AccountFormPage', () => {
     await save();
 
     expect(records()[0]).toMatchObject({ initialBalance: 2_000, isArchived: true });
+  });
+
+  it('sends the loaded version and warns when the account changed elsewhere', async () => {
+    const [account] = seedAccounts(userId, { name: 'Carteira' });
+    records()[0].updatedAt = '2026-11-15T12:00:00.000Z';
+    const update = vi
+      .spyOn(TestBed.inject(InMemoryAccountRepository), 'update')
+      .mockReturnValue(throwError(() => new StaleRecordError()));
+    await open(`/accounts/${account.id}/edit`);
+
+    await (await input('Nome da conta')).setValue('Carteira nova');
+    await save();
+
+    expect(update).toHaveBeenCalledWith(
+      account.id,
+      expect.objectContaining({ name: 'Carteira nova' }),
+      '2026-11-15T12:00:00.000Z',
+    );
+    expect((harness.routeNativeElement as HTMLElement).textContent).toContain(
+      'Este registro foi alterado em outra aba ou aparelho.',
+    );
+    expect(TestBed.inject(Router).url).toBe(`/accounts/${account.id}/edit`);
   });
 
   it('does not open accounts of other users', async () => {

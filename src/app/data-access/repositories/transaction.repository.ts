@@ -2,7 +2,9 @@ import { NewRecord } from './new-record';
 import { Observable } from 'rxjs';
 import { Transaction } from '../../shared/models/transaction';
 
-export type TransactionChanges = Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt'>>;
+export type TransactionChanges = Partial<
+  Omit<Transaction, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
+>;
 
 /** Contrato de acesso às transações: na API (`data-access/api`) ou no `localStorage` (demo). */
 export abstract class TransactionRepository {
@@ -14,7 +16,12 @@ export abstract class TransactionRepository {
   /** Grava o registro novo; o id e a data de criação são definidos ao gravar. */
   abstract create(transaction: NewRecord<Transaction>): Observable<Transaction>;
 
-  abstract update(id: string, changes: TransactionChanges): Observable<Transaction>;
+  /** `version`: o `updatedAt` do registro quando o formulário o carregou (concorrência otimista). */
+  abstract update(
+    id: string,
+    changes: TransactionChanges,
+    version?: string,
+  ): Observable<Transaction>;
 
   abstract delete(id: string): Observable<void>;
 

@@ -27,6 +27,8 @@ export interface Budget {
   /** Percentual do limite (1–100) a partir do qual o orçamento fica em alerta. */
   alertThreshold: number;
   createdAt: string;
+  /** Versão do registro na API, enviada no `If-Match` das edições; ausente na demo. */
+  updatedAt?: string;
 }
 
 /** Situação do orçamento no mês: o texto sempre acompanha a cor. */

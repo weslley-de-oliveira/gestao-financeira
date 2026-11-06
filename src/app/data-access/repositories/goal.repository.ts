@@ -2,7 +2,7 @@ import { Observable } from 'rxjs';
 import { Goal, GoalContribution } from '../../shared/models/goal';
 import { NewRecord, withIdentity } from './new-record';
 
-export type GoalChanges = Partial<Omit<Goal, 'id' | 'userId' | 'createdAt'>>;
+export type GoalChanges = Partial<Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>;
 
 /** Contrato de acesso às metas: na API (`data-access/api`) ou no `localStorage` (demo). */
 export abstract class GoalRepository {
@@ -14,7 +14,8 @@ export abstract class GoalRepository {
   /** Grava o registro novo; o id e a data de criação são definidos ao gravar. */
   abstract create(goal: NewRecord<Goal>): Observable<Goal>;
 
-  abstract update(id: string, changes: GoalChanges): Observable<Goal>;
+  /** `version`: o `updatedAt` do registro quando o formulário o carregou (concorrência otimista). */
+  abstract update(id: string, changes: GoalChanges, version?: string): Observable<Goal>;
 
   /**
    * Registra um aporte ou uma retirada. Por padrão, regrava a lista de movimentações da meta; a

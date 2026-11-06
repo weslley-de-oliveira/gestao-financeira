@@ -10,7 +10,7 @@ import { Transaction } from '../../shared/models/transaction';
 import { NewRecord } from '../repositories/new-record';
 import { TransactionChanges, TransactionRepository } from '../repositories/transaction.repository';
 import { API_BASE_URL } from './api.config';
-import { SessionUser, nullWhenNotFound, pick, toDomainError } from './api-http';
+import { ifMatch, nullWhenNotFound, pick, SessionUser, toDomainError } from './api-http';
 import { ApiProblemError } from '../../core/interceptors/api-problem-error';
 import type {
   ApiCreateEntry,
@@ -69,7 +69,7 @@ export class ApiTransactionRepository extends TransactionRepository {
    * A API não aceita `null` nos vínculos (conta, cartão, destino, categoria): o vínculo informado
    * substitui o anterior, e os que deixam de valer são limpos no servidor conforme o tipo.
    */
-  update(id: string, changes: TransactionChanges): Observable<Transaction> {
+  update(id: string, changes: TransactionChanges, version?: string): Observable<Transaction> {
     const body = pick(changes, [
       'type',
       'description',
@@ -87,10 +87,12 @@ export class ApiTransactionRepository extends TransactionRepository {
         delete body[key];
       }
     }
-    return this.http.patch<ApiTransaction>(`${this.url}/${encodeURIComponent(id)}`, body).pipe(
-      map((item) => this.toTransaction(item)),
-      toDomainError(invalidLink),
-    );
+    return this.http
+      .patch<ApiTransaction>(`${this.url}/${encodeURIComponent(id)}`, body, ifMatch(version))
+      .pipe(
+        map((item) => this.toTransaction(item)),
+        toDomainError(invalidLink),
+      );
   }
 
   delete(id: string): Observable<void> {
@@ -147,6 +149,7 @@ export class ApiTransactionRepository extends TransactionRepository {
       status: item.status,
       notes: item.notes,
       createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
     };
   }
 }

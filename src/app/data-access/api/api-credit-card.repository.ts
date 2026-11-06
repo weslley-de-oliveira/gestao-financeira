@@ -7,7 +7,7 @@ import { CreditCard } from '../../shared/models/credit-card';
 import { CreditCardChanges, CreditCardRepository } from '../repositories/credit-card.repository';
 import { NewRecord } from '../repositories/new-record';
 import { API_BASE_URL } from './api.config';
-import { SessionUser, nullWhenNotFound, pick, toDomainError } from './api-http';
+import { ifMatch, nullWhenNotFound, pick, SessionUser, toDomainError } from './api-http';
 import type { ApiCreditCard } from './api-types';
 
 const FIELDS = [
@@ -49,11 +49,12 @@ export class ApiCreditCardRepository extends CreditCardRepository {
     );
   }
 
-  update(id: string, changes: CreditCardChanges): Observable<CreditCard> {
+  update(id: string, changes: CreditCardChanges, version?: string): Observable<CreditCard> {
     return this.http
       .patch<ApiCreditCard>(
         `${this.url}/${encodeURIComponent(id)}`,
         pick(changes, [...FIELDS, 'isArchived']),
+        ifMatch(version),
       )
       .pipe(
         map((item) => this.toCard(item)),
@@ -75,6 +76,7 @@ export class ApiCreditCardRepository extends CreditCardRepository {
       color: item.color,
       isArchived: item.isArchived,
       createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
       usage: {
         usedLimit: item.usedLimit,
         availableLimit: item.availableLimit,

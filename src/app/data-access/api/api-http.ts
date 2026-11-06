@@ -44,6 +44,14 @@ export function toDomainError<T>(
     );
 }
 
+/**
+ * Cabeçalho `If-Match` da versão lida: a API só grava se o registro ainda estiver nela (senão,
+ * 412). A ETag da API é derivada do `updatedAt` (os milissegundos, entre aspas).
+ */
+export function ifMatch(version: string | undefined): { headers?: Record<string, string> } {
+  return version ? { headers: { 'If-Match': `"${Date.parse(version)}"` } } : {};
+}
+
 /** Copia só as chaves permitidas que vieram definidas (a API recusa campos desconhecidos). */
 export function pick<T extends object, K extends keyof T>(
   value: T,

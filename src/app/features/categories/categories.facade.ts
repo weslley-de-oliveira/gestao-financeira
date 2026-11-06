@@ -75,13 +75,14 @@ export class CategoriesFacade {
     return this.store(await firstValueFrom(this.repository.create(category)));
   }
 
-  async update(id: string, changes: CategoryUpdate): Promise<Category> {
+  /** `version`: o `updatedAt` do registro quando o formulário o carregou. */
+  async update(id: string, changes: CategoryUpdate, version?: string): Promise<Category> {
     const normalized = normalizeCategoryInput(changes);
     const current = await this.getOwned(id);
     await this.ensureUniqueName({ name: normalized.name, type: current.type }, id);
     const { name, icon, color, isArchived } = normalized;
     return this.store(
-      await firstValueFrom(this.repository.update(id, { name, icon, color, isArchived })),
+      await firstValueFrom(this.repository.update(id, { name, icon, color, isArchived }, version)),
     );
   }
 

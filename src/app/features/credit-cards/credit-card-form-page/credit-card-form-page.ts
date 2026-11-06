@@ -9,6 +9,10 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggle } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
+import {
+  STALE_RECORD_MESSAGE,
+  StaleRecordError,
+} from '../../../core/interceptors/stale-record-error';
 import { ColorSelect } from '../../../shared/components/appearance-select/color-select';
 import { MoneyMaskDirective } from '../../../shared/directives/money-mask.directive';
 import { CARD_BRANDS, CARD_BRAND_LABELS, CreditCard } from '../../../shared/models/credit-card';
@@ -61,6 +65,8 @@ export class CreditCardFormPage implements OnInit {
   protected readonly isEdit = computed(() => this.id() !== undefined);
   protected readonly loadState = signal<LoadState>('loading');
   protected readonly errorMessage = signal<string | null>(null);
+  /** Versão do registro carregado (`updatedAt`), enviada no `If-Match` ao salvar. */
+  private version: string | undefined;
   protected readonly cancelLink = computed(() => {
     const id = this.id();
     return id ? ['/credit-cards', id] : ['/credit-cards'];
@@ -89,12 +95,18 @@ export class CreditCardFormPage implements OnInit {
       const input = toCreditCardInput(field().value());
       const id = this.id();
       try {
-        const saved = id ? await this.facade.update(id, input) : await this.facade.create(input);
+        const saved = id
+          ? await this.facade.update(id, input, this.version)
+          : await this.facade.create(input);
         this.snackBar.open(id ? 'Cartão atualizado.' : 'Cartão cadastrado.', 'Fechar', {
           duration: 4000,
         });
         await this.router.navigate(['/credit-cards', saved.id]);
       } catch (error) {
+        if (error instanceof StaleRecordError) {
+          this.errorMessage.set(STALE_RECORD_MESSAGE);
+          return undefined;
+        }
         if (error instanceof InvalidCreditCardInputError && error.field === 'paymentAccountId') {
           return {
             kind: 'reference',
@@ -124,6 +136,7 @@ export class CreditCardFormPage implements OnInit {
         return;
       }
       this.original.set(card);
+      this.version = card?.updatedAt;
       this.model.set(card ? toCreditCardFormModel(card) : this.prefilledModel());
       this.loadState.set('ready');
     } catch {

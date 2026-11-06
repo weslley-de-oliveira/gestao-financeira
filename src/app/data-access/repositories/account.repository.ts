@@ -2,7 +2,7 @@ import { NewRecord } from './new-record';
 import { Observable } from 'rxjs';
 import { Account } from '../../shared/models/account';
 
-export type AccountChanges = Partial<Omit<Account, 'id' | 'userId' | 'createdAt'>>;
+export type AccountChanges = Partial<Omit<Account, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>;
 
 /** Contrato de acesso às contas: na API (`data-access/api`) ou no `localStorage` (demo). */
 export abstract class AccountRepository {
@@ -14,5 +14,6 @@ export abstract class AccountRepository {
   /** Grava o registro novo; o id e a data de criação são definidos ao gravar. */
   abstract create(account: NewRecord<Account>): Observable<Account>;
 
-  abstract update(id: string, changes: AccountChanges): Observable<Account>;
+  /** `version`: o `updatedAt` do registro quando o formulário o carregou (concorrência otimista). */
+  abstract update(id: string, changes: AccountChanges, version?: string): Observable<Account>;
 }
