@@ -9,6 +9,7 @@
     "db:reset": "node scripts/ensure-db.mjs --reset",
     "start:dev": "concurrently -k \"npm run start\" \"npm run start:api\"",
     "start:demo": "ng serve -c demo",
+    "start:with-api": "ng serve -c api",
     "build": "ng build",
     "build:demo": "ng build -c demo",
     "watch": "ng build --watch --configuration development",

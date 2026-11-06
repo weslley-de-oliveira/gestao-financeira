@@ -76,6 +76,17 @@
                   "with": "src/app/data-access/data-access.providers.demo.ts"
                 }
               ]
+            },
+            "api": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/app/data-access/data-access.providers.ts",
+                  "with": "src/app/data-access/data-access.providers.api.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -91,6 +102,10 @@
             },
             "demo": {
               "buildTarget": "gestao-financeira:build:demo"
+            },
+            "api": {
+              "buildTarget": "gestao-financeira:build:api",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"
