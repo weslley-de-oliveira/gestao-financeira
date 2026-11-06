@@ -48,13 +48,18 @@ test('pages, sorts and searches the transactions of the period', async ({ page, 
   // No celular a lista não é tabela; a paginação é a mesma.
   test.skip(isMobile, 'Verifica as colunas da tabela do desktop.');
   await page.goto('/transactions');
+  const range = page.locator('.mat-mdc-paginator-range-label');
+  const totalOf = async () => Number((await range.textContent())?.trim().split(' de ')[1]);
+  await expect(range).toHaveText(/de \d+/);
+  const currentMonth = await totalOf();
+
   await page.getByRole('combobox', { name: 'Período' }).click();
   await page.getByRole('option', { name: 'Últimos 3 meses' }).click();
-
-  const range = page.locator('.mat-mdc-paginator-range-label');
+  // Espera o total dos 3 meses substituir o do mês atual.
+  await expect(range).not.toHaveText(new RegExp(` de ${currentMonth}\\s*$`));
   await expect(range).toHaveText(/1–10 de \d+/);
-  const total = Number((await range.textContent())?.trim().split(' de ')[1]);
-  expect(total).toBeGreaterThan(10);
+  const total = await totalOf();
+  expect(total).toBeGreaterThan(Math.max(10, currentMonth));
 
   await page.getByRole('button', { name: 'Próxima página' }).click();
   await expect(range).toHaveText(`11–${Math.min(20, total)} de ${total}`);
