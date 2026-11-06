@@ -1013,7 +1013,7 @@ export interface paths {
     };
     /**
      * Lista as transações
-     * @description Transações do usuário, das mais recentes para as mais antigas, com filtros combináveis: período (`from`/`to`, inclusivos), tipo, status, conta (origem ou destino), cartão, categoria e busca `q` na descrição e nas observações, sem diferenciar maiúsculas e acentos. Paginada por cursor: para a próxima página, repita a consulta com `cursor` igual ao `nextCursor` recebido.
+     * @description Transações do usuário, com filtros combináveis: período (`from`/`to`, inclusivos), tipo, status, conta (origem ou destino), cartão, categoria e busca `q` na descrição e nas observações, sem diferenciar maiúsculas e acentos. Ordenadas por `sort` (padrão: das mais recentes para as mais antigas). Paginada por cursor: para a próxima página, repita a consulta (filtros e `sort` iguais) com `cursor` igual ao `nextCursor` recebido.
      */
     get: {
       parameters: {
@@ -1022,6 +1022,8 @@ export interface paths {
           cursor?: string;
           /** @description Itens por página (1 a 100; padrão 50). */
           limit?: number;
+          /** @description Data (`date-desc`, padrão, ou `date-asc`) ou valor (`amount-desc` ou `amount-asc`). No empate, a registrada por último vem primeiro; em `date-asc`, a registrada primeiro. */
+          sort?: 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc';
           /** @description Data inicial do período, inclusiva. */
           from?: string;
           /** @description Data final do período, inclusiva. */
@@ -1131,6 +1133,79 @@ export interface paths {
         };
       };
     };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/transactions/summary': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Resume as transações filtradas
+     * @description Totais de todas as transações que passam nos filtros (os mesmos da listagem), sem paginação: quantidade, receitas e despesas realizadas, resultado e pendentes. Transferências e pagamentos de fatura contam na quantidade, mas não nos totais; compras no cartão são despesas.
+     */
+    get: {
+      parameters: {
+        query?: {
+          /** @description Data inicial do período, inclusiva. */
+          from?: string;
+          /** @description Data final do período, inclusiva. */
+          to?: string;
+          /** @description Só as transações deste tipo. */
+          type?: 'expense' | 'income' | 'transfer' | 'invoice-payment';
+          /** @description `completed` (realizada, altera o saldo) ou `pending` (pendente, não altera). */
+          status?: 'completed' | 'pending';
+          /** @description Transações que saem ou entram nesta conta (origem ou destino). */
+          accountId?: string;
+          /** @description Compras e pagamentos de fatura deste cartão. */
+          creditCardId?: string;
+          categoryId?: string;
+          /** @description Busca na descrição e nas observações, sem diferenciar maiúsculas e acentos. */
+          q?: string;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['TransactionSummary'];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -3064,7 +3139,7 @@ export interface components {
   schemas: {
     ProblemDetailsInput: {
       /**
-       * @description Tipo do problema; `about:blank` quando o status já basta.
+       * @description Tipo do problema: `/problems/validation-error` (422 com `errors`), `/problems/paid-invoice` (409: compra de fatura já paga), `/problems/archived-reference` (409: conta, cartão ou categoria arquivada); `about:blank` quando o status já basta.
        * @example about:blank
        */
       type: string;
@@ -3233,6 +3308,8 @@ export interface components {
       /** @description Criada com o conjunto inicial do cadastro; `false` nas criadas pelo usuário. */
       isDefault: boolean;
       isArchived: boolean;
+      /** @description Quantidade de transações que usam a categoria, em todos os períodos. */
+      transactionCount: number;
       /** Format: date-time */
       createdAt: string;
       /**
@@ -3493,6 +3570,18 @@ export interface components {
       /** @description Envie como `cursor` para buscar a próxima página; `null` no fim. */
       nextCursor: string | null;
     };
+    TransactionSummaryInput: {
+      /** @description Quantidade de transações, de qualquer tipo. */
+      count: number;
+      /** @description Soma das receitas realizadas, em centavos. */
+      income: number;
+      /** @description Soma das despesas realizadas (inclui compras no cartão). */
+      expense: number;
+      /** @description Receitas − despesas. */
+      net: number;
+      /** @description Quantidade de pendentes, de qualquer tipo (fora dos totais). */
+      pendingCount: number;
+    };
     DashboardInput: {
       /**
        * Format: date
@@ -3613,7 +3702,7 @@ export interface components {
     };
     ProblemDetails: {
       /**
-       * @description Tipo do problema; `about:blank` quando o status já basta.
+       * @description Tipo do problema: `/problems/validation-error` (422 com `errors`), `/problems/paid-invoice` (409: compra de fatura já paga), `/problems/archived-reference` (409: conta, cartão ou categoria arquivada); `about:blank` quando o status já basta.
        * @example about:blank
        */
       type: string;
@@ -3782,6 +3871,8 @@ export interface components {
       /** @description Criada com o conjunto inicial do cadastro; `false` nas criadas pelo usuário. */
       isDefault: boolean;
       isArchived: boolean;
+      /** @description Quantidade de transações que usam a categoria, em todos os períodos. */
+      transactionCount: number;
       /** Format: date-time */
       createdAt: string;
       /**
@@ -4041,6 +4132,18 @@ export interface components {
       items: components['schemas']['Transaction'][];
       /** @description Envie como `cursor` para buscar a próxima página; `null` no fim. */
       nextCursor: string | null;
+    };
+    TransactionSummary: {
+      /** @description Quantidade de transações, de qualquer tipo. */
+      count: number;
+      /** @description Soma das receitas realizadas, em centavos. */
+      income: number;
+      /** @description Soma das despesas realizadas (inclui compras no cartão). */
+      expense: number;
+      /** @description Receitas − despesas. */
+      net: number;
+      /** @description Quantidade de pendentes, de qualquer tipo (fora dos totais). */
+      pendingCount: number;
     };
     Dashboard: {
       /**
