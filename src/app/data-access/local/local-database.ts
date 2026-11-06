@@ -68,7 +68,7 @@ export class LocalDatabase extends DemoData {
 }
 
 /**
- * Coleção de registros de um usuário, com a mesma semântica do JSON Server: as operações
+ * Coleção de registros de um usuário, com a semântica de uma API REST: as operações
  * devolvem cópias e alterar um registro inexistente é erro.
  */
 export class LocalCollection<K extends Exclude<keyof LocalCollections, 'users'>> {

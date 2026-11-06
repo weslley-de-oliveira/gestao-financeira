@@ -8,9 +8,9 @@ const API_DIR = process.env['API_DIR'] ?? '../gestao-financeira-api';
 
 /**
  * Testes E2E contra a API real (`npm run e2e:api`). Sobe uma instância própria da API (porta 3334,
- * sem limite de tentativas) e o front na configuração `api`, com o proxy apontando para ela. O
- * banco é o do `.env` da API, com migrações aplicadas e a conta de demonstração criada
- * (`npm run db:migrate` e `npm run db:seed` no repositório da API).
+ * sem limite de tentativas) e o front com o proxy apontando para ela. O banco é o do `.env` da
+ * API, com migrações aplicadas e a conta de demonstração criada (`npm run db:migrate` e
+ * `npm run db:seed` no repositório da API).
  */
 export default defineConfig({
   testDir: './e2e-api',
@@ -41,7 +41,7 @@ export default defineConfig({
       env: { PORT: String(API_PORT), RATE_LIMIT_ENABLED: 'false', LOG_LEVEL: 'warn' },
     },
     {
-      command: `npx ng serve -c api --port ${PORT} --proxy-config proxy.e2e.conf.json`,
+      command: `npx ng serve --port ${PORT} --proxy-config proxy.e2e.conf.json`,
       url: `http://localhost:${PORT}`,
       reuseExistingServer: !isCI,
       timeout: 180_000,

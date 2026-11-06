@@ -6,7 +6,7 @@ Organiza contas, receitas, despesas, transferências, cartões de crédito, fatu
 
 **Demo publicada:** <https://gestao-financeira-tau-five.vercel.app>
 
-> **Aviso:** este é um projeto demonstrativo. Utilize apenas dados fictícios — nunca credenciais, contas ou cartões reais. A API utilizada no desenvolvimento é simulada e não oferece segurança de produção.
+> **Aviso:** este é um projeto demonstrativo. Utilize apenas dados fictícios — nunca credenciais, contas ou cartões reais. A autenticação local da demo (no navegador) é demonstrativa e não oferece segurança de produção.
 
 ## Demo
 
@@ -19,7 +19,7 @@ A [demo publicada](https://gestao-financeira-tau-five.vercel.app) (Vercel, atual
 
 | Tela              | Destaques                                                                                           |
 | ----------------- | --------------------------------------------------------------------------------------------------- |
-| Login e cadastro  | Hash de senha PBKDF2-SHA256 (600 mil iterações), sessão criptografada (AES-256-GCM), guards de rota |
+| Login e cadastro  | Sessão em cookie HttpOnly (API) ou criptografada no navegador (demo, PBKDF2), com os guards de rota |
 | Dashboard         | Resumo do período, receitas × despesas, evolução do saldo, transações recentes, orçamentos e metas  |
 | Contas            | Busca e filtros, saldo atual calculado, arquivamento                                                |
 | Transações        | Receitas, despesas e transferências, pendentes, compras no cartão, filtros por período e paginação  |
@@ -32,26 +32,27 @@ A [demo publicada](https://gestao-financeira-tau-five.vercel.app) (Vercel, atual
 
 ## Stack
 
-| Tecnologia                                                  | Uso                                                       |
-| ----------------------------------------------------------- | --------------------------------------------------------- |
-| [Angular 22](https://angular.dev)                           | Framework (standalone, zoneless, Signals, Signal Forms)   |
-| TypeScript 6                                                | Linguagem, em strict mode                                 |
-| RxJS 7                                                      | Fluxos assíncronos e HTTP                                 |
-| [Angular Material 22](https://material.angular.dev)         | Componentes de interface (Material Design 3)              |
-| SCSS                                                        | Tema do Material e estilos dos componentes                |
-| Material Symbols                                            | Ícones                                                    |
-| Angular CDK 22                                              | Primitivas de interface (base do Material)                |
-| [date-fns 4](https://date-fns.org)                          | Datas e adapter do datepicker do Material (pt-BR)         |
-| [Chart.js 4](https://www.chartjs.org)                       | Gráficos do dashboard (componente próprio)                |
-| Web Crypto API                                              | Hash de senha e criptografia no navegador                 |
-| [JSON Server 0.17](https://github.com/typicode/json-server) | API REST simulada para desenvolvimento                    |
-| [Faker](https://fakerjs.dev)                                | Geração do seed fictício (pt-BR, reproduzível)            |
-| [Vitest](https://vitest.dev)                                | Testes unitários e de componentes                         |
-| [Playwright](https://playwright.dev) + axe-core             | Testes E2E, de acessibilidade (WCAG 2.1 AA) e responsivos |
-| angular-eslint + ESLint, Prettier                           | Análise estática e formatação                             |
-| Husky + lint-staged + commitlint                            | Validações antes do commit e Conventional Commits         |
-| GitHub Actions                                              | CI: formatação, lint, testes unitários, build e E2E       |
-| [Vercel](https://vercel.com)                                | Hospedagem da demo                                        |
+| Tecnologia                                          | Uso                                                       |
+| --------------------------------------------------- | --------------------------------------------------------- |
+| [Angular 22](https://angular.dev)                   | Framework (standalone, zoneless, Signals, Signal Forms)   |
+| TypeScript 6                                        | Linguagem, em strict mode                                 |
+| RxJS 7                                              | Fluxos assíncronos e HTTP                                 |
+| [Angular Material 22](https://material.angular.dev) | Componentes de interface (Material Design 3)              |
+| SCSS                                                | Tema do Material e estilos dos componentes                |
+| Material Symbols                                    | Ícones                                                    |
+| Angular CDK 22                                      | Primitivas de interface (base do Material)                |
+| [date-fns 4](https://date-fns.org)                  | Datas e adapter do datepicker do Material (pt-BR)         |
+| [Chart.js 4](https://www.chartjs.org)               | Gráficos do dashboard (componente próprio)                |
+| Web Crypto API                                      | Hash de senha e criptografia no navegador                 |
+| `gestao-financeira-api`                             | Backend próprio: Node.js, Fastify e PostgreSQL            |
+| openapi-typescript                                  | Tipos do contrato da API, gerados do OpenAPI              |
+| [Faker](https://fakerjs.dev)                        | Geração do seed fictício (pt-BR, reproduzível)            |
+| [Vitest](https://vitest.dev)                        | Testes unitários e de componentes                         |
+| [Playwright](https://playwright.dev) + axe-core     | Testes E2E, de acessibilidade (WCAG 2.1 AA) e responsivos |
+| angular-eslint + ESLint, Prettier                   | Análise estática e formatação                             |
+| Husky + lint-staged + commitlint                    | Validações antes do commit e Conventional Commits         |
+| GitHub Actions                                      | CI: formatação, lint, testes unitários, build e E2E       |
+| [Vercel](https://vercel.com)                        | Hospedagem da demo                                        |
 
 ## Requisitos
 
@@ -61,17 +62,15 @@ A [demo publicada](https://gestao-financeira-tau-five.vercel.app) (Vercel, atual
 
 ## Como executar
 
-Com a API simulada (desenvolvimento):
+Com a API real (desenvolvimento): suba a [`gestao-financeira-api`](https://github.com/weslley-de-oliveira/gestao-financeira-api) na porta 3333, seguindo o README dela (`npm run db:up`, `npm run db:migrate`, `npm run db:seed` e `npm run dev`), e depois o front:
 
 ```bash
 npm install
-npm run start:dev
+npm start
 ```
 
-- Aplicação: `http://localhost:4200`
-- API simulada: `http://localhost:3000`
-
-Na primeira execução, `db/db.json` é criado a partir de `db/db.seed.json`, com as datas avançadas para o mês atual. Ele guarda apenas os dados do seu ambiente local e não é versionado; use `npm run db:reset` para voltar ao estado inicial.
+- Aplicação: `http://localhost:4200`, com a conta de demonstração `demo@exemplo.com` / `demo1234` criada pelo seed da API.
+- O `ng serve` encaminha `/api` para `http://127.0.0.1:3333` (`proxy.conf.json`): front e API ficam na mesma origem, e o cookie de sessão funciona sem CORS.
 
 Como na demo publicada, sem API (dados no `localStorage`):
 
@@ -83,12 +82,9 @@ npm run start:demo
 
 | Script                 | Descrição                                                |
 | ---------------------- | -------------------------------------------------------- |
-| `npm start`            | Inicia o servidor de desenvolvimento do Angular          |
-| `npm run start:api`    | Inicia a API simulada (JSON Server) na porta 3000        |
-| `npm run start:dev`    | Inicia o Angular e a API simulada juntos                 |
+| `npm start`            | Inicia o Angular, com o proxy para a API local           |
 | `npm run start:demo`   | Inicia a versão da demo (localStorage, sem API)          |
-| `npm run db:reset`     | Restaura os dados locais da API a partir do seed         |
-| `npm run seed`         | Gera novamente `db/db.seed.json` com dados fictícios     |
+| `npm run seed`         | Gera novamente o seed da demo (`db/db.seed.json`)        |
 | `npm run api:types`    | Gera os tipos do contrato a partir do OpenAPI da API     |
 | `npm run build`        | Gera o build de produção em `dist/`                      |
 | `npm run build:demo`   | Gera o build da demo publicada                           |
@@ -108,16 +104,15 @@ O `npm run e2e:api` sobe uma instância própria da API (porta 3334) a partir do
 
 A aplicação segue uma arquitetura orientada a funcionalidades (`core`, `shared`, `features` e `data-access`). As telas consomem facades, que usam contratos de repositório; as implementações ficam em `data-access`:
 
-- **HTTP** (`data-access/repositories/http-*.repository.ts`): JSON Server, usada no desenvolvimento.
-- **localStorage** (`data-access/local/`): usada na demo publicada. A configuração `demo` do Angular troca as implementações por `fileReplacements`, sem mudar nenhuma tela ou regra de negócio — o mesmo caminho para trocar a API simulada por um backend real.
+- **API** (`data-access/api/`): a API real, com os tipos do contrato gerados do OpenAPI (`npm run api:types`). Um interceptor converte as recusas da API (Problem Details) nos erros que as telas já exibem e, numa sessão expirada, leva ao login.
+- **localStorage** (`data-access/local/`): usada na demo publicada. A configuração `demo` do Angular troca as implementações por `fileReplacements`, sem mudar nenhuma tela ou regra de negócio.
 
 ```text
 db/
-  db.seed.json   # Seed fictício gerado por npm run seed (versionado)
-  db.json        # Dados locais da API, criados a partir do seed (não versionado)
+  db.seed.json   # Seed fictício da demo, gerado por npm run seed
 e2e/             # Testes E2E, de acessibilidade e responsivos (Playwright + axe)
 e2e-api/         # Testes E2E contra a API real (playwright.api.config.ts)
-scripts/         # ensure-db.mjs (cria db.json) e seed.mjs (gera o seed)
+scripts/         # seed.mjs (gera o seed da demo) e api-types.mjs (tipos do OpenAPI)
 src/
   app/           # Código da aplicação
   testing/       # Repositórios em memória e fixtures dos testes unitários
@@ -131,9 +126,10 @@ vercel.json      # Build da demo, fallback da SPA e cabeçalhos de segurança
 
 - **Testes unitários e de componentes** (Vitest + harnesses do Material): regras de domínio, facades, repositórios, formulários e telas, inclusive a validação do seed contra as regras do app.
 - **E2E** (Playwright, contra a build de demo): login, cadastro, navegação, lançamento de transação, pagamento de fatura, persistência e restauração dos dados. O relógio do navegador é fixado na data de referência do seed para resultados determinísticos.
+- **E2E contra a API real** (`npm run e2e:api`): sessão em cookie (restauração, expiração e saída), saldo calculado pelo servidor e exclusão da conta com senha. Na CI, com Postgres e o seed da API.
 - **Acessibilidade**: axe-core (WCAG 2.0/2.1 A e AA) em todas as telas principais, nos temas claro e escuro.
 - **Responsividade**: navegação pelo menu recolhido e ausência de rolagem horizontal num celular (Pixel 7).
-- **CI**: cada push na `main` e cada pull request passam por formatação, lint, testes unitários, build e E2E.
+- **CI**: cada push na `main` e cada pull request passam por formatação, lint, testes unitários, build e E2E (demo e API real).
 
 ## Padrão de commits
 

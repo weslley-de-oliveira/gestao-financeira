@@ -7,7 +7,7 @@ import {
 } from '../app/data-access/repositories/account.repository';
 import { Account } from '../app/shared/models/account';
 
-/** Repositório de contas em memória, para testes sem JSON Server. */
+/** Repositório de contas em memória, para testes sem API. */
 @Injectable()
 export class InMemoryAccountRepository extends AccountRepository {
   readonly records: Account[] = [];

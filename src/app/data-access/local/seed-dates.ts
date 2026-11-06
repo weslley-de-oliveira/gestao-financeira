@@ -1,6 +1,3 @@
-// Sem imports e só com tipos apagáveis: este arquivo também é executado diretamente pelo Node em
-// `scripts/ensure-db.mjs`, que remove os tipos do TypeScript.
-
 /** Metadados do seed: as datas foram geradas considerando `anchorDate` (`yyyy-MM-dd`) como hoje. */
 export interface SeedMeta {
   anchorDate: string;

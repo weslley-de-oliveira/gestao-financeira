@@ -4,7 +4,7 @@ import { Observable, of, throwError } from 'rxjs';
 import { GoalChanges, GoalRepository } from '../app/data-access/repositories/goal.repository';
 import { Goal } from '../app/shared/models/goal';
 
-/** Repositório de metas em memória, para testes sem JSON Server. */
+/** Repositório de metas em memória, para testes sem API. */
 @Injectable()
 export class InMemoryGoalRepository extends GoalRepository {
   readonly records: Goal[] = [];

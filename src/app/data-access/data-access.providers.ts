@@ -1,37 +1,33 @@
 import { Provider } from '@angular/core';
+import { ApiAuthGateway } from '../core/auth/api-auth.gateway';
 import { AuthGateway } from '../core/auth/auth.gateway';
-import { LocalAuthGateway } from '../core/auth/local-auth.gateway';
+import { ApiAccountRepository } from './api/api-account.repository';
+import { ApiBudgetRepository } from './api/api-budget.repository';
+import { ApiCategoryRepository } from './api/api-category.repository';
+import { ApiCreditCardRepository } from './api/api-credit-card.repository';
+import { ApiGoalRepository } from './api/api-goal.repository';
+import { ApiTransactionRepository } from './api/api-transaction.repository';
 import { AccountRepository } from './repositories/account.repository';
 import { BudgetRepository } from './repositories/budget.repository';
 import { CategoryRepository } from './repositories/category.repository';
 import { CreditCardRepository } from './repositories/credit-card.repository';
 import { GoalRepository } from './repositories/goal.repository';
-import { HttpAccountRepository } from './repositories/http-account.repository';
-import { HttpBudgetRepository } from './repositories/http-budget.repository';
-import { HttpCategoryRepository } from './repositories/http-category.repository';
-import { HttpCreditCardRepository } from './repositories/http-credit-card.repository';
-import { HttpGoalRepository } from './repositories/http-goal.repository';
-import { HttpTransactionRepository } from './repositories/http-transaction.repository';
-import { HttpUserDataRepository } from './repositories/http-user-data.repository';
-import { HttpUserRepository } from './repositories/http-user.repository';
 import { TransactionRepository } from './repositories/transaction.repository';
-import { UserDataRepository } from './repositories/user-data.repository';
-import { UserRepository } from './repositories/user.repository';
 
 /**
- * Implementações dos repositórios: HTTP (JSON Server). Na build de demo (`ng build -c demo`), este
- * arquivo é substituído por `data-access.providers.demo.ts`, que usa o `localStorage`.
+ * Implementações dos repositórios: a API real (`gestao-financeira-api`), em `/api/v1` na mesma
+ * origem. Em desenvolvimento, o proxy do `ng serve` (`proxy.conf.json`) encaminha para a API, e o
+ * cookie de sessão é enviado sem CORS. Na build de demo (`ng build -c demo`), este arquivo é
+ * substituído por `data-access.providers.demo.ts`, que usa o `localStorage`.
  */
 export function provideDataAccess(): Provider[] {
   return [
-    { provide: AuthGateway, useClass: LocalAuthGateway },
-    { provide: UserRepository, useClass: HttpUserRepository },
-    { provide: UserDataRepository, useClass: HttpUserDataRepository },
-    { provide: AccountRepository, useClass: HttpAccountRepository },
-    { provide: CategoryRepository, useClass: HttpCategoryRepository },
-    { provide: TransactionRepository, useClass: HttpTransactionRepository },
-    { provide: CreditCardRepository, useClass: HttpCreditCardRepository },
-    { provide: BudgetRepository, useClass: HttpBudgetRepository },
-    { provide: GoalRepository, useClass: HttpGoalRepository },
+    { provide: AuthGateway, useClass: ApiAuthGateway },
+    { provide: AccountRepository, useClass: ApiAccountRepository },
+    { provide: CategoryRepository, useClass: ApiCategoryRepository },
+    { provide: TransactionRepository, useClass: ApiTransactionRepository },
+    { provide: CreditCardRepository, useClass: ApiCreditCardRepository },
+    { provide: BudgetRepository, useClass: ApiBudgetRepository },
+    { provide: GoalRepository, useClass: ApiGoalRepository },
   ];
 }

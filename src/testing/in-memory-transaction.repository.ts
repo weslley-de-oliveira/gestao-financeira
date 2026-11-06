@@ -7,7 +7,7 @@ import {
 } from '../app/data-access/repositories/transaction.repository';
 import { Transaction } from '../app/shared/models/transaction';
 
-/** Repositório de transações em memória, para testes sem JSON Server. */
+/** Repositório de transações em memória, para testes sem API. */
 @Injectable()
 export class InMemoryTransactionRepository extends TransactionRepository {
   readonly records: Transaction[] = [];

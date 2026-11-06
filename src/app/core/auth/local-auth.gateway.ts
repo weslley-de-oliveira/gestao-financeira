@@ -15,7 +15,7 @@ import { AuthGateway, LoginCredentials, RegistrationData } from './auth.gateway'
 const SESSION_KEY = 'gf.session';
 
 /**
- * Autenticação demonstrativa, para a demo (`localStorage`) e o JSON Server: não oferece segurança
+ * Autenticação demonstrativa, para a demo (`localStorage`) e os testes: não oferece segurança
  * de produção. A senha é conferida no navegador contra um hash PBKDF2, e a sessão guarda apenas os
  * dados públicos do usuário, criptografados no sessionStorage.
  */

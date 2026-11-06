@@ -6,7 +6,7 @@ import {
 } from '../app/data-access/repositories/user.repository';
 import { User } from '../app/shared/models/user';
 
-/** Repositório de usuários em memória, para testes sem JSON Server. */
+/** Repositório de usuários em memória, para testes sem API. */
 @Injectable()
 export class InMemoryUserRepository extends UserRepository {
   readonly records: UserWithCredentials[] = [];

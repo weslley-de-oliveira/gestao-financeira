@@ -4,7 +4,10 @@ import { CreditCard } from '../../shared/models/credit-card';
 
 export type CreditCardChanges = Partial<Omit<CreditCard, 'id' | 'userId' | 'createdAt'>>;
 
-/** Contrato de acesso aos cartões de crédito. A implementação atual usa HTTP (JSON Server). */
+/**
+ * Contrato de acesso aos cartões de crédito: na API (`data-access/api`) ou no `localStorage`
+ * (demo).
+ */
 export abstract class CreditCardRepository {
   abstract listByUser(userId: string): Observable<CreditCard[]>;
 

@@ -4,7 +4,7 @@ import { Transaction } from '../../shared/models/transaction';
 
 export type TransactionChanges = Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt'>>;
 
-/** Contrato de acesso às transações. A implementação atual usa HTTP (JSON Server). */
+/** Contrato de acesso às transações: na API (`data-access/api`) ou no `localStorage` (demo). */
 export abstract class TransactionRepository {
   abstract listByUser(userId: string): Observable<Transaction[]>;
 

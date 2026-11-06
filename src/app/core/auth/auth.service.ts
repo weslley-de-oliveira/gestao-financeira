@@ -7,7 +7,7 @@ import { SessionCleanup } from './session-cleanup';
 export type { LoginCredentials, RegistrationData } from './auth.gateway';
 
 /**
- * Usuário atual das telas. A autenticação em si fica no `AuthGateway`: local (demo e JSON Server)
+ * Usuário atual das telas. A autenticação em si fica no `AuthGateway`: local (demo)
  * ou a API, conforme os providers de dados da build.
  */
 @Injectable({ providedIn: 'root' })

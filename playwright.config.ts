@@ -5,7 +5,7 @@ const isCI = !!process.env['CI'];
 
 /**
  * Testes E2E e de acessibilidade contra a build de demo: os dados ficam no localStorage e começam
- * pelo seed, então cada teste (com um navegador limpo) parte do mesmo estado, sem JSON Server.
+ * pelo seed, então cada teste (com um navegador limpo) parte do mesmo estado, sem API.
  */
 export default defineConfig({
   testDir: './e2e',

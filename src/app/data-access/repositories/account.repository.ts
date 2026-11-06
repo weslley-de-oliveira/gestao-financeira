@@ -4,7 +4,7 @@ import { Account } from '../../shared/models/account';
 
 export type AccountChanges = Partial<Omit<Account, 'id' | 'userId' | 'createdAt'>>;
 
-/** Contrato de acesso às contas. A implementação atual usa HTTP (JSON Server). */
+/** Contrato de acesso às contas: na API (`data-access/api`) ou no `localStorage` (demo). */
 export abstract class AccountRepository {
   abstract listByUser(userId: string): Observable<Account[]>;
 

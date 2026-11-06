@@ -4,7 +4,7 @@ import { NewRecord, withIdentity } from './new-record';
 
 export type GoalChanges = Partial<Omit<Goal, 'id' | 'userId' | 'createdAt'>>;
 
-/** Contrato de acesso às metas. A implementação atual usa HTTP (JSON Server). */
+/** Contrato de acesso às metas: na API (`data-access/api`) ou no `localStorage` (demo). */
 export abstract class GoalRepository {
   abstract listByUser(userId: string): Observable<Goal[]>;
 

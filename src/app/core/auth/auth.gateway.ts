@@ -12,8 +12,8 @@ export interface RegistrationData {
 }
 
 /**
- * Onde a autenticação acontece. A implementação local (demo e JSON Server) confere a senha no
- * navegador e guarda a sessão criptografada; a da API usa a sessão em cookie do servidor.
+ * Onde a autenticação acontece. A implementação local (demo) confere a senha no navegador
+ * e guarda a sessão criptografada; a da API usa a sessão em cookie do servidor.
  * O `AuthService` guarda só o usuário atual para as telas.
  */
 export abstract class AuthGateway {

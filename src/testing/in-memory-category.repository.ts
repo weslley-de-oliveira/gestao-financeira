@@ -7,7 +7,7 @@ import {
 } from '../app/data-access/repositories/category.repository';
 import { Category } from '../app/shared/models/category';
 
-/** Repositório de categorias em memória, para testes sem JSON Server. */
+/** Repositório de categorias em memória, para testes sem API. */
 @Injectable()
 export class InMemoryCategoryRepository extends CategoryRepository {
   readonly records: Category[] = [];

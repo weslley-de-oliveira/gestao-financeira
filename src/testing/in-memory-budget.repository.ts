@@ -4,7 +4,7 @@ import { Observable, of, throwError } from 'rxjs';
 import { BudgetChanges, BudgetRepository } from '../app/data-access/repositories/budget.repository';
 import { Budget } from '../app/shared/models/budget';
 
-/** Repositório de orçamentos em memória, para testes sem JSON Server. */
+/** Repositório de orçamentos em memória, para testes sem API. */
 @Injectable()
 export class InMemoryBudgetRepository extends BudgetRepository {
   readonly records: Budget[] = [];

@@ -7,7 +7,7 @@ import {
 } from '../app/data-access/repositories/credit-card.repository';
 import { CreditCard } from '../app/shared/models/credit-card';
 
-/** Repositório de cartões em memória, para testes sem JSON Server. */
+/** Repositório de cartões em memória, para testes sem API. */
 @Injectable()
 export class InMemoryCreditCardRepository extends CreditCardRepository {
   readonly records: CreditCard[] = [];

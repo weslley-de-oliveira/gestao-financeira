@@ -4,7 +4,7 @@ import { Category } from '../../shared/models/category';
 
 export type CategoryChanges = Partial<Omit<Category, 'id' | 'userId' | 'type' | 'createdAt'>>;
 
-/** Contrato de acesso às categorias. A implementação atual usa HTTP (JSON Server). */
+/** Contrato de acesso às categorias: na API (`data-access/api`) ou no `localStorage` (demo). */
 export abstract class CategoryRepository {
   abstract listByUser(userId: string): Observable<Category[]>;
 

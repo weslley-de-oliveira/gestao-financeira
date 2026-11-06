@@ -4,7 +4,7 @@ import { Budget } from '../../shared/models/budget';
 
 export type BudgetChanges = Partial<Pick<Budget, 'limits' | 'alertThreshold'>>;
 
-/** Contrato de acesso aos orçamentos. A implementação atual usa HTTP (JSON Server). */
+/** Contrato de acesso aos orçamentos: na API (`data-access/api`) ou no `localStorage` (demo). */
 export abstract class BudgetRepository {
   abstract listByUser(userId: string): Observable<Budget[]>;
 

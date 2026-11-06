@@ -76,17 +76,6 @@
                   "with": "src/app/data-access/data-access.providers.demo.ts"
                 }
               ]
-            },
-            "api": {
-              "optimization": false,
-              "extractLicenses": false,
-              "sourceMap": true,
-              "fileReplacements": [
-                {
-                  "replace": "src/app/data-access/data-access.providers.ts",
-                  "with": "src/app/data-access/data-access.providers.api.ts"
-                }
-              ]
             }
           },
           "defaultConfiguration": "production"
@@ -95,17 +84,15 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "gestao-financeira:build:production"
+              "buildTarget": "gestao-financeira:build:production",
+              "proxyConfig": "proxy.conf.json"
             },
             "development": {
-              "buildTarget": "gestao-financeira:build:development"
+              "buildTarget": "gestao-financeira:build:development",
+              "proxyConfig": "proxy.conf.json"
             },
             "demo": {
               "buildTarget": "gestao-financeira:build:demo"
-            },
-            "api": {
-              "buildTarget": "gestao-financeira:build:api",
-              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"
