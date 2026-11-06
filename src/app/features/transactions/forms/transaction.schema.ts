@@ -15,6 +15,7 @@ import {
 } from '../../../shared/models/transaction';
 import { parseIsoDate, toIsoDate } from '../../../shared/utils/date';
 import { MAX_MONEY_CENTS, formatMoneyInput, parseMoney } from '../../../shared/utils/money';
+import { MAX_INSTALLMENTS, MIN_INSTALLMENTS } from '../../installments/domain/installment-plan';
 import { TransactionInput } from '../domain/transaction-rules';
 
 /** Despesas podem ser pagas por uma conta ou lançadas num cartão de crédito. */
@@ -37,6 +38,8 @@ export interface TransactionFormModel {
   categoryId: string;
   status: TransactionStatus;
   notes: string;
+  /** Só em compras no cartão novas: 1 é à vista; de 2 a 24, uma compra parcelada. */
+  installments: number;
 }
 
 export const emptyTransactionForm = (
@@ -54,6 +57,7 @@ export const emptyTransactionForm = (
   categoryId: '',
   status: 'completed',
   notes: '',
+  installments: 1,
   ...overrides,
 });
 
@@ -70,6 +74,7 @@ export function toTransactionFormModel(transaction: Transaction): TransactionFor
     categoryId: transaction.categoryId ?? '',
     status: transaction.status,
     notes: transaction.notes ?? '',
+    installments: 1,
   };
 }
 
@@ -158,6 +163,25 @@ export const transactionSchema = schema<TransactionFormModel>((p) => {
   required(p.categoryId, {
     message: 'Selecione a categoria.',
     when: (ctx) => !isTransfer(ctx),
+  });
+
+  // Parcelas: só numa compra no cartão; ao menos R$ 0,01 por parcela.
+  hidden(p.installments, { when: (ctx) => !isCardPurchase(ctx) });
+  validate(p.installments, ({ value, valueOf }) => {
+    const count = value();
+    if (count === 1) {
+      return undefined;
+    }
+    if (!Number.isInteger(count) || count < MIN_INSTALLMENTS || count > MAX_INSTALLMENTS) {
+      return {
+        kind: 'installments',
+        message: `Parcele de ${MIN_INSTALLMENTS} a ${MAX_INSTALLMENTS} vezes.`,
+      };
+    }
+    const cents = parseMoney(valueOf(p.amount));
+    return cents !== null && cents < count
+      ? { kind: 'installments', message: 'O valor precisa ter pelo menos R$ 0,01 por parcela.' }
+      : undefined;
   });
 
   maxLength(p.notes, TRANSACTION_NOTES_MAX_LENGTH, {

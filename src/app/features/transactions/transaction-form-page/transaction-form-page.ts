@@ -24,6 +24,15 @@ import {
 import { AccountsFacade } from '../../accounts/accounts.facade';
 import { CategoriesFacade } from '../../categories/categories.facade';
 import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
+import { MAX_INSTALLMENTS, planInstallments } from '../../installments/domain/installment-plan';
+import {
+  InstallmentPurchasesFacade,
+  InvalidInstallmentCountError,
+} from '../../installments/installment-purchases.facade';
+import { toIsoDate } from '../../../shared/utils/date';
+import { parseMoney } from '../../../shared/utils/money';
+import { formatMonth } from '../../../shared/utils/month';
+import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 import { InvalidTransactionInputError, TransactionInput } from '../domain/transaction-rules';
 import {
   TransactionFormModel,
@@ -68,12 +77,14 @@ const REFERENCE_ERRORS: Partial<Record<keyof TransactionInput, string>> = {
 })
 export class TransactionFormPage implements OnInit {
   private readonly facade = inject(TransactionsFacade);
+  private readonly installmentsFacade = inject(InstallmentPurchasesFacade);
   private readonly accountsFacade = inject(AccountsFacade);
   private readonly categoriesFacade = inject(CategoriesFacade);
   private readonly creditCardsFacade = inject(CreditCardsFacade);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
   private readonly today = inject(TODAY);
+  private readonly money = new MoneyPipe();
 
   /** Parâmetro `:id` da rota; ausente na criação. */
   readonly id = input<string>();
@@ -110,6 +121,47 @@ export class TransactionFormPage implements OnInit {
       .cards()
       .filter((card) => !card.isArchived || card.id === this.original()?.creditCardId),
   );
+  protected readonly installmentOptions = Array.from(
+    { length: MAX_INSTALLMENTS },
+    (_, index) => index + 1,
+  );
+  /** Prévia das parcelas: valor da 1ª, das demais e a fatura da última. */
+  protected readonly installmentPreview = computed(() => {
+    const model = this.model();
+    const amount = parseMoney(model.amount);
+    const card = this.creditCardsFacade.cards().find((item) => item.id === model.creditCardId);
+    if (
+      !isCardPurchaseModel(model) ||
+      model.installments < 2 ||
+      !card ||
+      !model.date ||
+      amount === null ||
+      amount < model.installments
+    ) {
+      return null;
+    }
+    const plan = planInstallments(
+      card,
+      { amount, date: toIsoDate(model.date) },
+      model.installments,
+    );
+    return {
+      first: plan[0].amount,
+      others: plan[plan.length - 1].amount,
+      lastMonth: formatMonth(plan[plan.length - 1].referenceMonth),
+    };
+  });
+  protected readonly installmentHint = computed(() => {
+    const preview = this.installmentPreview();
+    if (!preview) {
+      return 'Cada parcela vai para a fatura de um mês.';
+    }
+    const values =
+      preview.first === preview.others
+        ? `Parcelas de ${this.money.transform(preview.others)}`
+        : `1ª de ${this.money.transform(preview.first)} e as demais de ${this.money.transform(preview.others)}`;
+    return `${values}; a última na fatura de ${preview.lastMonth}.`;
+  });
   protected readonly categoryOptions = computed(() => {
     const { type } = this.model();
     const original = this.original();
@@ -146,7 +198,24 @@ export class TransactionFormPage implements OnInit {
     await submit(this.transactionForm, async (field) => {
       const input = toTransactionInput(field().value());
       const id = this.id();
+      const installments = field().value().installments;
       try {
+        if (!id && input.creditCardId && installments > 1) {
+          await this.installmentsFacade.create({
+            description: input.description,
+            amount: input.amount,
+            date: input.date,
+            creditCardId: input.creditCardId,
+            categoryId: input.categoryId ?? '',
+            installmentCount: installments,
+            notes: input.notes,
+          });
+          this.snackBar.open(`Compra registrada em ${installments} parcelas.`, 'Fechar', {
+            duration: 4000,
+          });
+          await this.router.navigate(['/transactions']);
+          return undefined;
+        }
         const saved = id
           ? await this.facade.update(id, input, this.version)
           : await this.facade.create(input);
@@ -155,6 +224,13 @@ export class TransactionFormPage implements OnInit {
         });
         await this.router.navigate(id ? ['/transactions', saved.id] : ['/transactions']);
       } catch (error) {
+        if (error instanceof InvalidInstallmentCountError) {
+          return {
+            kind: 'installments',
+            message: 'Parcele de 2 a 24 vezes, com pelo menos R$ 0,01 por parcela.',
+            fieldTree: field.installments,
+          };
+        }
         if (error instanceof StaleRecordError) {
           this.errorMessage.set(STALE_RECORD_MESSAGE);
           return undefined;

@@ -115,6 +115,22 @@
                 <mat-error>{{ error.message }}</mat-error>
               }
             </mat-form-field>
+            @if (!isEdit()) {
+              <mat-form-field appearance="outline">
+                <mat-label>Parcelas</mat-label>
+                <mat-select [formField]="transactionForm.installments">
+                  @for (count of installmentOptions; track count) {
+                    <mat-option [value]="count">
+                      {{ count === 1 ? 'À vista' : count + 'x' }}
+                    </mat-option>
+                  }
+                </mat-select>
+                <mat-hint>{{ installmentHint() }}</mat-hint>
+                @if (transactionForm.installments().errors()[0]; as error) {
+                  <mat-error>{{ error.message }}</mat-error>
+                }
+              </mat-form-field>
+            }
           } @else {
             <mat-form-field appearance="outline">
               <mat-label>{{ isTransfer() ? 'Conta de origem' : 'Conta' }}</mat-label>

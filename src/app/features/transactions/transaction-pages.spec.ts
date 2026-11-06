@@ -501,6 +501,34 @@ describe('transaction pages', () => {
       ]);
     });
 
+    it('registers a card purchase in installments, with a preview of the values', async () => {
+      seedCreditCards(userId, { name: 'Roxinho', lastFourDigits: '4321' });
+      await open('/transactions/new');
+      const groups = await loader.getAllHarnesses(MatButtonToggleGroupHarness);
+      await (await groups[1].getToggles({ text: 'Cartão de crédito' }))[0].check();
+
+      await (await input('Descrição')).setValue('Geladeira');
+      await (await input('Valor')).setValue('10000');
+      await (await select('Cartão')).clickOptions({ text: /Roxinho/ });
+      await (await select('Categoria')).clickOptions({ text: 'Lazer' });
+      await (await select('Parcelas')).clickOptions({ text: '3x' });
+
+      const hints = await (await field('Parcelas')).getTextHints();
+      expect(hints.map((hint) => hint.replace(/\s+/g, ' '))).toEqual([
+        '1ª de R$ 33,34 e as demais de R$ 33,33; a última na fatura de fevereiro de 2027.',
+      ]);
+
+      await save();
+
+      expect(
+        records().map(({ installmentNumber, amount, date }) => [installmentNumber, amount, date]),
+      ).toEqual([
+        [1, 3_334, '2026-11-15'],
+        [2, 3_333, '2026-12-15'],
+        [3, 3_333, '2027-01-15'],
+      ]);
+    });
+
     it('preselects the card from the query param of "Nova compra"', async () => {
       seedCreditCards(userId, { name: 'Roxinho' });
 
