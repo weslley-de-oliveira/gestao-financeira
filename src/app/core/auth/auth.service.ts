@@ -54,6 +54,15 @@ export class AuthService {
    * `IncorrectPasswordError`), além das preferências deste navegador e da sessão. Não pode ser
    * desfeito.
    */
+  /** Troca a senha da pessoa logada; a sessão atual continua. */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const user = this._currentUser();
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+    await this.gateway.changePassword(user, currentPassword, newPassword);
+  }
+
   async deleteAccount(password: string): Promise<void> {
     await this.gateway.deleteAccount(this.requireUser(), password);
     this.preferences.reset();

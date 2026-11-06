@@ -75,6 +75,16 @@ export class LocalAuthGateway extends AuthGateway {
     await firstValueFrom(this.userData.deleteAllForUser(user.id));
   }
 
+  async changePassword(user: User, currentPassword: string, newPassword: string): Promise<void> {
+    const record = await firstValueFrom(this.users.findByEmail(user.email));
+    if (!record || !(await this.hasher.verify(currentPassword, record.passwordHash))) {
+      throw new IncorrectPasswordError();
+    }
+    await firstValueFrom(
+      this.users.updatePasswordHash(user.id, await this.hasher.hash(newPassword)),
+    );
+  }
+
   private async startSession(user: User): Promise<User> {
     await this.session.setItem(SESSION_KEY, user);
     return user;

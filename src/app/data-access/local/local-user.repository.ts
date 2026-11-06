@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, defer } from 'rxjs';
+import { PasswordHash } from '../../core/security/password-hasher';
 import { User } from '../../shared/models/user';
 import { toUserDto, toUserWithCredentials } from '../dto/user.dto';
 import { UserRepository, UserWithCredentials } from '../repositories/user.repository';
@@ -37,6 +38,18 @@ export class LocalUserRepository extends UserRepository {
         return user;
       });
       return toUserWithCredentials(dto).user;
+    });
+  }
+
+  updatePasswordHash(id: string, passwordHash: PasswordHash): Observable<void> {
+    return defer(async () => {
+      await this.database.mutate('users', (users) => {
+        const user = users.find((item) => item.id === id);
+        if (!user) {
+          throw new LocalRecordNotFoundError('users', id);
+        }
+        user.passwordHash = passwordHash;
+      });
     });
   }
 }

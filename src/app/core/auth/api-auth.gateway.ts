@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { API_BASE_URL } from '../../data-access/api/api.config';
 import type { ApiUser } from '../../data-access/api/api-types';
 import { User } from '../../shared/models/user';
-import { ApiProblemError } from '../interceptors/api-problem-error';
+import { ApiProblemError, isProblemDetails } from '../interceptors/api-problem-error';
 import {
   EmailAlreadyRegisteredError,
   IncorrectPasswordError,
@@ -73,6 +73,18 @@ export class ApiAuthGateway extends AuthGateway {
         : error;
     }
   }
+
+  async changePassword(_user: User, currentPassword: string, newPassword: string): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.http.post(`${this.baseUrl}/me/password`, { currentPassword, newPassword }),
+      );
+    } catch (error) {
+      // 422 no campo `currentPassword`: a senha atual está errada. Os demais 422 (regras da senha
+      // nova) já são conferidos pelo formulário e seguem como estão.
+      throw rejectedField(error) === 'currentPassword' ? new IncorrectPasswordError() : error;
+    }
+  }
 }
 
 function toUser({ id, name, email, createdAt }: ApiUser): User {
@@ -80,6 +92,17 @@ function toUser({ id, name, email, createdAt }: ApiUser): User {
 }
 
 /** Status da recusa, venha como `HttpErrorResponse` ou já convertida pelo interceptor. */
+/** Primeiro campo recusado num 422, venha convertido pelo interceptor ou ainda como HTTP. */
+function rejectedField(error: unknown): string | null {
+  if (error instanceof ApiProblemError) {
+    return error.field;
+  }
+  if (error instanceof HttpErrorResponse && isProblemDetails(error.error)) {
+    return new ApiProblemError(error.error).field;
+  }
+  return null;
+}
+
 function hasStatus(error: unknown, status: HttpStatusCode): boolean {
   return (
     (error instanceof HttpErrorResponse || error instanceof ApiProblemError) &&

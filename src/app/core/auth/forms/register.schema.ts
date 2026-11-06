@@ -26,7 +26,7 @@ export const emptyRegister = (): RegisterModel => ({
 export const PASSWORD_MIN_LENGTH = 8;
 
 /** Ao menos uma letra e um número. */
-const PASSWORD_PATTERN = /^(?=.*\p{L})(?=.*\d).+$/u;
+export const PASSWORD_PATTERN = /^(?=.*\p{L})(?=.*\d).+$/u;
 
 export const registerSchema = schema<RegisterModel>((p) => {
   required(p.name, { message: 'Informe o nome.' });
