@@ -2,6 +2,7 @@ import { Provider } from '@angular/core';
 import { AuthGateway } from '../core/auth/auth.gateway';
 import { LocalAuthGateway } from '../core/auth/local-auth.gateway';
 import { LocalAccountRepository } from './local/local-account.repository';
+import { LocalBudgetProgressRepository } from './local/local-budget-progress.repository';
 import { LocalBudgetRepository } from './local/local-budget.repository';
 import { LocalCategoryRepository } from './local/local-category.repository';
 import { LocalCreditCardRepository } from './local/local-credit-card.repository';
@@ -13,6 +14,7 @@ import { LocalTransactionRepository } from './local/local-transaction.repository
 import { LocalUserDataRepository } from './local/local-user-data.repository';
 import { LocalUserRepository } from './local/local-user.repository';
 import { AccountRepository } from './repositories/account.repository';
+import { BudgetProgressRepository } from './repositories/budget-progress.repository';
 import { BudgetRepository } from './repositories/budget.repository';
 import { CategoryRepository } from './repositories/category.repository';
 import { CreditCardRepository } from './repositories/credit-card.repository';
@@ -41,6 +43,7 @@ export function provideDataAccess(): Provider[] {
     { provide: CreditCardRepository, useClass: LocalCreditCardRepository },
     { provide: InvoiceRepository, useClass: LocalInvoiceRepository },
     { provide: BudgetRepository, useClass: LocalBudgetRepository },
+    { provide: BudgetProgressRepository, useClass: LocalBudgetProgressRepository },
     { provide: GoalRepository, useClass: LocalGoalRepository },
     { provide: DashboardRepository, useClass: LocalDashboardRepository },
   ];

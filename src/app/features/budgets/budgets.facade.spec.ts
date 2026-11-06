@@ -4,6 +4,7 @@ import { seedBudgets } from '../../../testing/budget-fixtures';
 import { seedCategories } from '../../../testing/category-fixtures';
 import { InMemoryBudgetRepository } from '../../../testing/in-memory-budget.repository';
 import { TEST_PROVIDERS } from '../../../testing/test-providers';
+import { seedTransactions } from '../../../testing/transaction-fixtures';
 import { BudgetNotFoundError, BudgetsFacade, DuplicateBudgetError } from './budgets.facade';
 import { BudgetInput, InvalidBudgetInputError } from './domain/budget-rules';
 
@@ -27,6 +28,34 @@ describe('BudgetsFacade', () => {
       { name: 'Salário', type: 'income' },
       { name: 'Antiga', isArchived: true },
     );
+  });
+
+  it('loads the consumption of the budgets valid in the month, and drops a deleted one', async () => {
+    const [food] = seedBudgets(
+      userId,
+      { categoryId: 'category-1' },
+      { categoryId: 'category-3', limits: [{ month: '2026-12', amount: 10_000 }] },
+    );
+    seedTransactions(
+      userId,
+      { categoryId: 'category-1', amount: 20_000, date: '2026-11-03' },
+      { categoryId: 'category-1', amount: 5_000, date: '2026-11-04', status: 'pending' },
+    );
+
+    await facade.loadProgress('2026-11');
+
+    expect(facade.progressStatus()).toBe('ready');
+    expect(facade.progress()).toEqual([
+      expect.objectContaining({
+        budget: expect.objectContaining({ id: food.id }),
+        spent: 20_000,
+        pending: 5_000,
+        available: 30_000,
+      }),
+    ]);
+
+    await facade.delete(food.id);
+    expect(facade.progress()).toEqual([]);
   });
 
   it('creates a budget starting in the current month', async () => {

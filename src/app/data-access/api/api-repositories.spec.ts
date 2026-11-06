@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { Goal } from '../../shared/models/goal';
 import { Transaction } from '../../shared/models/transaction';
 import { ApiAccountRepository } from './api-account.repository';
+import { ApiBudgetProgressRepository } from './api-budget-progress.repository';
 import { ApiBudgetRepository } from './api-budget.repository';
 import { ApiCategoryRepository } from './api-category.repository';
 import { ApiDashboardRepository } from './api-dashboard.repository';
@@ -91,6 +92,7 @@ describe('API repositories', () => {
         ApiCategoryRepository,
         ApiTransactionRepository,
         ApiBudgetRepository,
+        ApiBudgetProgressRepository,
         ApiGoalRepository,
         ApiDashboardRepository,
         ApiInvoiceRepository,
@@ -578,6 +580,40 @@ describe('API repositories', () => {
       request.flush(apiBudget);
 
       expect((await updated).limits).toEqual(apiBudget.limits);
+    });
+
+    it('reads the consumption of the month computed by the server', async () => {
+      const budget = (id: string, progress: ApiBudget['progress']): ApiBudget => ({
+        id,
+        categoryId: CATEGORY_ID,
+        alertThreshold: 80,
+        limitAmount: 90_000,
+        limits: [{ month: '2026-11', amount: 90_000 }],
+        progress,
+        createdAt: '2026-11-01T12:00:00.000Z',
+        updatedAt: '2026-11-01T12:00:00.000Z',
+      });
+      const progress = {
+        month: '2026-11',
+        limit: 90_000,
+        spent: 81_000,
+        pending: 5_000,
+        available: 9_000,
+        percent: 90,
+        state: 'warning' as const,
+      };
+
+      const list = firstValueFrom(
+        TestBed.inject(ApiBudgetProgressRepository).listByMonth(USER_ID, '2026-11'),
+      );
+      http
+        .expectOne('/api/v1/budgets?month=2026-11')
+        .flush([budget('b1', progress), budget('b2', null)]);
+
+      const [item, ...rest] = await list;
+      expect(rest).toEqual([]);
+      expect(item).toMatchObject(progress);
+      expect(item.budget).toMatchObject({ id: 'b1', userId: USER_ID });
     });
   });
 

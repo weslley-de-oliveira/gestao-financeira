@@ -4,10 +4,11 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { SessionCleanup } from '../../core/auth/session-cleanup';
 import { TODAY } from '../../core/services/today';
+import { BudgetProgressRepository } from '../../data-access/repositories/budget-progress.repository';
 import { BudgetRepository } from '../../data-access/repositories/budget.repository';
 import { CategoryRepository } from '../../data-access/repositories/category.repository';
-import { Budget } from '../../shared/models/budget';
-import { toIsoMonth } from '../../shared/utils/month';
+import { Budget, BudgetProgress } from '../../shared/models/budget';
+import { IsoMonth, toIsoMonth } from '../../shared/utils/month';
 import {
   BudgetInput,
   InvalidBudgetInputError,
@@ -34,25 +35,37 @@ export class DuplicateBudgetError extends Error {
 
 /**
  * Casos de uso dos orçamentos do usuário logado. O limite informado na criação ou na edição vale
- * do mês atual em diante; o consumo é calculado na tela a partir das transações.
+ * do mês atual em diante; o consumo de cada mês vem calculado do repositório.
  */
 @Injectable({ providedIn: 'root' })
 export class BudgetsFacade {
   private readonly repository = inject(BudgetRepository);
+  private readonly progressRepository = inject(BudgetProgressRepository);
   private readonly categories = inject(CategoryRepository);
   private readonly auth = inject(AuthService);
   private readonly today = inject(TODAY);
   private readonly _budgets = signal<Budget[]>([]);
   private readonly _status = signal<LoadStatus>('loading');
 
+  private readonly _progress = signal<BudgetProgress[]>([]);
+  private readonly _progressStatus = signal<LoadStatus>('loading');
+  /** Só a resposta do pedido mais recente vale (trocas rápidas de mês). */
+  private latestProgress = 0;
+
   readonly budgets = this._budgets.asReadonly();
   readonly status = this._status.asReadonly();
+  /** Consumo do mês carregado por `loadProgress`. */
+  readonly progress = this._progress.asReadonly();
+  readonly progressStatus = this._progressStatus.asReadonly();
 
   constructor() {
     // Ao encerrar a sessão, nada do usuário anterior fica em memória.
     inject(SessionCleanup).register(() => {
       this._budgets.set([]);
       this._status.set('loading');
+      this.latestProgress++;
+      this._progress.set([]);
+      this._progressStatus.set('loading');
     });
   }
 
@@ -104,6 +117,26 @@ export class BudgetsFacade {
     await this.getOwned(id);
     await firstValueFrom(this.repository.delete(id));
     this._budgets.update((budgets) => budgets.filter((item) => item.id !== id));
+    this._progress.update((progress) => progress.filter((item) => item.budget.id !== id));
+  }
+
+  /** Consumo dos orçamentos que valem no mês (na API, calculado pelo servidor). */
+  async loadProgress(month: IsoMonth): Promise<void> {
+    const request = ++this.latestProgress;
+    this._progressStatus.set('loading');
+    try {
+      const progress = await firstValueFrom(
+        this.progressRepository.listByMonth(this.userId(), month),
+      );
+      if (request === this.latestProgress) {
+        this._progress.set(progress);
+        this._progressStatus.set('ready');
+      }
+    } catch {
+      if (request === this.latestProgress) {
+        this._progressStatus.set('error');
+      }
+    }
   }
 
   /** Categoria de despesa ativa do usuário e ainda sem orçamento. */
