@@ -146,3 +146,10 @@ export class InvoicePaymentError extends Error {
     this.name = 'InvoicePaymentError';
   }
 }
+
+/** Fatura na listagem do cartão: os mesmos dados, com a quantidade de compras no lugar delas. */
+export type InvoiceSummary = Omit<Invoice, 'purchases'> & { purchaseCount: number };
+
+export function toInvoiceSummary({ purchases, ...invoice }: Invoice): InvoiceSummary {
+  return { ...invoice, purchaseCount: purchases.length };
+}

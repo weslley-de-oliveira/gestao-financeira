@@ -1,32 +1,107 @@
 import { NewRecord } from '../../data-access/repositories/new-record';
-import { Injectable, inject } from '@angular/core';
+import { Injectable, PendingTasks, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { SessionCleanup } from '../../core/auth/session-cleanup';
 import { TODAY } from '../../core/services/today';
 import { AccountRepository } from '../../data-access/repositories/account.repository';
 import { CreditCardRepository } from '../../data-access/repositories/credit-card.repository';
+import { InvoiceRepository } from '../../data-access/repositories/invoice.repository';
 import { TransactionRepository } from '../../data-access/repositories/transaction.repository';
 import { CreditCard } from '../../shared/models/credit-card';
 import { Transaction } from '../../shared/models/transaction';
 import { toIsoDate } from '../../shared/utils/date';
-import { TransactionsFacade } from '../transactions/transactions.facade';
-import { Invoice, InvoicePaymentError, buildInvoice, canPayInvoice } from './domain/invoice-rules';
+import {
+  Invoice,
+  InvoicePaymentError,
+  InvoiceSummary,
+  canPayInvoice,
+} from './domain/invoice-rules';
 
 export { InvoicePaymentError, type InvoicePaymentFailure } from './domain/invoice-rules';
 
+export type LoadStatus = 'loading' | 'ready' | 'error';
+
 /**
- * Pagamento demonstrativo das faturas. A fatura é calculada a partir das transações; pagar cria
- * a transação `invoice-payment` (valor total, data de hoje, conta de pagamento do cartão) e
- * desfazer a exclui. A listagem usa as transações já carregadas na `TransactionsFacade`.
+ * Faturas de um cartão e pagamento demonstrativo. As faturas vêm calculadas do repositório (na
+ * API, pelo servidor); pagar cria a transação `invoice-payment` (valor total, data de hoje, conta
+ * de pagamento do cartão) e desfazer a exclui.
  */
 @Injectable({ providedIn: 'root' })
 export class InvoicesFacade {
+  private readonly invoicesRepository = inject(InvoiceRepository);
   private readonly creditCards = inject(CreditCardRepository);
   private readonly accounts = inject(AccountRepository);
   private readonly transactions = inject(TransactionRepository);
-  private readonly transactionsFacade = inject(TransactionsFacade);
   private readonly auth = inject(AuthService);
   private readonly today = inject(TODAY);
+  private readonly pendingTasks = inject(PendingTasks);
+  private readonly _invoices = signal<InvoiceSummary[]>([]);
+  private readonly _invoice = signal<Invoice | null>(null);
+  private readonly _status = signal<LoadStatus>('loading');
+  private selection: { creditCardId: string; month: string | undefined } | null = null;
+  /** Só a resposta do pedido mais recente vale (trocas rápidas de cartão ou mês). */
+  private latest = 0;
+
+  /** Faturas do cartão selecionado, da mais recente para a mais antiga. */
+  readonly invoices = this._invoices.asReadonly();
+  /** Fatura selecionada, com as compras. */
+  readonly invoice = this._invoice.asReadonly();
+  readonly status = this._status.asReadonly();
+
+  constructor() {
+    // Ao encerrar a sessão, nada do usuário anterior fica em memória.
+    inject(SessionCleanup).register(() => {
+      this.latest++;
+      this.selection = null;
+      this._invoices.set([]);
+      this._invoice.set(null);
+      this._status.set('loading');
+    });
+  }
+
+  /**
+   * Carrega as faturas do cartão e a do mês pedido; sem mês (ou com um mês sem fatura), a aberta
+   * hoje ou a mais recente.
+   */
+  async select(creditCardId: string, month?: string): Promise<void> {
+    this.selection = { creditCardId, month };
+    const done = this.pendingTasks.add();
+    const request = ++this.latest;
+    try {
+      const userId = this.userId();
+      const invoices = await firstValueFrom(
+        this.invoicesRepository.listByCard(userId, creditCardId),
+      );
+      const chosen =
+        invoices.find((invoice) => invoice.referenceMonth === month) ??
+        invoices.find((invoice) => invoice.status === 'open') ??
+        invoices[0];
+      const invoice = chosen
+        ? await firstValueFrom(
+            this.invoicesRepository.findByMonth(userId, creditCardId, chosen.referenceMonth),
+          )
+        : null;
+      if (request === this.latest) {
+        this._invoices.set(invoices);
+        this._invoice.set(invoice);
+        this._status.set('ready');
+      }
+    } catch {
+      if (request === this.latest) {
+        this._status.set('error');
+      }
+    } finally {
+      done();
+    }
+  }
+
+  /** Recarrega a seleção atual (depois de pagar ou desfazer, ou numa nova tentativa). */
+  async refresh(): Promise<void> {
+    if (this.selection) {
+      await this.select(this.selection.creditCardId, this.selection.month);
+    }
+  }
 
   async pay(creditCardId: string, referenceMonth: string): Promise<Transaction> {
     const { card, invoice } = await this.loadInvoice(creditCardId, referenceMonth);
@@ -54,7 +129,7 @@ export class InvoicesFacade {
       notes: null,
     };
     const created = await firstValueFrom(this.transactions.payInvoice(payment));
-    await this.transactionsFacade.load();
+    await this.refresh();
     return created;
   }
 
@@ -65,28 +140,23 @@ export class InvoicesFacade {
       throw new InvoicePaymentError('not-payable');
     }
     await firstValueFrom(this.transactions.undoInvoicePayment(invoice.payment));
-    await this.transactionsFacade.load();
+    await this.refresh();
   }
 
-  /** Recalcula a fatura com os dados atuais, garantindo que o cartão é do usuário. */
+  /** A fatura com os dados atuais, garantindo que o cartão é do usuário. */
   private async loadInvoice(
     creditCardId: string,
     referenceMonth: string,
   ): Promise<{ card: CreditCard; invoice: Invoice }> {
     const userId = this.userId();
-    const [card, transactions] = await Promise.all([
+    const [card, invoice] = await Promise.all([
       firstValueFrom(this.creditCards.findById(creditCardId)),
-      firstValueFrom(this.transactions.listByUser(userId)),
+      firstValueFrom(this.invoicesRepository.findByMonth(userId, creditCardId, referenceMonth)),
     ]);
-    if (!card || card.userId !== userId) {
+    if (!card || card.userId !== userId || !invoice) {
       throw new InvoicePaymentError('not-found');
     }
-    try {
-      const today = toIsoDate(this.today());
-      return { card, invoice: buildInvoice(card, transactions, referenceMonth, today) };
-    } catch {
-      throw new InvoicePaymentError('not-found');
-    }
+    return { card, invoice };
   }
 
   private userId(): string {

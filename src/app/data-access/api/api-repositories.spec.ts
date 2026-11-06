@@ -9,6 +9,7 @@ import { ApiBudgetRepository } from './api-budget.repository';
 import { ApiCategoryRepository } from './api-category.repository';
 import { ApiDashboardRepository } from './api-dashboard.repository';
 import { ApiGoalRepository } from './api-goal.repository';
+import { ApiInvoiceRepository } from './api-invoice.repository';
 import { SessionUser } from './api-http';
 import { ApiTransactionRepository } from './api-transaction.repository';
 import { API_BASE_URL } from './api.config';
@@ -92,6 +93,7 @@ describe('API repositories', () => {
         ApiBudgetRepository,
         ApiGoalRepository,
         ApiDashboardRepository,
+        ApiInvoiceRepository,
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -371,6 +373,56 @@ describe('API repositories', () => {
       const undone = firstValueFrom(repository.undoInvoicePayment({ ...payment, userId: USER_ID }));
       http.expectOne({ url, method: 'DELETE' }).flush({ payment: null } as Partial<ApiInvoice>);
       await expect(undone).resolves.toBeUndefined();
+    });
+  });
+
+  describe('invoices', () => {
+    const cycle = {
+      referenceMonth: '2026-11',
+      start: '2026-10-05',
+      end: '2026-11-04',
+      closingDate: '2026-11-05',
+      dueDate: '2026-11-12',
+      creditCardId: CARD_ID,
+      total: 25_000,
+      status: 'paid' as const,
+      payment: apiTransaction({
+        id: 'payment',
+        type: 'invoice-payment',
+        creditCardId: CARD_ID,
+        invoiceMonth: '2026-11',
+        categoryId: null,
+      }),
+    };
+
+    it('lists the invoices of the card computed by the server', async () => {
+      const list = firstValueFrom(
+        TestBed.inject(ApiInvoiceRepository).listByCard(USER_ID, CARD_ID),
+      );
+      http
+        .expectOne(`/api/v1/credit-cards/${CARD_ID}/invoices`)
+        .flush([{ ...cycle, purchaseCount: 1 }]);
+
+      const [invoice] = await list;
+      expect(invoice).toMatchObject({ referenceMonth: '2026-11', purchaseCount: 1, total: 25_000 });
+      expect(invoice.payment).toMatchObject({ id: 'payment', userId: USER_ID });
+    });
+
+    it('loads one invoice with its purchases, and null for an unknown card', async () => {
+      const repository = TestBed.inject(ApiInvoiceRepository);
+      const found = firstValueFrom(repository.findByMonth(USER_ID, CARD_ID, '2026-11'));
+      http
+        .expectOne(`/api/v1/credit-cards/${CARD_ID}/invoices/2026-11`)
+        .flush({ ...cycle, purchases: [apiTransaction({ id: 'p1', accountId: null })] });
+      const missing = firstValueFrom(repository.findByMonth(USER_ID, 'outro', '2026-11'));
+      http
+        .expectOne('/api/v1/credit-cards/outro/invoices/2026-11')
+        .flush({ status: 404 }, { status: 404, statusText: 'Not Found' });
+
+      expect((await found)?.purchases.map((purchase) => [purchase.id, purchase.userId])).toEqual([
+        ['p1', USER_ID],
+      ]);
+      expect(await missing).toBeNull();
     });
   });
 

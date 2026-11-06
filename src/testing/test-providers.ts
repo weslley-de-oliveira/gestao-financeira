@@ -9,6 +9,8 @@ import { CategoryRepository } from '../app/data-access/repositories/category.rep
 import { CreditCardRepository } from '../app/data-access/repositories/credit-card.repository';
 import { DashboardRepository } from '../app/data-access/repositories/dashboard.repository';
 import { LocalDashboardRepository } from '../app/data-access/local/local-dashboard.repository';
+import { LocalInvoiceRepository } from '../app/data-access/local/local-invoice.repository';
+import { InvoiceRepository } from '../app/data-access/repositories/invoice.repository';
 import { GoalRepository } from '../app/data-access/repositories/goal.repository';
 import { TransactionRepository } from '../app/data-access/repositories/transaction.repository';
 import { UserDataRepository } from '../app/data-access/repositories/user-data.repository';
@@ -47,8 +49,9 @@ export const TEST_PROVIDERS: Provider[] = [
   { provide: BudgetRepository, useExisting: InMemoryBudgetRepository },
   InMemoryGoalRepository,
   { provide: GoalRepository, useExisting: InMemoryGoalRepository },
-  // O dashboard é calculado pelas regras locais, sobre os repositórios em memória.
+  // Dashboard e faturas são calculados pelas regras locais, sobre os repositórios em memória.
   { provide: DashboardRepository, useClass: LocalDashboardRepository },
+  { provide: InvoiceRepository, useClass: LocalInvoiceRepository },
   { provide: UserDataRepository, useClass: InMemoryUserDataRepository },
   FakeChartRenderer,
   { provide: CHART_RENDERER, useExisting: FakeChartRenderer },

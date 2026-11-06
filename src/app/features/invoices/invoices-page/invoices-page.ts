@@ -1,4 +1,13 @@
-import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -9,20 +18,12 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { TODAY } from '../../../core/services/today';
 import { openConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { IsoDatePipe } from '../../../shared/pipes/iso-date.pipe';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
-import { toIsoDate } from '../../../shared/utils/date';
 import { AccountsFacade } from '../../accounts/accounts.facade';
 import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
-import { TransactionsFacade } from '../../transactions/transactions.facade';
-import {
-  INVOICE_STATUS_LABELS,
-  Invoice,
-  canPayInvoice,
-  listInvoices,
-} from '../domain/invoice-rules';
+import { INVOICE_STATUS_LABELS, Invoice, canPayInvoice } from '../domain/invoice-rules';
 import { InvoicePaymentError, InvoicesFacade, monthLabel } from '../invoices.facade';
 
 /** Mensagens das recusas de pagamento. */
@@ -54,13 +55,11 @@ const PAYMENT_ERRORS: Readonly<Record<string, string>> = {
 })
 export class InvoicesPage implements OnInit {
   private readonly cardsFacade = inject(CreditCardsFacade);
-  private readonly transactionsFacade = inject(TransactionsFacade);
   private readonly accountsFacade = inject(AccountsFacade);
   private readonly invoicesFacade = inject(InvoicesFacade);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
-  private readonly today = inject(TODAY);
   private readonly money = new MoneyPipe();
 
   /** Query params da seleção. */
@@ -69,7 +68,11 @@ export class InvoicesPage implements OnInit {
 
   protected readonly busy = signal(false);
   protected readonly status = computed(() => {
-    const statuses = [this.cardsFacade.status(), this.transactionsFacade.status()];
+    const statuses = [
+      this.cardsFacade.status(),
+      // Sem cartão, não há faturas a carregar.
+      this.card() ? this.invoicesFacade.status() : 'ready',
+    ];
     return statuses.includes('error')
       ? 'error'
       : statuses.includes('loading')
@@ -88,20 +91,11 @@ export class InvoicesPage implements OnInit {
     const options = this.cardOptions();
     return options.find((card) => card.id === this.creditCardId()) ?? options[0] ?? null;
   });
-  protected readonly invoices = computed<Invoice[]>(() => {
-    const card = this.card();
-    return card
-      ? listInvoices(card, this.transactionsFacade.transactions(), toIsoDate(this.today()))
-      : [];
-  });
+  protected readonly invoices = this.invoicesFacade.invoices;
+  /** A fatura carregada, se for do cartão exibido (ao trocar de cartão, até a nova chegar). */
   protected readonly invoice = computed(() => {
-    const invoices = this.invoices();
-    return (
-      invoices.find((invoice) => invoice.referenceMonth === this.month()) ??
-      invoices.find((invoice) => invoice.status === 'open') ??
-      invoices[0] ??
-      null
-    );
+    const invoice = this.invoicesFacade.invoice();
+    return invoice && invoice.creditCardId === this.card()?.id ? invoice : null;
   });
   protected readonly canPay = computed(() => {
     const invoice = this.invoice();
@@ -115,14 +109,25 @@ export class InvoicesPage implements OnInit {
   protected readonly statusLabels = INVOICE_STATUS_LABELS;
   protected readonly monthLabel = monthLabel;
 
+  constructor() {
+    // Cartão ou mês escolhidos mudaram: carrega as faturas do cartão e a do mês.
+    effect(() => {
+      const card = this.card();
+      const month = this.month();
+      if (card) {
+        untracked(() => void this.invoicesFacade.select(card.id, month));
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.reload();
   }
 
   protected reload(): void {
     void this.cardsFacade.load();
-    void this.transactionsFacade.load();
     void this.accountsFacade.load();
+    void this.invoicesFacade.refresh();
   }
 
   protected selectCard(creditCardId: string): void {
