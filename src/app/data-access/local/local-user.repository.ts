@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, defer } from 'rxjs';
 import { PasswordHash } from '../../core/security/password-hasher';
 import { User } from '../../shared/models/user';
-import { toUserDto, toUserWithCredentials } from '../dto/user.dto';
+import { toUserDto, toUserWithCredentials } from './dto/user.dto';
 import { UserRepository, UserWithCredentials } from '../repositories/user.repository';
 import { LocalDatabase, LocalRecordNotFoundError } from './local-database';
 

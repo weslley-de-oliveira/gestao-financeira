@@ -2,7 +2,7 @@ import { NewRecord, withIdentity } from '../repositories/new-record';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { Goal } from '../../shared/models/goal';
-import { toGoal, toGoalDto } from '../dto/goal.dto';
+import { toGoal, toGoalDto } from './dto/goal.dto';
 import { GoalChanges, GoalRepository } from '../repositories/goal.repository';
 import { LocalCollection, LocalDatabase } from './local-database';
 

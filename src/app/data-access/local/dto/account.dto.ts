@@ -1,6 +1,6 @@
-import { Account, AccountType } from '../../shared/models/account';
+import { Account, AccountType } from '../../../shared/models/account';
 
-/** Formato do recurso `accounts` na API. Valores monetários em centavos inteiros. */
+/** Registro de `accounts` no `localStorage` da demo (e no seed). Valores em centavos inteiros. */
 export interface AccountDto {
   id: string;
   userId: string;

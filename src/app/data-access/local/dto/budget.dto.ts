@@ -1,6 +1,6 @@
-import { Budget } from '../../shared/models/budget';
+import { Budget } from '../../../shared/models/budget';
 
-/** Formato do recurso `budgets` na API. Limites em centavos inteiros e meses `yyyy-MM`. */
+/** Registro de `budgets` no `localStorage` da demo (e no seed). Limites em centavos, meses `yyyy-MM`. */
 export interface BudgetDto {
   id: string;
   userId: string;

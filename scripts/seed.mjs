@@ -434,7 +434,6 @@ const seed = {
   categories,
   budgets,
   creditCards,
-  invoices: [],
   goals,
 };
 

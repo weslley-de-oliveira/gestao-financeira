@@ -1,6 +1,6 @@
-import { CardBrand, CreditCard } from '../../shared/models/credit-card';
+import { CardBrand, CreditCard } from '../../../shared/models/credit-card';
 
-/** Formato do recurso `creditCards` na API. Limite em centavos inteiros. */
+/** Registro de `creditCards` no `localStorage` da demo (e no seed). Limite em centavos inteiros. */
 export interface CreditCardDto {
   id: string;
   userId: string;

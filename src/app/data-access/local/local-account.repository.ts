@@ -2,7 +2,7 @@ import { NewRecord, withIdentity } from '../repositories/new-record';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { Account } from '../../shared/models/account';
-import { toAccount, toAccountDto } from '../dto/account.dto';
+import { toAccount, toAccountDto } from './dto/account.dto';
 import { AccountChanges, AccountRepository } from '../repositories/account.repository';
 import { LocalCollection, LocalDatabase } from './local-database';
 

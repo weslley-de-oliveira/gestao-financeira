@@ -2,7 +2,7 @@ import { NewRecord, withIdentity } from '../repositories/new-record';
 import { Injectable, inject } from '@angular/core';
 import { Observable, defer, firstValueFrom, map } from 'rxjs';
 import { Category, withTransactionCounts } from '../../shared/models/category';
-import { toCategory, toCategoryDto } from '../dto/category.dto';
+import { toCategory, toCategoryDto } from './dto/category.dto';
 import { CategoryChanges, CategoryRepository } from '../repositories/category.repository';
 import { LocalCollection, LocalDatabase } from './local-database';
 

@@ -1,7 +1,7 @@
 import { Injectable, InjectionToken, inject } from '@angular/core';
 import { base64ToBytes, bytesToBase64 } from '../../shared/utils/base64';
 
-/** Hash de senha armazenado no mock. Nunca contém a senha em texto puro. */
+/** Hash de senha guardado na demo (`localStorage`). Nunca contém a senha em texto puro. */
 export interface PasswordHash {
   algorithm: 'PBKDF2-SHA256';
   iterations: number;
