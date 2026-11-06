@@ -3,7 +3,9 @@ import {
   InvalidTransactionCursorError,
   defaultTransactionQuery,
   filterTransactions,
+  fromQueryParams,
   pageTransactions,
+  toQueryParams,
   toTransactionFilters,
   totalTransactions,
 } from './transaction-query';
@@ -105,6 +107,45 @@ describe('transaction query', () => {
         categoryId: 'food',
         search: 'farm',
       });
+    });
+  });
+
+  describe('URL params', () => {
+    it('writes only the filters that differ from the default, and clears the others', () => {
+      expect(
+        toQueryParams({
+          ...defaultTransactionQuery(),
+          search: '  farmácia ',
+          type: 'expense',
+          sort: 'amount-asc',
+        }),
+      ).toEqual({
+        accountId: null,
+        creditCardId: null,
+        categoryId: null,
+        busca: 'farmácia',
+        tipo: 'expense',
+        conta: null,
+        categoria: null,
+        status: null,
+        ordem: 'amount-asc',
+      });
+    });
+
+    it('reads the filters back, ignoring unknown values', () => {
+      expect(
+        fromQueryParams({ busca: 'farmácia', tipo: 'refund', status: 'pending', ordem: 'nome' }),
+      ).toEqual({ ...defaultTransactionQuery(), search: 'farmácia', status: 'pending' });
+    });
+
+    it('accepts the link params of other pages', () => {
+      expect(fromQueryParams({ creditCardId: 'card', categoryId: 'food' })).toMatchObject({
+        accountId: 'card',
+        categoryId: 'food',
+      });
+      expect(fromQueryParams({ conta: 'checking', accountId: 'savings' }).accountId).toBe(
+        'checking',
+      );
     });
   });
 

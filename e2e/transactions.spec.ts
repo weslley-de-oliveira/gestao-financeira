@@ -85,3 +85,31 @@ test('pages, sorts and searches the transactions of the period', async ({ page, 
     expect(text.toLowerCase()).toContain('mercado');
   }
 });
+
+test('keeps the filters when coming back to the list and after reloading', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'Usa as colunas da tabela do desktop.');
+  await page.goto('/transactions');
+  await page.getByRole('combobox', { name: 'Tipo' }).click();
+  await page.getByRole('option', { name: 'Despesas' }).click();
+  await page.getByLabel('Buscar na descrição ou observações').fill('farmacia');
+  await expect(page).toHaveURL(/busca=farmacia/);
+  await expect(page).toHaveURL(/tipo=expense/);
+
+  const descriptions = page.locator('.transactions__table td.mat-column-description');
+  await expect(descriptions.first()).toContainText(/farmácia/i);
+  const listed = await descriptions.allTextContents();
+  await descriptions.first().getByRole('link').click();
+  await expect(page).toHaveURL(/\/transactions\/[^?]+$/);
+
+  await page.goBack();
+  await expect(page.getByLabel('Buscar na descrição ou observações')).toHaveValue('farmacia');
+  await expect(page.getByRole('combobox', { name: 'Tipo' })).toContainText('Despesas');
+  await expect(descriptions).toHaveText(listed);
+
+  await page.reload();
+  await expect(page.getByLabel('Buscar na descrição ou observações')).toHaveValue('farmacia');
+  await expect(descriptions).toHaveText(listed);
+});

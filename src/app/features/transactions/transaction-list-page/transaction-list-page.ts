@@ -19,7 +19,7 @@ import { MatPaginator, PageEvent } from '@angular/material/paginator';
 import { MatProgressBar } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { injectIsMobile } from '../../../core/layout/breakpoints';
 import { PeriodService } from '../../../core/services/period.service';
 import { IconAvatar } from '../../../shared/components/icon-avatar/icon-avatar';
@@ -36,8 +36,11 @@ import { CategoriesFacade } from '../../categories/categories.facade';
 import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
 import {
   ALL,
+  TRANSACTION_QUERY_PARAMS,
   TRANSACTION_SORT_OPTIONS,
   defaultTransactionQuery,
+  fromQueryParams,
+  toQueryParams,
   toTransactionFilters,
 } from '../domain/transaction-query';
 import { TransactionActions } from '../transaction-actions';
@@ -85,8 +88,17 @@ export class TransactionListPage implements OnInit {
   private readonly creditCardsFacade = inject(CreditCardsFacade);
   private readonly period = inject(PeriodService);
   private readonly actions = inject(TransactionActions);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
-  /** Query params opcionais que pré-filtram a lista (por exemplo, vindo do detalhe da conta). */
+  /** Filtros guardados na URL (`TRANSACTION_QUERY_PARAMS`), lidos ao abrir a tela. */
+  readonly busca = input<string>();
+  readonly tipo = input<string>();
+  readonly conta = input<string>();
+  readonly categoria = input<string>();
+  readonly status = input<string>();
+  readonly ordem = input<string>();
+  /** Parâmetros dos links de outras telas que abrem a lista já filtrada (detalhe da conta etc.). */
   readonly accountId = input<string>();
   readonly creditCardId = input<string>();
   readonly categoryId = input<string>();
@@ -95,7 +107,7 @@ export class TransactionListPage implements OnInit {
   protected readonly query = signal(defaultTransactionQuery());
   protected readonly filterForm = form(this.query);
 
-  protected readonly status = computed(() => {
+  protected readonly loadStatus = computed(() => {
     const statuses = [
       this.store.status(),
       this.accountsFacade.status(),
@@ -186,17 +198,38 @@ export class TransactionListPage implements OnInit {
       }
       untracked(() => void this.store.searchFor(filters, sort, pageSize));
     });
+    // Os filtros aplicados vão para a URL, sem criar entradas no histórico do navegador: voltar,
+    // recarregar ou compartilhar o link mantém a mesma lista.
+    effect(() => {
+      const queryParams = toQueryParams({ ...this.query(), search: this.appliedSearch() });
+      untracked(
+        () =>
+          void this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams,
+            queryParamsHandling: 'merge',
+            replaceUrl: true,
+          }),
+      );
+    });
   }
 
   ngOnInit(): void {
     // O filtro de conta também aceita um cartão (por exemplo, vindo do detalhe do cartão).
-    const accountId = this.accountId() ?? this.creditCardId();
-    const categoryId = this.categoryId();
-    this.query.update((query) => ({
-      ...query,
-      accountId: accountId ?? query.accountId,
-      categoryId: categoryId ?? query.categoryId,
-    }));
+    const query = fromQueryParams({
+      [TRANSACTION_QUERY_PARAMS.search]: this.busca(),
+      [TRANSACTION_QUERY_PARAMS.type]: this.tipo(),
+      [TRANSACTION_QUERY_PARAMS.accountId]: this.conta(),
+      [TRANSACTION_QUERY_PARAMS.categoryId]: this.categoria(),
+      [TRANSACTION_QUERY_PARAMS.status]: this.status(),
+      [TRANSACTION_QUERY_PARAMS.sort]: this.ordem(),
+      accountId: this.accountId(),
+      creditCardId: this.creditCardId(),
+      categoryId: this.categoryId(),
+    });
+    this.query.set(query);
+    // A busca vinda da URL vale já na primeira consulta, sem esperar a digitação.
+    this.appliedSearch.set(query.search);
     this.loadLookups();
   }
 
