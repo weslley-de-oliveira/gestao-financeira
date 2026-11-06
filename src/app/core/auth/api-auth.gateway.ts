@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { API_BASE_URL } from '../../data-access/api/api.config';
 import type { ApiUser } from '../../data-access/api/api-types';
 import { User } from '../../shared/models/user';
+import { ApiProblemError } from '../interceptors/api-problem-error';
 import {
   EmailAlreadyRegisteredError,
   IncorrectPasswordError,
@@ -78,6 +79,10 @@ function toUser({ id, name, email, createdAt }: ApiUser): User {
   return { id, name, email, createdAt };
 }
 
+/** Status da recusa, venha como `HttpErrorResponse` ou já convertida pelo interceptor. */
 function hasStatus(error: unknown, status: HttpStatusCode): boolean {
-  return error instanceof HttpErrorResponse && error.status === status;
+  return (
+    (error instanceof HttpErrorResponse || error instanceof ApiProblemError) &&
+    error.status === status
+  );
 }

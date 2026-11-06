@@ -1,11 +1,16 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
+import { ApiProblemError } from '../../core/interceptors/api-problem-error';
+import {
+  InsufficientGoalBalanceError,
+  InvalidGoalInputError,
+} from '../../features/goals/domain/goal-rules';
 import { Goal, GoalContribution } from '../../shared/models/goal';
 import { GoalChanges, GoalRepository } from '../repositories/goal.repository';
 import { NewRecord } from '../repositories/new-record';
 import { API_BASE_URL } from './api.config';
-import { SessionUser, nullWhenNotFound, pick } from './api-http';
+import { SessionUser, nullWhenNotFound, pick, toDomainError } from './api-http';
 import type { ApiGoal } from './api-types';
 
 const FIELDS = [
@@ -44,15 +49,19 @@ export class ApiGoalRepository extends GoalRepository {
 
   /** Uma meta nova começa sem movimentações, ativa e não pausada. */
   create(goal: NewRecord<Goal>): Observable<Goal> {
-    return this.http
-      .post<ApiGoal>(this.url, pick(goal, FIELDS))
-      .pipe(map((item) => this.toGoal(item)));
+    return this.http.post<ApiGoal>(this.url, pick(goal, FIELDS)).pipe(
+      map((item) => this.toGoal(item)),
+      toDomainError(goalProblem),
+    );
   }
 
   update(id: string, changes: GoalChanges): Observable<Goal> {
     return this.http
       .patch<ApiGoal>(this.goalUrl(id), pick(changes, [...FIELDS, 'isPaused', 'isArchived']))
-      .pipe(map((item) => this.toGoal(item)));
+      .pipe(
+        map((item) => this.toGoal(item)),
+        toDomainError(goalProblem),
+      );
   }
 
   override addContribution(
@@ -64,7 +73,10 @@ export class ApiGoalRepository extends GoalRepository {
         `${this.goalUrl(goal.id)}/contributions`,
         pick(contribution, ['type', 'amount', 'date', 'note']),
       )
-      .pipe(map((item) => this.toGoal(item)));
+      .pipe(
+        map((item) => this.toGoal(item)),
+        toDomainError(goalProblem),
+      );
   }
 
   override removeContribution(goal: Goal, contributionId: string): Observable<Goal> {
@@ -72,7 +84,10 @@ export class ApiGoalRepository extends GoalRepository {
       .delete<ApiGoal>(
         `${this.goalUrl(goal.id)}/contributions/${encodeURIComponent(contributionId)}`,
       )
-      .pipe(map((item) => this.toGoal(item)));
+      .pipe(
+        map((item) => this.toGoal(item)),
+        toDomainError(goalProblem),
+      );
   }
 
   private goalUrl(id: string): string {
@@ -103,4 +118,17 @@ export class ApiGoalRepository extends GoalRepository {
       createdAt: item.createdAt,
     };
   }
+}
+
+/**
+ * Acumulado que ficaria negativo (409), prazo no passado ou movimentação com data futura (422):
+ * os mesmos erros das regras locais.
+ */
+function goalProblem(problem: ApiProblemError): Error | null {
+  if (problem.status === 409) {
+    return new InsufficientGoalBalanceError();
+  }
+  return problem.field === 'deadline' || problem.field === 'date'
+    ? new InvalidGoalInputError(problem.field)
+    : null;
 }

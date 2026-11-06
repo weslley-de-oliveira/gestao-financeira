@@ -1,7 +1,8 @@
 import { HttpErrorResponse, HttpStatusCode } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, of, throwError } from 'rxjs';
+import { MonoTypeOperatorFunction, Observable, catchError, of, throwError } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
+import { ApiProblemError } from '../../core/interceptors/api-problem-error';
 
 /**
  * Dono dos registros na integração com a API. O servidor deriva o usuário da sessão (cookie) e não
@@ -24,6 +25,21 @@ export function nullWhenNotFound<T>(): (source: Observable<T>) => Observable<T |
         error instanceof HttpErrorResponse && error.status === HttpStatusCode.NotFound
           ? of(null)
           : throwError(() => error),
+      ),
+    );
+}
+
+/**
+ * Converte as recusas conhecidas da API (`ApiProblemError`, do interceptor) no erro de domínio
+ * que a tela já trata, igual ao das regras locais. As demais seguem como estão.
+ */
+export function toDomainError<T>(
+  convert: (problem: ApiProblemError) => Error | null,
+): MonoTypeOperatorFunction<T> {
+  return (source) =>
+    source.pipe(
+      catchError((error: unknown) =>
+        throwError(() => (error instanceof ApiProblemError && convert(error)) || error),
       ),
     );
 }

@@ -1,11 +1,17 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { EMPTY, Observable, expand, map, reduce } from 'rxjs';
+import { InvoicePaymentError } from '../../features/invoices/domain/invoice-rules';
+import {
+  InvalidTransactionInputError,
+  TransactionInput,
+} from '../../features/transactions/domain/transaction-rules';
 import { Transaction } from '../../shared/models/transaction';
 import { NewRecord } from '../repositories/new-record';
 import { TransactionChanges, TransactionRepository } from '../repositories/transaction.repository';
 import { API_BASE_URL } from './api.config';
-import { SessionUser, nullWhenNotFound, pick } from './api-http';
+import { SessionUser, nullWhenNotFound, pick, toDomainError } from './api-http';
+import { ApiProblemError } from '../../core/interceptors/api-problem-error';
 import type {
   ApiCreateEntry,
   ApiCreateTransfer,
@@ -16,6 +22,9 @@ import type {
 
 /** Maior página aceita pela API. */
 const PAGE_SIZE = 100;
+
+/** Vínculos com conta, cartão e categoria: o servidor confere se existem e estão ativos. */
+const LINKS = ['accountId', 'creditCardId', 'destinationAccountId', 'categoryId'] as const;
 
 /**
  * Transações na API real (`/v1/transactions`). O pagamento de fatura usa a rota da fatura, que
@@ -50,9 +59,10 @@ export class ApiTransactionRepository extends TransactionRepository {
   }
 
   create(transaction: NewRecord<Transaction>): Observable<Transaction> {
-    return this.http
-      .post<ApiTransaction>(this.url, toCreateBody(transaction))
-      .pipe(map((item) => this.toTransaction(item)));
+    return this.http.post<ApiTransaction>(this.url, toCreateBody(transaction)).pipe(
+      map((item) => this.toTransaction(item)),
+      toDomainError(invalidLink),
+    );
   }
 
   /**
@@ -72,19 +82,15 @@ export class ApiTransactionRepository extends TransactionRepository {
       'status',
       'notes',
     ]);
-    for (const key of [
-      'accountId',
-      'creditCardId',
-      'destinationAccountId',
-      'categoryId',
-    ] as const) {
+    for (const key of LINKS) {
       if (body[key] === null) {
         delete body[key];
       }
     }
-    return this.http
-      .patch<ApiTransaction>(`${this.url}/${encodeURIComponent(id)}`, body)
-      .pipe(map((item) => this.toTransaction(item)));
+    return this.http.patch<ApiTransaction>(`${this.url}/${encodeURIComponent(id)}`, body).pipe(
+      map((item) => this.toTransaction(item)),
+      toDomainError(invalidLink),
+    );
   }
 
   delete(id: string): Observable<void> {
@@ -94,13 +100,17 @@ export class ApiTransactionRepository extends TransactionRepository {
   }
 
   override payInvoice(payment: NewRecord<Transaction>): Observable<Transaction> {
-    return this.http
-      .post<ApiInvoice>(this.paymentUrl(payment), null)
-      .pipe(map((invoice) => this.toTransaction(invoicePayment(invoice))));
+    return this.http.post<ApiInvoice>(this.paymentUrl(payment), null).pipe(
+      map((invoice) => this.toTransaction(invoicePayment(invoice))),
+      toDomainError(notPayable),
+    );
   }
 
   override undoInvoicePayment(payment: Transaction): Observable<void> {
-    return this.http.delete<ApiInvoice>(this.paymentUrl(payment)).pipe(map(() => undefined));
+    return this.http.delete<ApiInvoice>(this.paymentUrl(payment)).pipe(
+      map(() => undefined),
+      toDomainError(notPayable),
+    );
   }
 
   private paymentUrl({
@@ -171,6 +181,19 @@ function toCreateBody(transaction: NewRecord<Transaction>): ApiCreateEntry | Api
       ? { creditCardId: transaction.creditCardId }
       : { accountId: required(transaction.accountId) }),
   };
+}
+
+/** Vínculo recusado (inexistente, arquivado ou incompatível): o formulário marca o campo. */
+function invalidLink(problem: ApiProblemError): Error | null {
+  const field = LINKS.find((link) => link === problem.field);
+  return problem.status === 422 && field
+    ? new InvalidTransactionInputError(field satisfies keyof TransactionInput)
+    : null;
+}
+
+/** Fatura que mudou de situação desde que a tela carregou (já paga, sem compras, aberta). */
+function notPayable(problem: ApiProblemError): Error | null {
+  return problem.status === 409 ? new InvoicePaymentError('not-payable') : null;
 }
 
 function invoicePayment(invoice: ApiInvoice): ApiTransaction {

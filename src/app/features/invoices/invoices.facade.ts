@@ -10,20 +10,9 @@ import { CreditCard } from '../../shared/models/credit-card';
 import { Transaction } from '../../shared/models/transaction';
 import { toIsoDate } from '../../shared/utils/date';
 import { TransactionsFacade } from '../transactions/transactions.facade';
-import { Invoice, buildInvoice, canPayInvoice } from './domain/invoice-rules';
+import { Invoice, InvoicePaymentError, buildInvoice, canPayInvoice } from './domain/invoice-rules';
 
-/**
- * Motivo da recusa: fatura inexistente, que não pode ser paga (aberta, sem compras ou já paga),
- * ou conta de pagamento do cartão indisponível (arquivada ou removida).
- */
-export type InvoicePaymentFailure = 'not-found' | 'not-payable' | 'payment-account';
-
-export class InvoicePaymentError extends Error {
-  constructor(readonly reason: InvoicePaymentFailure) {
-    super(`Invoice payment refused: ${reason}`);
-    this.name = 'InvoicePaymentError';
-  }
-}
+export { InvoicePaymentError, type InvoicePaymentFailure } from './domain/invoice-rules';
 
 /**
  * Pagamento demonstrativo das faturas. A fatura é calculada a partir das transações; pagar cria

@@ -1,11 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
+import { ApiProblemError } from '../../core/interceptors/api-problem-error';
+import { InvalidCreditCardInputError } from '../../features/credit-cards/domain/credit-card-input';
 import { CreditCard } from '../../shared/models/credit-card';
 import { CreditCardChanges, CreditCardRepository } from '../repositories/credit-card.repository';
 import { NewRecord } from '../repositories/new-record';
 import { API_BASE_URL } from './api.config';
-import { SessionUser, nullWhenNotFound, pick } from './api-http';
+import { SessionUser, nullWhenNotFound, pick, toDomainError } from './api-http';
 import type { ApiCreditCard } from './api-types';
 
 const FIELDS = [
@@ -41,9 +43,10 @@ export class ApiCreditCardRepository extends CreditCardRepository {
   }
 
   create(card: NewRecord<CreditCard>): Observable<CreditCard> {
-    return this.http
-      .post<ApiCreditCard>(this.url, pick(card, FIELDS))
-      .pipe(map((item) => this.toCard(item)));
+    return this.http.post<ApiCreditCard>(this.url, pick(card, FIELDS)).pipe(
+      map((item) => this.toCard(item)),
+      toDomainError(invalidPaymentAccount),
+    );
   }
 
   update(id: string, changes: CreditCardChanges): Observable<CreditCard> {
@@ -52,7 +55,10 @@ export class ApiCreditCardRepository extends CreditCardRepository {
         `${this.url}/${encodeURIComponent(id)}`,
         pick(changes, [...FIELDS, 'isArchived']),
       )
-      .pipe(map((item) => this.toCard(item)));
+      .pipe(
+        map((item) => this.toCard(item)),
+        toDomainError(invalidPaymentAccount),
+      );
   }
 
   private toCard(item: ApiCreditCard): CreditCard {
@@ -71,4 +77,11 @@ export class ApiCreditCardRepository extends CreditCardRepository {
       createdAt: item.createdAt,
     };
   }
+}
+
+/** Conta de pagamento inexistente (422) ou arquivada (409): o formulário marca o campo. */
+function invalidPaymentAccount(problem: ApiProblemError): Error | null {
+  return problem.status === 409 || problem.field === 'paymentAccountId'
+    ? new InvalidCreditCardInputError('paymentAccountId')
+    : null;
 }

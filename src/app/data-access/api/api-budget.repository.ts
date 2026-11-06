@@ -1,11 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
+import { ApiProblemError } from '../../core/interceptors/api-problem-error';
+import { InvalidBudgetInputError } from '../../features/budgets/domain/budget-rules';
 import { Budget } from '../../shared/models/budget';
 import { BudgetChanges, BudgetRepository } from '../repositories/budget.repository';
 import { NewRecord } from '../repositories/new-record';
 import { API_BASE_URL } from './api.config';
-import { SessionUser, nullWhenNotFound } from './api-http';
+import { SessionUser, nullWhenNotFound, toDomainError } from './api-http';
 import type { ApiBudget } from './api-types';
 
 /**
@@ -39,7 +41,10 @@ export class ApiBudgetRepository extends BudgetRepository {
         limitAmount: currentLimit(budget.limits),
         alertThreshold: budget.alertThreshold,
       })
-      .pipe(map((item) => this.toBudget(item)));
+      .pipe(
+        map((item) => this.toBudget(item)),
+        toDomainError(invalidCategory),
+      );
   }
 
   update(id: string, changes: BudgetChanges): Observable<Budget> {
@@ -74,4 +79,9 @@ export class ApiBudgetRepository extends BudgetRepository {
 /** O limite em vigor é o da vigência mais recente (as vigências vêm em ordem crescente). */
 function currentLimit(limits: Budget['limits']): number {
   return limits[limits.length - 1].amount;
+}
+
+/** Categoria inexistente ou que não é de despesa: o formulário marca o campo. */
+function invalidCategory(problem: ApiProblemError): Error | null {
+  return problem.field === 'categoryId' ? new InvalidBudgetInputError('categoryId') : null;
 }
