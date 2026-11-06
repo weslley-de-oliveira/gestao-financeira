@@ -29,6 +29,7 @@ const apiAccount: ApiAccount = {
   icon: 'account_balance',
   isArchived: false,
   createdAt: '2026-11-01T12:00:00.000Z',
+  updatedAt: '2026-11-01T12:00:00.000Z',
 };
 
 function apiTransaction(overrides: Partial<ApiTransaction> = {}): ApiTransaction {
@@ -46,6 +47,7 @@ function apiTransaction(overrides: Partial<ApiTransaction> = {}): ApiTransaction
     status: 'completed',
     notes: null,
     createdAt: '2026-11-05T12:00:00.000Z',
+    updatedAt: '2026-11-05T12:00:00.000Z',
     ...overrides,
   };
 }
@@ -62,6 +64,7 @@ const apiGoal: ApiGoal = {
   isPaused: false,
   isArchived: false,
   createdAt: '2026-11-01T12:00:00.000Z',
+  updatedAt: '2026-11-01T12:00:00.000Z',
   contributions: [],
   currentAmount: 0,
   remainingAmount: 1_000_000,
@@ -316,6 +319,7 @@ describe('API repositories', () => {
         ],
         progress: null,
         createdAt: '2026-10-01T12:00:00.000Z',
+        updatedAt: '2026-11-01T12:00:00.000Z',
       };
 
       const updated = firstValueFrom(
