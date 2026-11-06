@@ -1,4 +1,13 @@
-import { Component, OnInit, computed, inject, input, linkedSignal, signal } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+} from '@angular/core';
 import { FormField, form } from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -26,11 +35,11 @@ import { AccountsFacade } from '../../accounts/accounts.facade';
 import { CategoriesFacade } from '../../categories/categories.facade';
 import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
 import {
+  ALL,
   TRANSACTION_SORT_OPTIONS,
   defaultTransactionQuery,
-  queryTransactions,
+  toTransactionFilters,
 } from '../domain/transaction-query';
-import { summarizeTransactions } from '../domain/transaction-rules';
 import { TransactionActions } from '../transaction-actions';
 import {
   TRANSACTION_SIGNS,
@@ -41,9 +50,10 @@ import {
   categoryOf,
   isEditable,
 } from '../transaction-display';
-import { TransactionsFacade } from '../transactions.facade';
+import { TransactionListStore } from './transaction-list-store';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
+const SEARCH_DELAY_MS = 300;
 
 @Component({
   imports: [
@@ -66,9 +76,10 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50];
   selector: 'app-transaction-list-page',
   templateUrl: './transaction-list-page.html',
   styleUrl: './transaction-list-page.scss',
+  providers: [TransactionListStore],
 })
 export class TransactionListPage implements OnInit {
-  private readonly facade = inject(TransactionsFacade);
+  private readonly store = inject(TransactionListStore);
   private readonly accountsFacade = inject(AccountsFacade);
   private readonly categoriesFacade = inject(CategoriesFacade);
   private readonly creditCardsFacade = inject(CreditCardsFacade);
@@ -86,7 +97,7 @@ export class TransactionListPage implements OnInit {
 
   protected readonly status = computed(() => {
     const statuses = [
-      this.facade.status(),
+      this.store.status(),
       this.accountsFacade.status(),
       this.categoriesFacade.status(),
     ];
@@ -104,25 +115,29 @@ export class TransactionListPage implements OnInit {
     categories: byId(this.categoriesFacade.categories()),
     creditCards: byId(this.creditCardsFacade.cards()),
   }));
-  protected readonly hasTransactions = computed(() => this.facade.transactions().length > 0);
-  protected readonly filtered = computed(() =>
-    queryTransactions(this.facade.transactions(), this.query(), this.period.range()),
-  );
-  protected readonly summary = computed(() => summarizeTransactions(this.filtered()));
-
+  protected readonly hasTransactions = this.store.hasAny;
+  protected readonly summary = this.store.totals;
+  protected readonly page = this.store.items;
+  protected readonly busy = this.store.busy;
+  protected readonly pageIndex = this.store.pageIndex;
   protected readonly pageSizeOptions = PAGE_SIZE_OPTIONS;
-  protected readonly pageSize = signal(PAGE_SIZE_OPTIONS[0]);
-  /** Volta à primeira página quando filtros ou período mudam. */
-  protected readonly pageIndex = linkedSignal({
-    source: () => [this.query(), this.period.range()],
-    computation: () => 0,
-  });
-  protected readonly page = computed(() => {
-    const items = this.filtered();
-    const lastPage = Math.max(0, Math.ceil(items.length / this.pageSize()) - 1);
-    const start = Math.min(this.pageIndex(), lastPage) * this.pageSize();
-    return items.slice(start, start + this.pageSize());
-  });
+  private readonly pageSize = signal(PAGE_SIZE_OPTIONS[0]);
+
+  /** A busca só vai ao servidor quando a pessoa para de digitar. */
+  private readonly appliedSearch = signal('');
+  private readonly cardIds = computed(
+    () => new Set(this.creditCardsFacade.cards().map((card) => card.id)),
+  );
+  private readonly filters = computed(
+    () =>
+      toTransactionFilters(
+        { ...this.query(), search: this.appliedSearch() },
+        this.period.range(),
+        (id) => this.cardIds().has(id),
+      ),
+    { equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) },
+  );
+  private readonly sort = computed(() => this.query().sort);
 
   protected readonly accountOptions = computed(() =>
     [...this.accountsFacade.accounts()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
@@ -154,6 +169,25 @@ export class TransactionListPage implements OnInit {
   protected readonly accountLabel = accountLabel;
   protected readonly categoryOf = categoryOf;
 
+  constructor() {
+    effect((onCleanup) => {
+      const search = this.query().search;
+      const timer = setTimeout(() => this.appliedSearch.set(search), SEARCH_DELAY_MS);
+      onCleanup(() => clearTimeout(timer));
+    });
+    // Filtros, período, ordenação ou tamanho de página mudaram: nova consulta, na primeira página.
+    effect(() => {
+      const filters = this.filters();
+      const sort = this.sort();
+      const pageSize = this.pageSize();
+      // Com um cartão escolhido, espera os cartões para saber que o id é de cartão.
+      if (this.query().accountId !== ALL && this.creditCardsFacade.status() === 'loading') {
+        return;
+      }
+      untracked(() => void this.store.searchFor(filters, sort, pageSize));
+    });
+  }
+
   ngOnInit(): void {
     // O filtro de conta também aceita um cartão (por exemplo, vindo do detalhe do cartão).
     const accountId = this.accountId() ?? this.creditCardId();
@@ -163,24 +197,32 @@ export class TransactionListPage implements OnInit {
       accountId: accountId ?? query.accountId,
       categoryId: categoryId ?? query.categoryId,
     }));
-    this.reload();
+    this.loadLookups();
   }
 
   protected reload(): void {
-    void this.facade.load();
-    void this.accountsFacade.load();
-    void this.categoriesFacade.load();
-    // Só fornece os nomes dos cartões; sem eles, as compras aparecem como "Cartão de crédito".
-    void this.creditCardsFacade.load();
+    this.loadLookups();
+    void this.store.refresh();
   }
 
   protected clearFilters(): void {
     this.query.set(defaultTransactionQuery());
+    this.appliedSearch.set('');
   }
 
   protected onPage(event: PageEvent): void {
-    this.pageSize.set(event.pageSize);
-    this.pageIndex.set(event.pageIndex);
+    if (event.pageSize !== this.pageSize()) {
+      this.pageSize.set(event.pageSize);
+    } else {
+      void this.store.goTo(event.pageIndex);
+    }
+  }
+
+  private loadLookups(): void {
+    void this.accountsFacade.load();
+    void this.categoriesFacade.load();
+    // Só fornece os nomes dos cartões; sem eles, as compras aparecem como "Cartão de crédito".
+    void this.creditCardsFacade.load();
   }
 
   // Métodos tipados: as linhas do `mat-table` chegam ao template como `any`.
@@ -204,11 +246,15 @@ export class TransactionListPage implements OnInit {
     return isEditable(transaction);
   }
 
-  protected toggleStatus(transaction: Transaction): void {
-    void this.actions.toggleStatus(transaction);
+  protected async toggleStatus(transaction: Transaction): Promise<void> {
+    if (await this.actions.toggleStatus(transaction)) {
+      await this.store.refresh();
+    }
   }
 
-  protected delete(transaction: Transaction): void {
-    void this.actions.delete(transaction);
+  protected async delete(transaction: Transaction): Promise<void> {
+    if (await this.actions.delete(transaction)) {
+      await this.store.refresh();
+    }
   }
 }

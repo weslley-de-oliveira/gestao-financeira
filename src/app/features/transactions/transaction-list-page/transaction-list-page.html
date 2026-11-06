@@ -132,11 +132,19 @@
       </form>
 
       <p class="visually-hidden" aria-live="polite">
-        {{ filtered().length }}
-        {{ filtered().length === 1 ? 'transação encontrada' : 'transações encontradas' }}
+        {{ summary().count }}
+        {{ summary().count === 1 ? 'transação encontrada' : 'transações encontradas' }}
       </p>
 
-      @if (filtered().length === 0) {
+      @if (busy()) {
+        <mat-progress-bar
+          class="transactions__busy"
+          mode="indeterminate"
+          aria-label="Atualizando transações"
+        />
+      }
+
+      @if (summary().count === 0) {
         <div class="transactions__state">
           <mat-icon aria-hidden="true">search_off</mat-icon>
           <p>Nenhuma transação no período e nos filtros selecionados.</p>
@@ -269,7 +277,7 @@
           }
 
           <mat-paginator
-            [length]="filtered().length"
+            [length]="summary().count"
             [pageIndex]="pageIndex()"
             [pageSize]="pageSize()"
             [pageSizeOptions]="pageSizeOptions"

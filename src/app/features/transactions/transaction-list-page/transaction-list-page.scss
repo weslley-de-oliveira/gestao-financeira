@@ -223,3 +223,8 @@
   color: var(--mat-sys-on-tertiary-container);
   font: var(--mat-sys-label-small);
 }
+
+// Barra fina durante as recargas, sem empurrar os resultados para baixo.
+.transactions__busy {
+  margin-block-end: -4px;
+}
