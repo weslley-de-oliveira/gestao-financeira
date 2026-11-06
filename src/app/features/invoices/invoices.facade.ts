@@ -1,3 +1,4 @@
+import { NewRecord } from '../../data-access/repositories/new-record';
 import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -49,8 +50,7 @@ export class InvoicesFacade {
       throw new InvoicePaymentError('payment-account');
     }
 
-    const payment: Transaction = {
-      id: crypto.randomUUID(),
+    const payment: NewRecord<Transaction> = {
       userId: this.userId(),
       type: 'invoice-payment',
       description: `Fatura ${card.name} ${monthLabel(referenceMonth)}`,
@@ -63,9 +63,8 @@ export class InvoicesFacade {
       categoryId: null,
       status: 'completed',
       notes: null,
-      createdAt: new Date().toISOString(),
     };
-    const created = await firstValueFrom(this.transactions.create(payment));
+    const created = await firstValueFrom(this.transactions.payInvoice(payment));
     await this.transactionsFacade.load();
     return created;
   }
@@ -76,7 +75,8 @@ export class InvoicesFacade {
     if (!invoice.payment) {
       throw new InvoicePaymentError('not-payable');
     }
-    await this.transactionsFacade.delete(invoice.payment.id);
+    await firstValueFrom(this.transactions.undoInvoicePayment(invoice.payment));
+    await this.transactionsFacade.load();
   }
 
   /** Recalcula a fatura com os dados atuais, garantindo que o cartão é do usuário. */

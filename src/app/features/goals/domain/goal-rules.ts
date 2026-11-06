@@ -7,6 +7,7 @@ import {
   GOAL_ICONS,
   GOAL_NAME_MAX_LENGTH,
   Goal,
+  GoalContribution,
   GoalStatus,
   GoalWithProgress,
 } from '../../../shared/models/goal';
@@ -43,7 +44,11 @@ export class InsufficientGoalBalanceError extends Error {
 }
 
 /** Inicial + aportes − retiradas. */
-export function goalBalance(goal: Pick<Goal, 'initialAmount' | 'contributions'>): Cents {
+export function goalBalance(
+  goal: Pick<Goal, 'initialAmount'> & {
+    contributions: readonly Pick<GoalContribution, 'type' | 'amount'>[];
+  },
+): Cents {
   return goal.contributions.reduce(
     (total, item) => total + (item.type === 'deposit' ? item.amount : -item.amount),
     goal.initialAmount,

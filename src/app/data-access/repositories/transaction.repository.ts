@@ -17,4 +17,18 @@ export abstract class TransactionRepository {
   abstract update(id: string, changes: TransactionChanges): Observable<Transaction>;
 
   abstract delete(id: string): Observable<void>;
+
+  /**
+   * Registra o pagamento de uma fatura (transação `invoice-payment` do cartão e do mês). Por
+   * padrão, grava a transação como qualquer outra; a API tem uma operação própria, que calcula o
+   * valor e a data no servidor.
+   */
+  payInvoice(payment: NewRecord<Transaction>): Observable<Transaction> {
+    return this.create(payment);
+  }
+
+  /** Desfaz o pagamento de uma fatura. Por padrão, apaga a transação do pagamento. */
+  undoInvoicePayment(payment: Transaction): Observable<void> {
+    return this.delete(payment.id);
+  }
 }
