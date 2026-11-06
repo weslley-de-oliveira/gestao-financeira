@@ -94,12 +94,15 @@ npm run start:demo
 | `npm run build:demo`   | Gera o build da demo publicada                           |
 | `npm test`             | Executa os testes unitários com Vitest                   |
 | `npm run e2e`          | Executa os testes E2E e de acessibilidade com Playwright |
+| `npm run e2e:api`      | Executa os testes E2E contra a API real                  |
 | `npm run e2e:report`   | Abre o relatório da última execução do Playwright        |
 | `npm run lint`         | Executa o ESLint                                         |
 | `npm run format`       | Formata o código com Prettier                            |
 | `npm run format:check` | Verifica a formatação sem alterar arquivos               |
 
 Antes da primeira execução dos testes E2E, instale o navegador: `npx playwright install chromium`.
+
+O `npm run e2e:api` sobe uma instância própria da API (porta 3334) a partir do repositório [`gestao-financeira-api`](https://github.com/weslley-de-oliveira/gestao-financeira-api), clonado ao lado deste (ou na pasta de `API_DIR`), e usa o banco do `.env` dela, com as migrações aplicadas e a conta de demonstração criada (`npm run db:migrate` e `npm run db:seed` na API).
 
 ## Arquitetura
 
@@ -113,6 +116,7 @@ db/
   db.seed.json   # Seed fictício gerado por npm run seed (versionado)
   db.json        # Dados locais da API, criados a partir do seed (não versionado)
 e2e/             # Testes E2E, de acessibilidade e responsivos (Playwright + axe)
+e2e-api/         # Testes E2E contra a API real (playwright.api.config.ts)
 scripts/         # ensure-db.mjs (cria db.json) e seed.mjs (gera o seed)
 src/
   app/           # Código da aplicação
