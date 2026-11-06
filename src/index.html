@@ -15,8 +15,85 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
       rel="stylesheet"
     />
+    <!--
+      Carregamento inicial, antes do Angular: o app espera a API dizer quem está logado. No plano
+      gratuito, a API hiberna sem uso e a primeira resposta pode levar quase um minuto; depois de
+      alguns segundos, a tela explica a espera. O Angular substitui este conteúdo ao iniciar.
+    -->
+    <style>
+      .app-boot {
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: 16px;
+        min-height: 100vh;
+        padding: 24px;
+        box-sizing: border-box;
+        font-family: Inter, system-ui, sans-serif;
+        text-align: center;
+        color: #1f2937;
+        background: #f8fafc;
+      }
+      .app-boot__spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #cbd5e1;
+        border-top-color: #1e3a8a;
+        border-radius: 50%;
+        animation: app-boot-spin 0.9s linear infinite;
+      }
+      .app-boot__title {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 600;
+      }
+      .app-boot__hint {
+        max-width: 360px;
+        margin: 0;
+        color: #475569;
+        opacity: 0;
+        animation: app-boot-show 0.4s ease-out 4s forwards;
+      }
+      @media (prefers-color-scheme: dark) {
+        .app-boot {
+          color: #e5e7eb;
+          background: #0f172a;
+        }
+        .app-boot__spinner {
+          border-color: #334155;
+          border-top-color: #93c5fd;
+        }
+        .app-boot__hint {
+          color: #94a3b8;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .app-boot__spinner {
+          animation-duration: 3s;
+        }
+      }
+      @keyframes app-boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes app-boot-show {
+        to {
+          opacity: 1;
+        }
+      }
+    </style>
   </head>
   <body>
-    <app-root></app-root>
+    <app-root>
+      <div class="app-boot" role="status">
+        <div class="app-boot__spinner" aria-hidden="true"></div>
+        <p class="app-boot__title">Carregando a Gestão Financeira…</p>
+        <p class="app-boot__hint">
+          O servidor da demonstração é gratuito e hiberna sem uso. A primeira visita depois disso
+          pode levar até um minuto.
+        </p>
+      </div>
+    </app-root>
   </body>
 </html>
