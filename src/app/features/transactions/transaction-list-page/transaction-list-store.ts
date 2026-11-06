@@ -48,6 +48,9 @@ export class TransactionListStore {
   private nextCursor: string | null = null;
   /** Só a resposta do pedido mais recente vale (digitação e cliques rápidos). */
   private latest = 0;
+  /** Filtros dos totais exibidos e se `hasAny` já foi carregado. */
+  private totalsKey: string | null = null;
+  private hasAnyLoaded = false;
 
   readonly items = this._items.asReadonly();
   readonly totals = this._totals.asReadonly();
@@ -65,10 +68,8 @@ export class TransactionListStore {
     sort: TransactionSort,
     pageSize: number,
   ): Promise<void> {
-    const previous = this._search();
     this.setSearch({ filters, sort, pageSize });
-    const filtersChanged = !previous || !sameFilters(previous.filters, filters);
-    await this.fetch(0, null, { totals: filtersChanged, hasAny: !previous });
+    await this.fetch(0, null);
   }
 
   /** Vai para a página anterior ou seguinte (o paginador anda uma página por vez). */
@@ -81,7 +82,7 @@ export class TransactionListStore {
     if (pageIndex > this._pageIndex()) {
       this.cursors[pageIndex] = cursor;
     }
-    await this.fetch(pageIndex, cursor, { totals: false, hasAny: false });
+    await this.fetch(pageIndex, cursor);
   }
 
   /** Recarrega a página atual e os totais (depois de alterar ou excluir uma transação). */
@@ -90,13 +91,10 @@ export class TransactionListStore {
       return;
     }
     const index = this._pageIndex();
-    await this.fetch(index, this.cursors[index] ?? null, { totals: true, hasAny: true });
+    await this.fetch(index, this.cursors[index] ?? null, { reloadTotals: true });
     // A página ficou vazia (a última transação dela saiu): volta uma página.
     if (this._items().length === 0 && index > 0) {
-      await this.fetch(index - 1, this.cursors[index - 1] ?? null, {
-        totals: false,
-        hasAny: false,
-      });
+      await this.fetch(index - 1, this.cursors[index - 1] ?? null);
     }
   }
 
@@ -109,12 +107,18 @@ export class TransactionListStore {
   private async fetch(
     pageIndex: number,
     cursor: string | null,
-    also: { totals: boolean; hasAny: boolean },
+    { reloadTotals = false } = {},
   ): Promise<void> {
     const search = this._search();
     if (!search) {
       return;
     }
+    // Pede os totais que a tela ainda não mostra; uma resposta descartada não conta como mostrada.
+    const totalsKey = filtersKey(search.filters);
+    const also = {
+      totals: reloadTotals || totalsKey !== this.totalsKey,
+      hasAny: reloadTotals || !this.hasAnyLoaded,
+    };
     const request = ++this.latest;
     const done = this.pendingTasks.add();
     this._busy.set(true);
@@ -140,9 +144,11 @@ export class TransactionListStore {
       this._pageIndex.set(pageIndex);
       if (totals) {
         this._totals.set(totals);
+        this.totalsKey = totalsKey;
       }
       if (everything) {
         this._hasAny.set(everything.count > 0);
+        this.hasAnyLoaded = true;
       }
       this._status.set('ready');
     } catch {
@@ -166,6 +172,6 @@ export class TransactionListStore {
   }
 }
 
-function sameFilters(a: TransactionFilters, b: TransactionFilters): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+function filtersKey(filters: TransactionFilters): string {
+  return JSON.stringify(filters);
 }
