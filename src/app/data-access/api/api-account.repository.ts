@@ -5,7 +5,7 @@ import { Account } from '../../shared/models/account';
 import { AccountChanges, AccountRepository } from '../repositories/account.repository';
 import { NewRecord } from '../repositories/new-record';
 import { API_BASE_URL } from './api.config';
-import { SessionUser, nullWhenNotFound, pick } from './api-http';
+import { ifMatch, nullWhenNotFound, pick, SessionUser } from './api-http';
 import type { ApiAccount } from './api-types';
 
 const FIELDS = ['name', 'type', 'institution', 'initialBalance', 'color', 'icon'] as const;
@@ -37,11 +37,12 @@ export class ApiAccountRepository extends AccountRepository {
       .pipe(map((item) => this.toAccount(item)));
   }
 
-  update(id: string, changes: AccountChanges): Observable<Account> {
+  update(id: string, changes: AccountChanges, version?: string): Observable<Account> {
     return this.http
       .patch<ApiAccount>(
         `${this.url}/${encodeURIComponent(id)}`,
         pick(changes, [...FIELDS, 'isArchived']),
+        ifMatch(version),
       )
       .pipe(map((item) => this.toAccount(item)));
   }
@@ -58,6 +59,7 @@ export class ApiAccountRepository extends AccountRepository {
       icon: item.icon,
       isArchived: item.isArchived,
       createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
       currentBalance: item.currentBalance,
     };
   }

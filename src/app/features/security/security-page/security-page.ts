@@ -1,5 +1,14 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { FormField, form, maxLength, minLength, required, submit } from '@angular/forms/signals';
+import {
+  FormField,
+  form,
+  maxLength,
+  minLength,
+  pattern,
+  required,
+  submit,
+  validate,
+} from '@angular/forms/signals';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -9,6 +18,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { IncorrectPasswordError } from '../../../core/auth/auth.errors';
 import { AuthService } from '../../../core/auth/auth.service';
+import { PASSWORD_MIN_LENGTH, PASSWORD_PATTERN } from '../../../core/auth/forms/register.schema';
 import {
   DecryptionFailedError,
   DemoCipher,
@@ -23,6 +33,18 @@ interface EncryptFormModel {
   plaintext: string;
 }
 
+interface ChangePasswordModel {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+const emptyPasswords = (): ChangePasswordModel => ({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+});
+
 interface DecryptFormModel {
   passphrase: string;
   /** Payload em JSON, editável para demonstrar a detecção de alterações. */
@@ -30,7 +52,8 @@ interface DecryptFormModel {
 }
 
 /**
- * Modo demonstrativo, laboratório de criptografia (AES-256-GCM + PBKDF2) e exclusão da conta.
+ * Modo demonstrativo, troca de senha, laboratório de criptografia (AES-256-GCM + PBKDF2) e
+ * exclusão da conta.
  * As frases ficam só no formulário, em memória, e são apagadas depois de cada operação.
  */
 @Component({
@@ -72,6 +95,31 @@ export class SecurityPage {
   protected readonly decrypted = signal<string | null>(null);
   protected readonly decryptError = signal<string | null>(null);
 
+  /** Troca de senha: as mesmas regras do cadastro, e a nova diferente da atual. */
+  private readonly passwordModel = signal(emptyPasswords());
+  protected readonly passwordForm = form(this.passwordModel, (p) => {
+    required(p.currentPassword, { message: 'Informe a senha atual.' });
+    required(p.newPassword, { message: 'Informe a senha nova.' });
+    minLength(p.newPassword, PASSWORD_MIN_LENGTH, {
+      message: `A senha deve ter pelo menos ${PASSWORD_MIN_LENGTH} caracteres.`,
+    });
+    pattern(p.newPassword, PASSWORD_PATTERN, {
+      message: 'A senha deve conter pelo menos uma letra e um número.',
+    });
+    validate(p.newPassword, ({ value, valueOf }) =>
+      value() && value() === valueOf(p.currentPassword)
+        ? { kind: 'samePassword', message: 'A senha nova deve ser diferente da atual.' }
+        : undefined,
+    );
+    required(p.confirmPassword, { message: 'Confirme a senha nova.' });
+    validate(p.confirmPassword, ({ value, valueOf }) =>
+      value() && value() !== valueOf(p.newPassword)
+        ? { kind: 'passwordMismatch', message: 'As senhas não coincidem.' }
+        : undefined,
+    );
+  });
+  protected readonly passwordError = signal<string | null>(null);
+
   /** Confirmação da exclusão: o e-mail da conta, digitado, e a senha atual. */
   private readonly confirmation = signal({ email: '', password: '' });
   protected readonly confirmForm = form(this.confirmation);
@@ -82,6 +130,37 @@ export class SecurityPage {
   );
   protected readonly deleting = signal(false);
   protected readonly deleteError = signal<string | null>(null);
+
+  protected async changePassword(event: Event): Promise<void> {
+    event.preventDefault();
+    this.passwordError.set(null);
+    await submit(this.passwordForm, async (field) => {
+      const { currentPassword, newPassword } = field().value();
+      try {
+        await this.auth.changePassword(currentPassword, newPassword);
+      } catch (error) {
+        if (error instanceof IncorrectPasswordError) {
+          return {
+            kind: 'incorrectPassword',
+            message: 'Senha incorreta.',
+            fieldTree: field.currentPassword,
+          };
+        }
+        this.passwordError.set('Não foi possível trocar a senha. Tente novamente em instantes.');
+        return undefined;
+      }
+      // As senhas não ficam no formulário depois de usadas.
+      this.passwordForm().reset(emptyPasswords());
+      this.snackBar.open(
+        'Senha alterada. As sessões em outros aparelhos foram encerradas.',
+        'Fechar',
+        {
+          duration: 5000,
+        },
+      );
+      return undefined;
+    });
+  }
 
   protected async encrypt(event: Event): Promise<void> {
     event.preventDefault();

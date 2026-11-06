@@ -2,7 +2,9 @@ import { NewRecord } from './new-record';
 import { Observable } from 'rxjs';
 import { CreditCard } from '../../shared/models/credit-card';
 
-export type CreditCardChanges = Partial<Omit<CreditCard, 'id' | 'userId' | 'createdAt'>>;
+export type CreditCardChanges = Partial<
+  Omit<CreditCard, 'id' | 'userId' | 'createdAt' | 'updatedAt'>
+>;
 
 /**
  * Contrato de acesso aos cartões de crédito: na API (`data-access/api`) ou no `localStorage`
@@ -17,5 +19,6 @@ export abstract class CreditCardRepository {
   /** Grava o registro novo; o id e a data de criação são definidos ao gravar. */
   abstract create(card: NewRecord<CreditCard>): Observable<CreditCard>;
 
-  abstract update(id: string, changes: CreditCardChanges): Observable<CreditCard>;
+  /** `version`: o `updatedAt` do registro quando o formulário o carregou (concorrência otimista). */
+  abstract update(id: string, changes: CreditCardChanges, version?: string): Observable<CreditCard>;
 }

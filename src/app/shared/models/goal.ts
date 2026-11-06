@@ -46,6 +46,8 @@ export interface Goal {
   isPaused: boolean;
   isArchived: boolean;
   createdAt: string;
+  /** Versão do registro na API, enviada no `If-Match` das edições; ausente na demo. */
+  updatedAt?: string;
 }
 
 /** Status calculado: concluída > pausada > atrasada > em andamento. */

@@ -19,4 +19,7 @@ export abstract class UserRepository {
 
   /** Atualiza só o nome: e-mail e senha são dados de autenticação, com fluxo próprio. */
   abstract updateName(id: string, name: string): Observable<User>;
+
+  /** Grava o hash da senha nova (a troca de senha confere a atual antes). */
+  abstract updatePasswordHash(id: string, passwordHash: PasswordHash): Observable<void>;
 }

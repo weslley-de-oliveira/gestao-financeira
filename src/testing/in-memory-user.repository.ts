@@ -4,6 +4,7 @@ import {
   UserRepository,
   UserWithCredentials,
 } from '../app/data-access/repositories/user.repository';
+import { PasswordHash } from '../app/core/security/password-hasher';
 import { User } from '../app/shared/models/user';
 
 /** Repositório de usuários em memória, para testes sem API. */
@@ -27,5 +28,14 @@ export class InMemoryUserRepository extends UserRepository {
     }
     record.user = { ...record.user, name };
     return of({ ...record.user });
+  }
+
+  updatePasswordHash(id: string, passwordHash: PasswordHash): Observable<void> {
+    const record = this.records.find((item) => item.user.id === id);
+    if (!record) {
+      return throwError(() => new Error(`User ${id} not found`));
+    }
+    record.passwordHash = passwordHash;
+    return of(undefined);
   }
 }

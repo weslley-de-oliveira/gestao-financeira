@@ -10,7 +10,7 @@ import { Goal, GoalContribution } from '../../shared/models/goal';
 import { GoalChanges, GoalRepository } from '../repositories/goal.repository';
 import { NewRecord } from '../repositories/new-record';
 import { API_BASE_URL } from './api.config';
-import { SessionUser, nullWhenNotFound, pick, toDomainError } from './api-http';
+import { ifMatch, nullWhenNotFound, pick, SessionUser, toDomainError } from './api-http';
 import type { ApiGoal } from './api-types';
 
 const FIELDS = [
@@ -55,9 +55,13 @@ export class ApiGoalRepository extends GoalRepository {
     );
   }
 
-  update(id: string, changes: GoalChanges): Observable<Goal> {
+  update(id: string, changes: GoalChanges, version?: string): Observable<Goal> {
     return this.http
-      .patch<ApiGoal>(this.goalUrl(id), pick(changes, [...FIELDS, 'isPaused', 'isArchived']))
+      .patch<ApiGoal>(
+        this.goalUrl(id),
+        pick(changes, [...FIELDS, 'isPaused', 'isArchived']),
+        ifMatch(version),
+      )
       .pipe(
         map((item) => this.toGoal(item)),
         toDomainError(goalProblem),
@@ -95,28 +99,7 @@ export class ApiGoalRepository extends GoalRepository {
   }
 
   private toGoal(item: ApiGoal): Goal {
-    return {
-      id: item.id,
-      userId: this.session.id(),
-      name: item.name,
-      description: item.description,
-      targetAmount: item.targetAmount,
-      initialAmount: item.initialAmount,
-      contributions: item.contributions.map(({ id, type, amount, date, note, createdAt }) => ({
-        id,
-        type,
-        amount,
-        date,
-        note,
-        createdAt,
-      })),
-      deadline: item.deadline,
-      color: item.color,
-      icon: item.icon,
-      isPaused: item.isPaused,
-      isArchived: item.isArchived,
-      createdAt: item.createdAt,
-    };
+    return toGoalModel(item, this.session.id());
   }
 }
 
@@ -131,4 +114,31 @@ function goalProblem(problem: ApiProblemError): Error | null {
   return problem.field === 'deadline' || problem.field === 'date'
     ? new InvalidGoalInputError(problem.field)
     : null;
+}
+
+/** Converte o formato da API no modelo do app; o dono é o usuário da sessão. */
+export function toGoalModel(item: ApiGoal, userId: string): Goal {
+  return {
+    id: item.id,
+    userId,
+    name: item.name,
+    description: item.description,
+    targetAmount: item.targetAmount,
+    initialAmount: item.initialAmount,
+    contributions: item.contributions.map(({ id, type, amount, date, note, createdAt }) => ({
+      id,
+      type,
+      amount,
+      date,
+      note,
+      createdAt,
+    })),
+    deadline: item.deadline,
+    color: item.color,
+    icon: item.icon,
+    isPaused: item.isPaused,
+    isArchived: item.isArchived,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
 }

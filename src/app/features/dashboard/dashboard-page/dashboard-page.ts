@@ -3,9 +3,10 @@ import {
   Component,
   DEFAULT_CURRENCY_CODE,
   LOCALE_ID,
-  OnInit,
   computed,
+  effect,
   inject,
+  untracked,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -17,23 +18,18 @@ import { PeriodService } from '../../../core/services/period.service';
 import { TODAY } from '../../../core/services/today';
 import { ChartSpec } from '../../../shared/components/chart/chart-spec';
 import { ChartView } from '../../../shared/components/chart/chart-view';
-import { PERIOD_OPTIONS, isInRange } from '../../../shared/models/period';
+import { PERIOD_OPTIONS } from '../../../shared/models/period';
 import { Transaction } from '../../../shared/models/transaction';
 import { IsoDatePipe } from '../../../shared/pipes/iso-date.pipe';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 import { formatIsoDate } from '../../../shared/utils/date';
-import { BudgetProgress } from '../../../shared/models/budget';
 import { formatMonth, toIsoMonth } from '../../../shared/utils/month';
-import { AccountsFacade, LoadStatus } from '../../accounts/accounts.facade';
+import { AccountsFacade } from '../../accounts/accounts.facade';
 import { BudgetHighlights } from '../../budgets/budget-highlights/budget-highlights';
-import { BudgetsFacade } from '../../budgets/budgets.facade';
-import { queryGoals } from '../../goals/domain/goal-query';
 import { GoalHighlights } from '../../goals/goal-highlights/goal-highlights';
-import { GoalsFacade } from '../../goals/goals.facade';
-import { budgetProgress } from '../../budgets/domain/budget-rules';
 import { CategoriesFacade } from '../../categories/categories.facade';
 import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
-import { summarizeTransactions } from '../../transactions/domain/transaction-rules';
+import { DashboardFacade, LoadStatus } from '../dashboard.facade';
 import {
   TRANSACTION_SIGNS,
   TRANSACTION_TYPE_ICONS,
@@ -41,17 +37,6 @@ import {
   accountLabel,
   byId,
 } from '../../transactions/transaction-display';
-import { TransactionsFacade } from '../../transactions/transactions.facade';
-import { balanceEvolution, incomeVsExpense, recentTransactions } from '../domain/dashboard-metrics';
-
-/** Quantidade de transações recentes exibidas. */
-const RECENT_LIMIT = 5;
-
-/** Quantidade de orçamentos exibidos: os mais consumidos do mês atual. */
-const BUDGET_HIGHLIGHTS = 3;
-
-/** Quantidade de metas exibidas: as que pedem atenção primeiro. */
-const GOAL_HIGHLIGHTS = 3;
 
 interface Shortcut {
   label: string;
@@ -72,8 +57,9 @@ function combineStatus(...statuses: LoadStatus[]): LoadStatus {
 }
 
 /**
- * Resumo do período selecionado na topbar. Cards, gráficos e lista usam as mesmas transações da
- * `TransactionsFacade` e as mesmas regras (`summarizeTransactions` e a regra única do saldo).
+ * Resumo do período selecionado na topbar, numa chamada só (`DashboardFacade`): na API, calculado
+ * no servidor, sem baixar as transações; na demo, pelas mesmas regras no navegador. Contas e
+ * cartões só dão os nomes das transações recentes.
  */
 @Component({
   imports: [
@@ -93,12 +79,10 @@ function combineStatus(...statuses: LoadStatus[]): LoadStatus {
   templateUrl: './dashboard-page.html',
   styleUrl: './dashboard-page.scss',
 })
-export class DashboardPage implements OnInit {
+export class DashboardPage {
+  private readonly dashboard = inject(DashboardFacade);
   private readonly accountsFacade = inject(AccountsFacade);
-  private readonly transactionsFacade = inject(TransactionsFacade);
   private readonly creditCardsFacade = inject(CreditCardsFacade);
-  private readonly budgetsFacade = inject(BudgetsFacade);
-  private readonly goalsFacade = inject(GoalsFacade);
   private readonly categoriesFacade = inject(CategoriesFacade);
   private readonly period = inject(PeriodService);
   private readonly today = inject(TODAY);
@@ -127,37 +111,34 @@ export class DashboardPage implements OnInit {
     () => PERIOD_OPTIONS.find((option) => option.value === this.period.selected())?.label ?? '',
   );
 
-  protected readonly accountsStatus = this.accountsFacade.status;
-  protected readonly transactionsStatus = this.transactionsFacade.status;
-  protected readonly combinedStatus = computed(() =>
-    combineStatus(this.accountsStatus(), this.transactionsStatus()),
+  /** Todos os widgets vêm do mesmo resumo: carregam e falham juntos. */
+  private readonly status = this.dashboard.status;
+  private readonly data = this.dashboard.data;
+  protected readonly accountsStatus = this.status;
+  protected readonly transactionsStatus = this.status;
+  protected readonly combinedStatus = this.status;
+  protected readonly goalsStatus = this.status;
+  /** O widget de orçamentos também precisa dos nomes das categorias. */
+  protected readonly budgetsStatus = computed(() =>
+    combineStatus(this.status(), this.categoriesFacade.status()),
   );
-  /** Erro geral: nenhuma das fontes carregou. */
-  protected readonly allFailed = computed(
-    () => this.accountsStatus() === 'error' && this.transactionsStatus() === 'error',
-  );
-  /** Sem contas e sem transações: o dashboard orienta os primeiros passos. */
+  protected readonly allFailed = computed(() => this.status() === 'error');
+  /** Sem contas: o dashboard orienta os primeiros passos (sem conta, não há transações). */
   protected readonly isEmpty = computed(
     () =>
-      this.combinedStatus() === 'ready' &&
-      this.accountsFacade.accounts().length === 0 &&
-      this.transactionsFacade.transactions().length === 0,
+      this.status() === 'ready' &&
+      this.accountsFacade.status() === 'ready' &&
+      this.accountsFacade.accounts().length === 0,
   );
 
-  protected readonly totalBalance = this.accountsFacade.totalActiveBalance;
-  protected readonly activeAccountsCount = computed(
-    () => this.accountsFacade.accounts().filter((account) => !account.isArchived).length,
+  protected readonly totalBalance = computed(() => this.data()?.balance.total ?? 0);
+  protected readonly activeAccountsCount = computed(() => this.data()?.balance.activeAccounts ?? 0);
+  protected readonly summary = computed(
+    () => this.data()?.summary ?? { income: 0, expense: 0, net: 0, pendingCount: 0 },
   );
-  private readonly periodTransactions = computed(() => {
-    const range = this.period.range();
-    return this.transactionsFacade
-      .transactions()
-      .filter((transaction) => isInRange(transaction.date, range));
-  });
-  protected readonly summary = computed(() => summarizeTransactions(this.periodTransactions()));
 
   protected readonly incomeExpenseChart = computed<ChartSpec>(() => {
-    const points = incomeVsExpense(this.periodTransactions(), this.period.range());
+    const points = this.data()?.incomeVsExpense ?? [];
     return {
       type: 'bar',
       labels: points.map((point) => point.label),
@@ -182,11 +163,7 @@ export class DashboardPage implements OnInit {
   );
 
   protected readonly balanceChart = computed<ChartSpec>(() => {
-    const points = balanceEvolution(
-      this.accountsFacade.accounts(),
-      this.transactionsFacade.transactions(),
-      this.period.range(),
-    );
+    const points = this.data()?.balanceEvolution ?? [];
     return {
       type: 'line',
       labels: points.map((point) => formatIsoDate(point.date).slice(0, 5)),
@@ -202,9 +179,7 @@ export class DashboardPage implements OnInit {
     };
   });
 
-  protected readonly recent = computed(() =>
-    recentTransactions(this.transactionsFacade.transactions(), this.period.range(), RECENT_LIMIT),
-  );
+  protected readonly recent = computed(() => this.data()?.recentTransactions ?? []);
   protected readonly lookups = computed<TransactionLookups>(() => ({
     accounts: byId(this.accountsFacade.accounts()),
     // A lista recente identifica o tipo pelo ícone; não precisa das categorias.
@@ -213,73 +188,45 @@ export class DashboardPage implements OnInit {
   }));
 
   /** O widget de orçamentos usa sempre o mês atual, não o período da topbar. */
-  private readonly budgetMonth = toIsoMonth(this.today());
-  protected readonly budgetMonthLabel = formatMonth(this.budgetMonth);
-  protected readonly budgetsStatus = computed(() =>
-    combineStatus(
-      this.budgetsFacade.status(),
-      this.transactionsStatus(),
-      this.categoriesFacade.status(),
-    ),
-  );
-  protected readonly goalsStatus = this.goalsFacade.status;
-  /** Metas ativas ainda não concluídas: atrasadas primeiro, depois o prazo mais próximo. */
-  protected readonly goalHighlights = computed(() =>
-    queryGoals(this.goalsFacade.goals(), 'active')
-      .filter((goal) => goal.status !== 'completed')
-      .slice(0, GOAL_HIGHLIGHTS),
-  );
-  protected readonly budgetHighlights = computed(() => {
-    const transactions = this.transactionsFacade.transactions();
-    return this.budgetsFacade
-      .budgets()
-      .map((budget) => budgetProgress(budget, transactions, this.budgetMonth))
-      .filter((item): item is BudgetProgress => item !== null)
-      .sort((a, b) => b.percent - a.percent)
-      .slice(0, BUDGET_HIGHLIGHTS);
-  });
+  protected readonly budgetMonthLabel = formatMonth(toIsoMonth(this.today()));
+  protected readonly goalHighlights = computed(() => this.data()?.goalHighlights ?? []);
+  protected readonly budgetHighlights = computed(() => this.data()?.budgetHighlights ?? []);
 
   protected readonly shortcuts = SHORTCUTS;
   protected readonly accountLabel = accountLabel;
 
-  ngOnInit(): void {
-    this.reload();
+  constructor() {
+    // Recarrega o resumo a cada troca de período na topbar.
+    effect(() => {
+      const range = this.period.range();
+      untracked(() => void this.dashboard.load(range));
+    });
+    this.loadLookups();
   }
 
   protected reload(): void {
-    this.reloadAccounts();
-    this.reloadTransactions();
-    this.reloadBudgets();
-    this.reloadGoals();
+    void this.dashboard.load(this.period.range());
+    this.loadLookups();
   }
 
   protected reloadGoals(): void {
-    void this.goalsFacade.load();
+    this.reload();
   }
 
   protected reloadBudgets(): void {
-    void this.budgetsFacade.load();
-    void this.categoriesFacade.load();
+    this.reload();
   }
 
   protected reloadAccounts(): void {
-    void this.accountsFacade.load();
+    this.reload();
   }
 
   protected reloadTransactions(): void {
-    void this.transactionsFacade.load();
-    // Só fornece os nomes dos cartões das compras recentes; uma falha não bloqueia o dashboard.
-    void this.creditCardsFacade.load();
+    this.reload();
   }
 
-  /** Recarrega só as fontes que falharam. */
   protected retryFailed(): void {
-    if (this.accountsStatus() === 'error') {
-      this.reloadAccounts();
-    }
-    if (this.transactionsStatus() === 'error') {
-      this.reloadTransactions();
-    }
+    this.reload();
   }
 
   protected typeIcon(transaction: Transaction): string {
@@ -288,5 +235,12 @@ export class DashboardPage implements OnInit {
 
   protected sign(transaction: Transaction): string {
     return TRANSACTION_SIGNS[transaction.type];
+  }
+
+  /** Nomes de contas, cartões e categorias; uma falha deles não bloqueia o resumo. */
+  private loadLookups(): void {
+    void this.accountsFacade.load();
+    void this.creditCardsFacade.load();
+    void this.categoriesFacade.load();
   }
 }

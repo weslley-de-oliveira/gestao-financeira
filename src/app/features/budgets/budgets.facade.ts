@@ -85,7 +85,8 @@ export class BudgetsFacade {
   }
 
   /** A categoria não muda; o novo limite vale do mês atual em diante. */
-  async update(id: string, input: BudgetInput): Promise<Budget> {
+  /** `version`: o `updatedAt` do registro quando o formulário o carregou. */
+  async update(id: string, input: BudgetInput, version?: string): Promise<Budget> {
     const normalized = normalizeBudgetInput(input);
     const previous = await this.getOwned(id);
     if (normalized.categoryId !== previous.categoryId) {
@@ -95,7 +96,7 @@ export class BudgetsFacade {
       limits: withLimitFrom(previous.limits, this.currentMonth(), normalized.limitAmount),
       alertThreshold: normalized.alertThreshold,
     };
-    return this.store(await firstValueFrom(this.repository.update(id, changes)));
+    return this.store(await firstValueFrom(this.repository.update(id, changes, version)));
   }
 
   /** O orçamento não guarda histórico próprio (o consumo vem das transações): pode ser excluído. */

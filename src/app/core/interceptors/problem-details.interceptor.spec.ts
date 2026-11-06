@@ -12,6 +12,7 @@ import { API_BASE_URL } from '../../data-access/api/api.config';
 import { AuthService } from '../auth/auth.service';
 import { ApiProblemError } from './api-problem-error';
 import { problemDetailsInterceptor } from './problem-details.interceptor';
+import { StaleRecordError } from './stale-record-error';
 
 describe('problemDetailsInterceptor', () => {
   let http: HttpClient;
@@ -64,6 +65,15 @@ describe('problemDetailsInterceptor', () => {
       .flush(problem(409), { status: 409, statusText: 'Conflict' });
 
     await expect(request).rejects.toMatchObject({ status: 409, field: null });
+  });
+
+  it('turns a 412 (If-Match of an old version) into a StaleRecordError', async () => {
+    const request = firstValueFrom(http.patch('/api/v1/accounts/a1', {}));
+    controller
+      .expectOne('/api/v1/accounts/a1')
+      .flush(problem(412), { status: 412, statusText: 'Precondition Failed' });
+
+    await expect(request).rejects.toBeInstanceOf(StaleRecordError);
   });
 
   it('ends the session and goes to the login, keeping the current page, on a 401', async () => {

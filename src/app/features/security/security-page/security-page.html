@@ -150,6 +150,65 @@
   </mat-card>
 
   <mat-card appearance="outlined" class="security__section">
+    <h2 class="security__section-title">Trocar a senha</h2>
+    <p class="security__text">
+      A sessão neste navegador continua; as sessões abertas em outros aparelhos são encerradas.
+    </p>
+    <form
+      class="security__form"
+      aria-label="Trocar a senha"
+      novalidate
+      (submit)="changePassword($event)"
+    >
+      <mat-form-field appearance="outline">
+        <mat-label>Senha atual</mat-label>
+        <input
+          matInput
+          type="password"
+          autocomplete="current-password"
+          [formField]="passwordForm.currentPassword"
+        />
+        @if (passwordForm.currentPassword().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Senha nova</mat-label>
+        <input
+          matInput
+          type="password"
+          autocomplete="new-password"
+          [formField]="passwordForm.newPassword"
+        />
+        <mat-hint>Mínimo de 8 caracteres, com letras e números.</mat-hint>
+        @if (passwordForm.newPassword().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Confirmar a senha nova</mat-label>
+        <input
+          matInput
+          type="password"
+          autocomplete="new-password"
+          [formField]="passwordForm.confirmPassword"
+        />
+        @if (passwordForm.confirmPassword().errors()[0]; as error) {
+          <mat-error>{{ error.message }}</mat-error>
+        }
+      </mat-form-field>
+      @if (passwordError(); as message) {
+        <p class="security__result--error" role="alert">{{ message }}</p>
+      }
+      <div>
+        <button matButton="filled" type="submit" [disabled]="passwordForm().submitting()">
+          {{ passwordForm().submitting() ? 'Salvando…' : 'Trocar a senha' }}
+        </button>
+      </div>
+    </form>
+  </mat-card>
+
+  <mat-card appearance="outlined" class="security__section">
     <h2 class="security__section-title">Limpar os dados fictícios</h2>
     <ul class="security__list">
       <li>
@@ -174,7 +233,7 @@
         <mat-hint>{{ user()?.email }}</mat-hint>
       </mat-form-field>
       <mat-form-field appearance="outline">
-        <mat-label>Senha atual</mat-label>
+        <mat-label>Senha atual (confirmação)</mat-label>
         <input
           matInput
           type="password"

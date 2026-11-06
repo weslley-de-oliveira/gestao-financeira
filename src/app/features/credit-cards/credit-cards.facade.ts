@@ -84,11 +84,12 @@ export class CreditCardsFacade {
     return this.store(await firstValueFrom(this.repository.create(card)));
   }
 
-  async update(id: string, input: CreditCardInput): Promise<CreditCardWithUsage> {
+  /** `version`: o `updatedAt` do registro quando o formulário o carregou. */
+  async update(id: string, input: CreditCardInput, version?: string): Promise<CreditCardWithUsage> {
     const normalized = normalizeCreditCardInput(input);
     const previous = await this.getOwned(id);
     await this.assertPaymentAccount(normalized, previous);
-    return this.store(await firstValueFrom(this.repository.update(id, normalized)));
+    return this.store(await firstValueFrom(this.repository.update(id, normalized, version)));
   }
 
   /** Arquivar preserva o cartão e as compras; ele só deixa de aceitar novas compras. */

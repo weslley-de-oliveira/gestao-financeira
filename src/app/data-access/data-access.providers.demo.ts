@@ -5,6 +5,7 @@ import { LocalAccountRepository } from './local/local-account.repository';
 import { LocalBudgetRepository } from './local/local-budget.repository';
 import { LocalCategoryRepository } from './local/local-category.repository';
 import { LocalCreditCardRepository } from './local/local-credit-card.repository';
+import { LocalDashboardRepository } from './local/local-dashboard.repository';
 import { LocalDatabase } from './local/local-database';
 import { LocalGoalRepository } from './local/local-goal.repository';
 import { LocalTransactionRepository } from './local/local-transaction.repository';
@@ -14,6 +15,7 @@ import { AccountRepository } from './repositories/account.repository';
 import { BudgetRepository } from './repositories/budget.repository';
 import { CategoryRepository } from './repositories/category.repository';
 import { CreditCardRepository } from './repositories/credit-card.repository';
+import { DashboardRepository } from './repositories/dashboard.repository';
 import { DemoData } from './repositories/demo-data';
 import { GoalRepository } from './repositories/goal.repository';
 import { TransactionRepository } from './repositories/transaction.repository';
@@ -37,5 +39,6 @@ export function provideDataAccess(): Provider[] {
     { provide: CreditCardRepository, useClass: LocalCreditCardRepository },
     { provide: BudgetRepository, useClass: LocalBudgetRepository },
     { provide: GoalRepository, useClass: LocalGoalRepository },
+    { provide: DashboardRepository, useClass: LocalDashboardRepository },
   ];
 }

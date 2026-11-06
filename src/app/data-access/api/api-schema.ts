@@ -550,7 +550,10 @@ export interface paths {
     patch: {
       parameters: {
         query?: never;
-        header?: never;
+        header?: {
+          /** @description ETag recebida na leitura (`GET` ou `PATCH` anterior). Se o registro mudou desde então, responde 412 e nada é gravado. */
+          'if-match'?: string;
+        };
         path: {
           id: string;
         };
@@ -622,6 +625,15 @@ export interface paths {
         };
         /** @description Default Response */
         404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        412: {
           headers: {
             [name: string]: unknown;
           };
@@ -875,7 +887,10 @@ export interface paths {
     patch: {
       parameters: {
         query?: never;
-        header?: never;
+        header?: {
+          /** @description ETag recebida na leitura (`GET` ou `PATCH` anterior). Se o registro mudou desde então, responde 412 e nada é gravado. */
+          'if-match'?: string;
+        };
         path: {
           id: string;
         };
@@ -960,6 +975,15 @@ export interface paths {
         };
         /** @description Default Response */
         409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        412: {
           headers: {
             [name: string]: unknown;
           };
@@ -1244,7 +1268,10 @@ export interface paths {
     patch: {
       parameters: {
         query?: never;
-        header?: never;
+        header?: {
+          /** @description ETag recebida na leitura (`GET` ou `PATCH` anterior). Se o registro mudou desde então, responde 412 e nada é gravado. */
+          'if-match'?: string;
+        };
         path: {
           id: string;
         };
@@ -1320,6 +1347,15 @@ export interface paths {
         };
         /** @description Default Response */
         409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        412: {
           headers: {
             [name: string]: unknown;
           };
@@ -1555,7 +1591,10 @@ export interface paths {
     patch: {
       parameters: {
         query?: never;
-        header?: never;
+        header?: {
+          /** @description ETag recebida na leitura (`GET` ou `PATCH` anterior). Se o registro mudou desde então, responde 412 e nada é gravado. */
+          'if-match'?: string;
+        };
         path: {
           id: string;
         };
@@ -1627,6 +1666,15 @@ export interface paths {
         };
         /** @description Default Response */
         409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        412: {
           headers: {
             [name: string]: unknown;
           };
@@ -1796,12 +1844,15 @@ export interface paths {
     put?: never;
     /**
      * Paga a fatura
-     * @description Paga o valor total da fatura, com a data de hoje, debitando a conta de pagamento do cartão (cria a transação `invoice-payment`). Só fatura fechada ou vencida, com compras e ainda sem pagamento; senão, ou com a conta de pagamento arquivada, responde 409. Devolve a fatura paga.
+     * @description Paga o valor total da fatura, com a data de hoje, debitando a conta de pagamento do cartão (cria a transação `invoice-payment`). Só fatura fechada ou vencida, com compras e ainda sem pagamento; senão, ou com a conta de pagamento arquivada, responde 409. Devolve a fatura paga. Com `Idempotency-Key`, repetir o pedido (ex.: depois de uma falha de rede) devolve o mesmo pagamento em vez de 409: a chave reaproveitada em outra requisição responde 422, e enquanto a primeira ainda roda, 409.
      */
     post: {
       parameters: {
         query?: never;
-        header?: never;
+        header?: {
+          /** @description Chave única por operação (ex.: um UUID gerado ao abrir a confirmação). Repetir a requisição com a mesma chave em até 24 horas devolve a resposta da primeira, sem executar de novo. */
+          'idempotency-key'?: string;
+        };
         path: {
           id: string;
           /** @description Mês de referência da fatura (o mês do vencimento). */
@@ -2179,7 +2230,10 @@ export interface paths {
     patch: {
       parameters: {
         query?: never;
-        header?: never;
+        header?: {
+          /** @description ETag recebida na leitura (`GET` ou `PATCH` anterior). Se o registro mudou desde então, responde 412 e nada é gravado. */
+          'if-match'?: string;
+        };
         path: {
           id: string;
         };
@@ -2221,6 +2275,15 @@ export interface paths {
         };
         /** @description Default Response */
         404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        412: {
           headers: {
             [name: string]: unknown;
           };
@@ -2457,7 +2520,10 @@ export interface paths {
     patch: {
       parameters: {
         query?: never;
-        header?: never;
+        header?: {
+          /** @description ETag recebida na leitura (`GET` ou `PATCH` anterior). Se o registro mudou desde então, responde 412 e nada é gravado. */
+          'if-match'?: string;
+        };
         path: {
           id: string;
         };
@@ -2529,6 +2595,15 @@ export interface paths {
         };
         /** @description Default Response */
         404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        412: {
           headers: {
             [name: string]: unknown;
           };
@@ -2907,6 +2982,82 @@ export interface paths {
     };
     trace?: never;
   };
+  '/v1/me/password': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Troca a senha
+     * @description Confirma com a senha atual (errada responde 422 em `currentPassword`). A senha nova segue as regras do cadastro e precisa ser diferente da atual. Esta sessão continua; as outras sessões da pessoa, em outros aparelhos, são encerradas.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': {
+            /** @description Senha atual, para confirmar a troca. */
+            currentPassword: string;
+            /**
+             * @description Senha nova: de 8 a 128 caracteres, com pelo menos uma letra e um número.
+             * @example senha1234
+             */
+            newPassword: string;
+          };
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2973,6 +3124,11 @@ export interface components {
       isArchived: boolean;
       /** Format: date-time */
       createdAt: string;
+      /**
+       * Format: date-time
+       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
+       */
+      updatedAt: string;
     };
     UserInput: {
       /** Format: uuid */
@@ -3022,6 +3178,11 @@ export interface components {
       progress: components['schemas']['BudgetProgressInput'] | null;
       /** Format: date-time */
       createdAt: string;
+      /**
+       * Format: date-time
+       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
+       */
+      updatedAt: string;
     };
     CategoryInput: {
       /** Format: uuid */
@@ -3074,6 +3235,11 @@ export interface components {
       isArchived: boolean;
       /** Format: date-time */
       createdAt: string;
+      /**
+       * Format: date-time
+       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
+       */
+      updatedAt: string;
     };
     /** @description A fatura aberta hoje. */
     NextInvoiceInput: {
@@ -3131,6 +3297,11 @@ export interface components {
       isArchived: boolean;
       /** Format: date-time */
       createdAt: string;
+      /**
+       * Format: date-time
+       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
+       */
+      updatedAt: string;
       /** @description Compras ainda não pagas, em centavos: compras menos faturas pagas. */
       usedLimit: number;
       /** @description Limite menos o utilizado; negativo quando o limite foi ultrapassado. */
@@ -3192,6 +3363,11 @@ export interface components {
       isArchived: boolean;
       /** Format: date-time */
       createdAt: string;
+      /**
+       * Format: date-time
+       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
+       */
+      updatedAt: string;
       /** @description Aportes e retiradas, dos mais recentes para os mais antigos. */
       contributions: components['schemas']['GoalContributionInput'][];
       /** @description Acumulado: inicial + aportes − retiradas. */
@@ -3242,6 +3418,11 @@ export interface components {
       notes: string | null;
       /** Format: date-time */
       createdAt: string;
+      /**
+       * Format: date-time
+       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
+       */
+      updatedAt: string;
     };
     /** @description Receita ou despesa em conta, ou compra no cartão (despesa com `creditCardId`). */
     CreateEntryInput: {
@@ -3492,6 +3673,11 @@ export interface components {
       isArchived: boolean;
       /** Format: date-time */
       createdAt: string;
+      /**
+       * Format: date-time
+       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
+       */
+      updatedAt: string;
     };
     User: {
       /** Format: uuid */
@@ -3541,6 +3727,11 @@ export interface components {
       progress: components['schemas']['BudgetProgress'] | null;
       /** Format: date-time */
       createdAt: string;
+      /**
+       * Format: date-time
+       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
+       */
+      updatedAt: string;
     };
     Category: {
       /** Format: uuid */
@@ -3593,6 +3784,11 @@ export interface components {
       isArchived: boolean;
       /** Format: date-time */
       createdAt: string;
+      /**
+       * Format: date-time
+       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
+       */
+      updatedAt: string;
     };
     /** @description A fatura aberta hoje. */
     NextInvoice: {
@@ -3650,6 +3846,11 @@ export interface components {
       isArchived: boolean;
       /** Format: date-time */
       createdAt: string;
+      /**
+       * Format: date-time
+       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
+       */
+      updatedAt: string;
       /** @description Compras ainda não pagas, em centavos: compras menos faturas pagas. */
       usedLimit: number;
       /** @description Limite menos o utilizado; negativo quando o limite foi ultrapassado. */
@@ -3711,6 +3912,11 @@ export interface components {
       isArchived: boolean;
       /** Format: date-time */
       createdAt: string;
+      /**
+       * Format: date-time
+       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
+       */
+      updatedAt: string;
       /** @description Aportes e retiradas, dos mais recentes para os mais antigos. */
       contributions: components['schemas']['GoalContribution'][];
       /** @description Acumulado: inicial + aportes − retiradas. */
@@ -3761,6 +3967,11 @@ export interface components {
       notes: string | null;
       /** Format: date-time */
       createdAt: string;
+      /**
+       * Format: date-time
+       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
+       */
+      updatedAt: string;
     };
     /** @description Receita ou despesa em conta, ou compra no cartão (despesa com `creditCardId`). */
     CreateEntry: {

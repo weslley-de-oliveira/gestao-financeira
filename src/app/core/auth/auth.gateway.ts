@@ -36,4 +36,10 @@ export abstract class AuthGateway {
    * `IncorrectPasswordError`). Não pode ser desfeito.
    */
   abstract deleteAccount(user: User, password: string): Promise<void>;
+
+  /**
+   * Troca a senha, confirmando com a atual (errada → `IncorrectPasswordError`). Na API, a sessão
+   * atual continua e as dos outros aparelhos são encerradas.
+   */
+  abstract changePassword(user: User, currentPassword: string, newPassword: string): Promise<void>;
 }

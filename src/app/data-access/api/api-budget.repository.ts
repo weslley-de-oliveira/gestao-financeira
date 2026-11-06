@@ -7,7 +7,7 @@ import { Budget } from '../../shared/models/budget';
 import { BudgetChanges, BudgetRepository } from '../repositories/budget.repository';
 import { NewRecord } from '../repositories/new-record';
 import { API_BASE_URL } from './api.config';
-import { SessionUser, nullWhenNotFound, toDomainError } from './api-http';
+import { ifMatch, nullWhenNotFound, SessionUser, toDomainError } from './api-http';
 import type { ApiBudget } from './api-types';
 
 /**
@@ -47,7 +47,7 @@ export class ApiBudgetRepository extends BudgetRepository {
       );
   }
 
-  update(id: string, changes: BudgetChanges): Observable<Budget> {
+  update(id: string, changes: BudgetChanges, version?: string): Observable<Budget> {
     const body: { limitAmount?: number; alertThreshold?: number } = {};
     if (changes.limits) {
       body.limitAmount = currentLimit(changes.limits);
@@ -56,7 +56,7 @@ export class ApiBudgetRepository extends BudgetRepository {
       body.alertThreshold = changes.alertThreshold;
     }
     return this.http
-      .patch<ApiBudget>(`${this.url}/${encodeURIComponent(id)}`, body)
+      .patch<ApiBudget>(`${this.url}/${encodeURIComponent(id)}`, body, ifMatch(version))
       .pipe(map((item) => this.toBudget(item)));
   }
 
@@ -65,14 +65,7 @@ export class ApiBudgetRepository extends BudgetRepository {
   }
 
   private toBudget(item: ApiBudget): Budget {
-    return {
-      id: item.id,
-      userId: this.session.id(),
-      categoryId: item.categoryId,
-      limits: item.limits.map(({ month, amount }) => ({ month, amount })),
-      alertThreshold: item.alertThreshold,
-      createdAt: item.createdAt,
-    };
+    return toBudgetModel(item, this.session.id());
   }
 }
 
@@ -84,4 +77,17 @@ function currentLimit(limits: Budget['limits']): number {
 /** Categoria inexistente ou que não é de despesa: o formulário marca o campo. */
 function invalidCategory(problem: ApiProblemError): Error | null {
   return problem.field === 'categoryId' ? new InvalidBudgetInputError('categoryId') : null;
+}
+
+/** Converte o formato da API no modelo do app; o dono é o usuário da sessão. */
+export function toBudgetModel(item: ApiBudget, userId: string): Budget {
+  return {
+    id: item.id,
+    userId,
+    categoryId: item.categoryId,
+    limits: item.limits.map(({ month, amount }) => ({ month, amount })),
+    alertThreshold: item.alertThreshold,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
 }

@@ -75,10 +75,11 @@ export class AccountsFacade {
     return this.store(await firstValueFrom(this.repository.create(account)));
   }
 
-  async update(id: string, input: AccountInput): Promise<AccountWithBalance> {
+  /** `version`: o `updatedAt` do registro quando o formulário o carregou. */
+  async update(id: string, input: AccountInput, version?: string): Promise<AccountWithBalance> {
     const changes = normalizeAccountInput(input);
     await this.ensureOwnership(id);
-    return this.store(await firstValueFrom(this.repository.update(id, changes)));
+    return this.store(await firstValueFrom(this.repository.update(id, changes, version)));
   }
 
   /** Arquivar preserva a conta e o histórico; ela só deixa de aparecer entre as ativas. */

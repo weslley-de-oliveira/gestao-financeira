@@ -7,6 +7,7 @@ import { Transaction } from '../../shared/models/transaction';
 import { ApiAccountRepository } from './api-account.repository';
 import { ApiBudgetRepository } from './api-budget.repository';
 import { ApiCategoryRepository } from './api-category.repository';
+import { ApiDashboardRepository } from './api-dashboard.repository';
 import { ApiGoalRepository } from './api-goal.repository';
 import { SessionUser } from './api-http';
 import { ApiTransactionRepository } from './api-transaction.repository';
@@ -29,6 +30,7 @@ const apiAccount: ApiAccount = {
   icon: 'account_balance',
   isArchived: false,
   createdAt: '2026-11-01T12:00:00.000Z',
+  updatedAt: '2026-11-01T12:00:00.000Z',
 };
 
 function apiTransaction(overrides: Partial<ApiTransaction> = {}): ApiTransaction {
@@ -46,6 +48,7 @@ function apiTransaction(overrides: Partial<ApiTransaction> = {}): ApiTransaction
     status: 'completed',
     notes: null,
     createdAt: '2026-11-05T12:00:00.000Z',
+    updatedAt: '2026-11-05T12:00:00.000Z',
     ...overrides,
   };
 }
@@ -62,6 +65,7 @@ const apiGoal: ApiGoal = {
   isPaused: false,
   isArchived: false,
   createdAt: '2026-11-01T12:00:00.000Z',
+  updatedAt: '2026-11-01T12:00:00.000Z',
   contributions: [],
   currentAmount: 0,
   remainingAmount: 1_000_000,
@@ -87,6 +91,7 @@ describe('API repositories', () => {
         ApiTransactionRepository,
         ApiBudgetRepository,
         ApiGoalRepository,
+        ApiDashboardRepository,
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -142,6 +147,31 @@ describe('API repositories', () => {
       request.flush(apiAccount);
 
       expect((await created).id).toBe(ACCOUNT_ID);
+    });
+  });
+
+  describe('optimistic concurrency', () => {
+    it('reads the version and sends it back as If-Match when saving', async () => {
+      const repository = TestBed.inject(ApiAccountRepository);
+      const found = firstValueFrom(repository.findById(ACCOUNT_ID));
+      http.expectOne(`/api/v1/accounts/${ACCOUNT_ID}`).flush(apiAccount);
+      const account = await found;
+      expect(account?.updatedAt).toBe(apiAccount.updatedAt);
+
+      const saved = firstValueFrom(
+        repository.update(ACCOUNT_ID, { name: 'Conta nova' }, account?.updatedAt),
+      );
+      const request = http.expectOne({ url: `/api/v1/accounts/${ACCOUNT_ID}`, method: 'PATCH' });
+      expect(request.request.headers.get('If-Match')).toBe(`"${Date.parse(apiAccount.updatedAt)}"`);
+      request.flush({ ...apiAccount, name: 'Conta nova' });
+      await saved;
+
+      // Sem versão (ex.: arquivar pela lista), a edição vale sobre a versão atual.
+      const archived = firstValueFrom(repository.update(ACCOUNT_ID, { isArchived: true }));
+      const archive = http.expectOne({ url: `/api/v1/accounts/${ACCOUNT_ID}`, method: 'PATCH' });
+      expect(archive.request.headers.has('If-Match')).toBe(false);
+      archive.flush({ ...apiAccount, isArchived: true });
+      await archived;
     });
   });
 
@@ -303,6 +333,131 @@ describe('API repositories', () => {
     });
   });
 
+  describe('invoice payment', () => {
+    const url = `/api/v1/credit-cards/${CARD_ID}/invoices/2026-11/payment`;
+    const payment: Omit<Transaction, 'id' | 'createdAt'> = {
+      userId: USER_ID,
+      type: 'invoice-payment',
+      description: 'Pagamento de fatura',
+      amount: 25_000,
+      date: '2026-11-05',
+      accountId: ACCOUNT_ID,
+      creditCardId: CARD_ID,
+      invoiceMonth: '2026-11',
+      destinationAccountId: null,
+      categoryId: null,
+      status: 'completed',
+      notes: null,
+    };
+    const paid = apiTransaction({
+      type: 'invoice-payment',
+      creditCardId: CARD_ID,
+      invoiceMonth: '2026-11',
+      categoryId: null,
+    });
+
+    it('repeats a payment whose response was lost with the same Idempotency-Key', async () => {
+      vi.useFakeTimers();
+      try {
+        const result = firstValueFrom(TestBed.inject(ApiTransactionRepository).payInvoice(payment));
+        const first = http.expectOne({ url, method: 'POST' });
+        const key = first.request.headers.get('Idempotency-Key');
+        expect(key).toMatch(/^[0-9a-f-]{36}$/);
+        first.error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+
+        await vi.advanceTimersByTimeAsync(1000);
+        const retry = http.expectOne({ url, method: 'POST' });
+        expect(retry.request.headers.get('Idempotency-Key')).toBe(key);
+        retry.flush({ payment: paid } as Partial<ApiInvoice>, {
+          headers: { 'Idempotent-Replayed': 'true' },
+        });
+
+        expect((await result).type).toBe('invoice-payment');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('does not repeat a payment the API refused, and uses a new key each time', async () => {
+      const repository = TestBed.inject(ApiTransactionRepository);
+      const refused = firstValueFrom(repository.payInvoice(payment));
+      const first = http.expectOne({ url, method: 'POST' });
+      first.flush({ status: 409 }, { status: 409, statusText: 'Conflict' });
+      await expect(refused).rejects.toMatchObject({ status: 409 });
+
+      const next = firstValueFrom(repository.payInvoice(payment));
+      const second = http.expectOne({ url, method: 'POST' });
+      expect(second.request.headers.get('Idempotency-Key')).not.toBe(
+        first.request.headers.get('Idempotency-Key'),
+      );
+      second.flush({ payment: paid } as Partial<ApiInvoice>);
+      await next;
+    });
+  });
+
+  describe('dashboard', () => {
+    it('asks the API for the summary of the period and maps it to the app models', async () => {
+      const summary = firstValueFrom(
+        TestBed.inject(ApiDashboardRepository).load(USER_ID, {
+          start: '2026-11-01',
+          end: '2026-11-30',
+        }),
+      );
+      const request = http.expectOne(
+        (req) => req.url === '/api/v1/dashboard' && req.method === 'GET',
+      );
+      expect(request.request.params.get('from')).toBe('2026-11-01');
+      expect(request.request.params.get('to')).toBe('2026-11-30');
+      request.flush({
+        from: '2026-11-01',
+        to: '2026-11-30',
+        summary: { income: 500_000, expense: 25_000, net: 475_000, pendingCount: 1 },
+        balance: { total: 125_000, activeAccounts: 1 },
+        incomeVsExpense: [
+          { label: '01–07', start: '2026-11-01', end: '2026-11-07', income: 500_000, expense: 0 },
+        ],
+        balanceEvolution: [{ date: '2026-11-01', balance: 100_000 }],
+        recentTransactions: [apiTransaction()],
+        budgetHighlights: [
+          {
+            id: 'b1',
+            categoryId: CATEGORY_ID,
+            alertThreshold: 80,
+            limitAmount: 50_000,
+            limits: [{ month: '2026-11', amount: 50_000 }],
+            progress: {
+              month: '2026-11',
+              limit: 50_000,
+              spent: 25_000,
+              pending: 0,
+              available: 25_000,
+              percent: 50,
+              state: 'ok',
+            },
+            createdAt: '2026-11-01T12:00:00.000Z',
+            updatedAt: '2026-11-01T12:00:00.000Z',
+          },
+        ],
+        goalHighlights: [apiGoal],
+      });
+
+      const dashboard = await summary;
+      expect(dashboard.summary.pendingCount).toBe(1);
+      expect(dashboard.incomeVsExpense).toEqual([{ label: '01–07', income: 500_000, expense: 0 }]);
+      expect(dashboard.recentTransactions[0].userId).toBe(USER_ID);
+      expect(dashboard.budgetHighlights[0]).toMatchObject({
+        budget: { id: 'b1', userId: USER_ID },
+        spent: 25_000,
+        state: 'ok',
+      });
+      expect(dashboard.goalHighlights[0]).toMatchObject({
+        id: apiGoal.id,
+        userId: USER_ID,
+        status: 'in-progress',
+      });
+    });
+  });
+
   describe('budgets', () => {
     it('sends only the current limit and keeps the history from the response', async () => {
       const apiBudget: ApiBudget = {
@@ -316,6 +471,7 @@ describe('API repositories', () => {
         ],
         progress: null,
         createdAt: '2026-10-01T12:00:00.000Z',
+        updatedAt: '2026-11-01T12:00:00.000Z',
       };
 
       const updated = firstValueFrom(

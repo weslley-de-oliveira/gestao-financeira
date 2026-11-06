@@ -180,7 +180,7 @@ describe('settings and security pages', () => {
       expect(await button.isDisabled()).toBe(true);
 
       await (await input('Digite seu e-mail para confirmar')).setValue('outra@exemplo.com');
-      await (await input('Senha atual')).setValue('senha123');
+      await (await input('Senha atual (confirmação)')).setValue('senha123');
       expect(await button.isDisabled()).toBe(true);
 
       await (await input('Digite seu e-mail para confirmar')).setValue('ANA@exemplo.com');
@@ -191,10 +191,39 @@ describe('settings and security pages', () => {
       expect(TestBed.inject(InMemoryUserRepository).records).toEqual([]);
     });
 
+    it('changes the password, checking the current one and the rules of the new one', async () => {
+      await open('/security');
+      await (await input('Senha atual')).setValue('senha-errada1');
+      await (await input('Senha nova')).setValue('senha-errada1');
+      await (await input('Confirmar a senha nova')).setValue('outra1234');
+      await click('Trocar a senha');
+      expect(text()).toContain('A senha nova deve ser diferente da atual.');
+      expect(text()).toContain('As senhas não coincidem.');
+
+      await (await input('Senha nova')).setValue('novaSenha99');
+      await (await input('Confirmar a senha nova')).setValue('novaSenha99');
+      await click('Trocar a senha');
+      await vi.waitFor(() => {
+        harness.fixture.detectChanges();
+        expect(text()).toContain('Senha incorreta.');
+      }, CRYPTO_WAIT);
+
+      await (await input('Senha atual')).setValue('senha123');
+      await click('Trocar a senha');
+      const auth = TestBed.inject(AuthService);
+      await vi.waitFor(async () => {
+        harness.fixture.detectChanges();
+        expect(await (await input('Senha atual')).getValue()).toBe('');
+      }, CRYPTO_WAIT);
+      await auth.logout();
+      await auth.login({ email: 'ana@exemplo.com', password: 'novaSenha99' });
+      expect(auth.currentUser()?.email).toBe('ana@exemplo.com');
+    });
+
     it('keeps the account and warns when the current password is wrong', async () => {
       await open('/security');
       await (await input('Digite seu e-mail para confirmar')).setValue('ana@exemplo.com');
-      await (await input('Senha atual')).setValue('senha-errada');
+      await (await input('Senha atual (confirmação)')).setValue('senha-errada');
 
       await (
         await loader.getHarness(MatButtonHarness.with({ text: /Excluir conta e dados/ }))

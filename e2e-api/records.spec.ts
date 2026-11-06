@@ -39,14 +39,32 @@ test('deletes the account only with the current password', async ({ page }) => {
 
   await navigate(page, 'Segurança');
   await page.getByLabel('Digite seu e-mail para confirmar').fill(email);
-  await page.getByLabel('Senha atual').fill('senha-errada1');
+  await page.getByLabel('Senha atual (confirmação)').fill('senha-errada1');
   await page.getByRole('button', { name: 'Excluir conta e dados' }).click();
   await expect(page.getByText('Senha incorreta.')).toBeVisible();
 
-  await page.getByLabel('Senha atual').fill(password);
+  await page.getByLabel('Senha atual (confirmação)').fill(password);
   await page.getByRole('button', { name: 'Excluir conta e dados' }).click();
   await expect(page).toHaveURL(/\/login$/);
 
   await login(page, email, password);
   await expect(page.getByRole('alert')).toHaveText('E-mail ou senha inválidos.');
+});
+
+test('changes the password and signs in with the new one', async ({ page }) => {
+  const { email, password } = await registerNewUser(page);
+
+  await navigate(page, 'Segurança');
+  await page.getByLabel('Senha atual', { exact: true }).fill(password);
+  await page.getByLabel('Senha nova', { exact: true }).fill('novaSenha99');
+  await page.getByLabel('Confirmar a senha nova').fill('novaSenha99');
+  await page.getByRole('button', { name: 'Trocar a senha' }).click();
+  await expect(page.getByText('Senha alterada.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Menu do usuário' }).click();
+  await page.getByRole('menuitem', { name: /Sair/ }).click();
+  await login(page, email, password);
+  await expect(page.getByRole('alert')).toHaveText('E-mail ou senha inválidos.');
+  await login(page, email, 'novaSenha99');
+  await expect(page).toHaveURL(/\/dashboard$/);
 });

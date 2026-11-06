@@ -96,4 +96,18 @@ describe('AuthService account management', () => {
     expect(TestBed.inject(InMemoryUserRepository).records).toHaveLength(1);
     expect(auth.currentUser()?.email).toBe('ana@exemplo.com');
   });
+
+  it('changes the password after checking the current one, keeping the session', async () => {
+    await expect(auth.changePassword('senha-errada', 'novaSenha99')).rejects.toBeInstanceOf(
+      IncorrectPasswordError,
+    );
+
+    await auth.changePassword('senha123', 'novaSenha99');
+
+    expect(auth.currentUser()?.email).toBe('ana@exemplo.com');
+    await auth.logout();
+    await expect(auth.login({ email: 'ana@exemplo.com', password: 'senha123' })).rejects.toThrow();
+    await auth.login({ email: 'ana@exemplo.com', password: 'novaSenha99' });
+    expect(auth.currentUser()?.email).toBe('ana@exemplo.com');
+  });
 });

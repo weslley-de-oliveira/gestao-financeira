@@ -84,7 +84,8 @@ export class GoalsFacade {
    * Uma data-limite já vencida pode ser mantida, mas não definida de novo; o valor inicial não
    * pode deixar o acumulado negativo.
    */
-  async update(id: string, input: GoalInput): Promise<GoalWithProgress> {
+  /** `version`: o `updatedAt` do registro quando o formulário o carregou. */
+  async update(id: string, input: GoalInput, version?: string): Promise<GoalWithProgress> {
     const normalized = normalizeGoalInput(input);
     const previous = await this.getOwned(id);
     if (normalized.deadline !== previous.deadline) {
@@ -93,7 +94,7 @@ export class GoalsFacade {
     if (goalBalance({ ...previous, initialAmount: normalized.initialAmount }) < 0) {
       throw new InsufficientGoalBalanceError();
     }
-    return this.save(id, normalized);
+    return this.save(id, normalized, version);
   }
 
   async setPaused(id: string, isPaused: boolean): Promise<GoalWithProgress> {
@@ -151,8 +152,12 @@ export class GoalsFacade {
     return goal;
   }
 
-  private async save(id: string, changes: GoalChanges): Promise<GoalWithProgress> {
-    return this.store(await firstValueFrom(this.repository.update(id, changes)));
+  private async save(
+    id: string,
+    changes: GoalChanges,
+    version?: string,
+  ): Promise<GoalWithProgress> {
+    return this.store(await firstValueFrom(this.repository.update(id, changes, version)));
   }
 
   private store(goal: Goal): GoalWithProgress {

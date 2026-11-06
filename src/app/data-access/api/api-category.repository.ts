@@ -5,7 +5,7 @@ import { Category } from '../../shared/models/category';
 import { CategoryChanges, CategoryRepository } from '../repositories/category.repository';
 import { NewRecord } from '../repositories/new-record';
 import { API_BASE_URL } from './api.config';
-import { SessionUser, nullWhenNotFound, pick } from './api-http';
+import { ifMatch, nullWhenNotFound, pick, SessionUser } from './api-http';
 import type { ApiCategory } from './api-types';
 
 /** Categorias na API real (`/v1/categories`). */
@@ -36,11 +36,12 @@ export class ApiCategoryRepository extends CategoryRepository {
       .pipe(map((item) => this.toCategory(item)));
   }
 
-  update(id: string, changes: CategoryChanges): Observable<Category> {
+  update(id: string, changes: CategoryChanges, version?: string): Observable<Category> {
     return this.http
       .patch<ApiCategory>(
         `${this.url}/${encodeURIComponent(id)}`,
         pick(changes, ['name', 'icon', 'color', 'isArchived']),
+        ifMatch(version),
       )
       .pipe(map((item) => this.toCategory(item)));
   }
@@ -56,6 +57,7 @@ export class ApiCategoryRepository extends CategoryRepository {
       isDefault: item.isDefault,
       isArchived: item.isArchived,
       createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
     };
   }
 }

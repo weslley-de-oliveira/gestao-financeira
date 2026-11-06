@@ -112,6 +112,41 @@ describe('ApiAuthGateway', () => {
     await expect(wrong).rejects.toBeInstanceOf(IncorrectPasswordError);
   });
 
+  it('changes the password with POST /me/password, mapping a wrong current password', async () => {
+    const changed = gateway.changePassword(user, 'senha123', 'novaSenha99');
+    const request = http.expectOne({ url: '/api/v1/me/password', method: 'POST' });
+    expect(request.request.body).toEqual({
+      currentPassword: 'senha123',
+      newPassword: 'novaSenha99',
+    });
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await expect(changed).resolves.toBeUndefined();
+
+    const wrong = gateway.changePassword(user, 'errada', 'novaSenha99');
+    http.expectOne({ url: '/api/v1/me/password', method: 'POST' }).flush(
+      {
+        status: 422,
+        title: 'Erro',
+        detail: 'Erro',
+        errors: [{ field: 'body.currentPassword', message: 'Senha incorreta.' }],
+      },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
+    await expect(wrong).rejects.toBeInstanceOf(IncorrectPasswordError);
+
+    const weak = gateway.changePassword(user, 'senha123', 'fraca');
+    http.expectOne({ url: '/api/v1/me/password', method: 'POST' }).flush(
+      {
+        status: 422,
+        title: 'Erro',
+        detail: 'Erro',
+        errors: [{ field: 'body.newPassword', message: 'Senha fraca.' }],
+      },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
+    await expect(weak).rejects.toMatchObject({ status: 422 });
+  });
+
   it('passes other errors (e.g. 429 rate limit) on to the screen', async () => {
     const limited = gateway.login({ email: 'ana@exemplo.com', password: 'x' });
     fail('/api/v1/auth/login', 'POST', 429);
