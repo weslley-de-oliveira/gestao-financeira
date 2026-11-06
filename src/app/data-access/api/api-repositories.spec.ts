@@ -200,10 +200,11 @@ describe('API repositories', () => {
         color: '#2e7d32',
         isDefault: false,
         isArchived: true,
+        transactionCount: 7,
         createdAt: '2026-11-01T12:00:00.000Z',
       });
 
-      expect((await updated).isArchived).toBe(true);
+      expect(await updated).toMatchObject({ isArchived: true, transactionCount: 7 });
     });
   });
 

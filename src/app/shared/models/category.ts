@@ -27,6 +27,8 @@ export interface Category {
   createdAt: string;
   /** Versão do registro na API, enviada no `If-Match` das edições; ausente na demo. */
   updatedAt?: string;
+  /** Transações que usam a categoria, em todos os períodos: calculado, nunca gravado. */
+  transactionCount?: number;
 }
 
 export const CATEGORY_ICONS: readonly AppearanceOption[] = [
@@ -53,3 +55,20 @@ export const CATEGORY_ICONS: readonly AppearanceOption[] = [
   { value: 'payments', label: 'Dinheiro' },
   { value: 'more_horiz', label: 'Outros' },
 ];
+
+/** Completa as categorias com a quantidade de transações de cada uma (demo e testes). */
+export function withTransactionCounts(
+  categories: readonly Category[],
+  transactions: readonly { categoryId: string | null }[],
+): Category[] {
+  const counts = new Map<string, number>();
+  for (const { categoryId } of transactions) {
+    if (categoryId) {
+      counts.set(categoryId, (counts.get(categoryId) ?? 0) + 1);
+    }
+  }
+  return categories.map((category) => ({
+    ...category,
+    transactionCount: counts.get(category.id) ?? 0,
+  }));
+}

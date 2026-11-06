@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 import { Category } from '../../shared/models/category';
 
 export type CategoryChanges = Partial<
-  Omit<Category, 'id' | 'userId' | 'type' | 'createdAt' | 'updatedAt'>
+  Omit<Category, 'id' | 'userId' | 'type' | 'createdAt' | 'updatedAt' | 'transactionCount'>
 >;
 
 /** Contrato de acesso às categorias: na API (`data-access/api`) ou no `localStorage` (demo). */

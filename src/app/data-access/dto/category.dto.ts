@@ -27,6 +27,9 @@ export function toCategory(dto: CategoryDto): Category {
   };
 }
 
+/** A contagem de uso é calculada na leitura, não gravada. */
 export function toCategoryDto(category: Category): CategoryDto {
-  return { ...category };
+  const dto: CategoryDto & Partial<Pick<Category, 'transactionCount'>> = { ...category };
+  delete dto.transactionCount;
+  return dto;
 }
