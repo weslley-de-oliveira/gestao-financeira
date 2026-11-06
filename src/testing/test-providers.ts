@@ -10,7 +10,9 @@ import { CreditCardRepository } from '../app/data-access/repositories/credit-car
 import { DashboardRepository } from '../app/data-access/repositories/dashboard.repository';
 import { LocalDashboardRepository } from '../app/data-access/local/local-dashboard.repository';
 import { LocalBudgetProgressRepository } from '../app/data-access/local/local-budget-progress.repository';
+import { LocalInstallmentPurchaseRepository } from '../app/data-access/local/local-installment-purchase.repository';
 import { LocalInvoiceRepository } from '../app/data-access/local/local-invoice.repository';
+import { InstallmentPurchaseRepository } from '../app/data-access/repositories/installment-purchase.repository';
 import { BudgetProgressRepository } from '../app/data-access/repositories/budget-progress.repository';
 import { InvoiceRepository } from '../app/data-access/repositories/invoice.repository';
 import { GoalRepository } from '../app/data-access/repositories/goal.repository';
@@ -53,9 +55,10 @@ export const TEST_PROVIDERS: Provider[] = [
   { provide: BudgetRepository, useExisting: InMemoryBudgetRepository },
   InMemoryGoalRepository,
   { provide: GoalRepository, useExisting: InMemoryGoalRepository },
-  // Dashboard, faturas e consumo dos orçamentos são calculados pelas regras locais, sobre os repositórios em memória.
+  // Dashboard, faturas, consumo dos orçamentos e compras parceladas são calculados pelas regras locais, sobre os repositórios em memória.
   { provide: DashboardRepository, useClass: LocalDashboardRepository },
   { provide: InvoiceRepository, useClass: LocalInvoiceRepository },
+  { provide: InstallmentPurchaseRepository, useClass: LocalInstallmentPurchaseRepository },
   { provide: BudgetProgressRepository, useClass: LocalBudgetProgressRepository },
   { provide: UserDataRepository, useClass: InMemoryUserDataRepository },
   FakeChartRenderer,

@@ -10,6 +10,7 @@ import { ApiBudgetRepository } from './api-budget.repository';
 import { ApiCategoryRepository } from './api-category.repository';
 import { ApiDashboardRepository } from './api-dashboard.repository';
 import { ApiGoalRepository } from './api-goal.repository';
+import { ApiInstallmentPurchaseRepository } from './api-installment-purchase.repository';
 import { ApiInvoiceRepository } from './api-invoice.repository';
 import { SessionUser } from './api-http';
 import { ApiTransactionRepository } from './api-transaction.repository';
@@ -99,6 +100,7 @@ describe('API repositories', () => {
         ApiGoalRepository,
         ApiDashboardRepository,
         ApiInvoiceRepository,
+        ApiInstallmentPurchaseRepository,
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -417,6 +419,81 @@ describe('API repositories', () => {
         ['p1', USER_ID],
       ]);
       expect(await missing).toBeNull();
+    });
+  });
+
+  describe('installment purchases', () => {
+    const apiPurchase = {
+      id: 'group',
+      description: 'Geladeira',
+      amount: 10_000,
+      installmentCount: 2,
+      creditCardId: CARD_ID,
+      categoryId: CATEGORY_ID,
+      notes: null,
+      installments: [1, 2].map((installmentNumber) =>
+        apiTransaction({
+          id: `p${installmentNumber}`,
+          accountId: null,
+          creditCardId: CARD_ID,
+          amount: 5_000,
+          installmentGroupId: 'group',
+          installmentNumber,
+          installmentCount: 2,
+        }),
+      ),
+    };
+
+    it('creates with an Idempotency-Key and maps the installments', async () => {
+      const created = firstValueFrom(
+        TestBed.inject(ApiInstallmentPurchaseRepository).create(USER_ID, {
+          description: 'Geladeira',
+          amount: 10_000,
+          date: '2026-11-10',
+          creditCardId: CARD_ID,
+          categoryId: CATEGORY_ID,
+          installmentCount: 2,
+          notes: null,
+        }),
+      );
+      const request = http.expectOne({ url: '/api/v1/installment-purchases', method: 'POST' });
+      expect(request.request.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/);
+      expect(request.request.body).toEqual({
+        description: 'Geladeira',
+        amount: 10_000,
+        date: '2026-11-10',
+        creditCardId: CARD_ID,
+        categoryId: CATEGORY_ID,
+        installmentCount: 2,
+        notes: null,
+      });
+      request.flush(apiPurchase);
+
+      const purchase = await created;
+      expect(purchase).toMatchObject({ id: 'group', userId: USER_ID, installmentCount: 2 });
+      expect(
+        purchase.installments.map((item) => [item.id, item.userId, item.installmentNumber]),
+      ).toEqual([
+        ['p1', USER_ID, 1],
+        ['p2', USER_ID, 2],
+      ]);
+    });
+
+    it('updates only description, category and notes, and deletes the purchase', async () => {
+      const repository = TestBed.inject(ApiInstallmentPurchaseRepository);
+      const updated = firstValueFrom(
+        repository.update(USER_ID, 'group', { description: 'Geladeira nova', notes: null }),
+      );
+      const patch = http.expectOne({ url: '/api/v1/installment-purchases/group', method: 'PATCH' });
+      expect(patch.request.body).toEqual({ description: 'Geladeira nova', notes: null });
+      patch.flush(apiPurchase);
+      await updated;
+
+      const deleted = firstValueFrom(repository.delete(USER_ID, 'group'));
+      http
+        .expectOne({ url: '/api/v1/installment-purchases/group', method: 'DELETE' })
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await deleted;
     });
   });
 

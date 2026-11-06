@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, map, retry, throwError, timer } from 'rxjs';
+import { InstallmentNotEditableError } from '../../features/installments/domain/installment-rules';
 import {
   InvoicePaymentError,
   PaidInvoiceError,
@@ -216,13 +217,20 @@ function toCreateBody(transaction: NewRecord<Transaction>): ApiCreateEntry | Api
 /** Tipo do 409 de compra numa fatura já paga (`type` do Problem Details). */
 export const PAID_INVOICE_PROBLEM = '/problems/paid-invoice';
 
+/** Tipo do 409 de uma parcela alterada ou excluída sozinha. */
+export const INSTALLMENT_PROBLEM = '/problems/installment';
+
 /**
  * Vínculo recusado (inexistente, arquivado ou incompatível): o formulário marca o campo. Compra
- * de fatura já paga vira `PaidInvoiceError`, que as telas explicam.
+ * de fatura já paga vira `PaidInvoiceError`, e parcela alterada sozinha, `InstallmentNotEditableError`:
+ * as telas explicam os dois.
  */
-function transactionError(problem: ApiProblemError): Error | null {
+export function transactionError(problem: ApiProblemError): Error | null {
   if (problem.status === 409 && problem.type === PAID_INVOICE_PROBLEM) {
     return new PaidInvoiceError();
+  }
+  if (problem.status === 409 && problem.type === INSTALLMENT_PROBLEM) {
+    return new InstallmentNotEditableError();
   }
   const field = LINKS.find((link) => link === problem.field);
   return problem.status === 422 && field
@@ -236,7 +244,7 @@ function notPayable(problem: ApiProblemError): Error | null {
 }
 
 /** Falha em que a requisição pode ter chegado à API sem a resposta chegar ao navegador. */
-function isTransient(error: unknown): boolean {
+export function isTransient(error: unknown): boolean {
   return error instanceof HttpErrorResponse && [0, 502, 503, 504].includes(error.status);
 }
 
@@ -272,5 +280,8 @@ export function toTransactionModel(item: ApiTransaction, userId: string): Transa
     notes: item.notes,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
+    installmentGroupId: item.installmentGroupId,
+    installmentNumber: item.installmentNumber,
+    installmentCount: item.installmentCount,
   };
 }
