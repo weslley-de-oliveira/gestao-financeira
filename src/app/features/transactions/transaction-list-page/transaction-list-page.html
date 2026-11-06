@@ -169,6 +169,9 @@
                     </a>
                     <span class="transaction-item__meta">
                       {{ transaction.date | isoDate }} · {{ accountLabel(transaction, lookups()) }}
+                      @if (installmentLabel(transaction); as installment) {
+                        · {{ installment }}
+                      }
                     </span>
                   </div>
                   <div class="transaction-item__side">
@@ -310,9 +313,11 @@
         </span>
       </button>
     }
-    <button mat-menu-item type="button" (click)="delete(transaction)">
-      <mat-icon>delete</mat-icon>
-      <span>Excluir</span>
-    </button>
+    @if (canDelete(transaction)) {
+      <button mat-menu-item type="button" (click)="delete(transaction)">
+        <mat-icon>delete</mat-icon>
+        <span>Excluir</span>
+      </button>
+    }
   </ng-template>
 </mat-menu>

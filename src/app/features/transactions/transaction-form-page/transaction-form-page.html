@@ -20,6 +20,14 @@
     </p>
     <a matButton="outlined" routerLink="/invoices">Ver faturas</a>
   }
+  @case ('installment') {
+    <p class="transaction-form__message" role="alert">
+      Esta transação é uma parcela de uma compra parcelada. Descrição, categoria e observações mudam
+      pela compra, no detalhe da parcela; para mudar valor, parcelas, cartão ou data, exclua a
+      compra e registre de novo.
+    </p>
+    <a matButton="outlined" [routerLink]="['/transactions', id()]">Ver a parcela</a>
+  }
   @case ('error') {
     <p class="transaction-form__message" role="alert">
       Não foi possível carregar os dados. Tente novamente em instantes.

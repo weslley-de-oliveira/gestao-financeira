@@ -143,6 +143,9 @@
                       [routerLink]="['/transactions', purchase.id]"
                     >
                       {{ purchase.description }}
+                      @if (installmentLabel(purchase); as installment) {
+                        <small class="invoice__item-installment">{{ installment }}</small>
+                      }
                     </a>
                     <span class="invoice__item-amount">{{ purchase.amount | money }}</span>
                   </li>

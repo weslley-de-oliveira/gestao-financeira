@@ -36,7 +36,26 @@
           </p>
         </div>
         <div class="transaction-detail__actions">
-          @if (isEditable(transaction)) {
+          @if (purchase(); as purchase) {
+            <button
+              matButton="outlined"
+              type="button"
+              [disabled]="busy()"
+              (click)="editPurchase(purchase)"
+            >
+              <mat-icon>edit</mat-icon>
+              Editar a compra
+            </button>
+            <button
+              matButton="outlined"
+              type="button"
+              [disabled]="busy()"
+              (click)="deletePurchase(purchase)"
+            >
+              <mat-icon>delete</mat-icon>
+              Excluir a compra
+            </button>
+          } @else if (isEditable(transaction)) {
             <a matButton="outlined" [routerLink]="['/transactions', transaction.id, 'edit']">
               <mat-icon>edit</mat-icon>
               Editar
@@ -62,10 +81,12 @@
               }}
             </button>
           }
-          <button matButton="outlined" type="button" (click)="delete(transaction)">
-            <mat-icon>delete</mat-icon>
-            Excluir
-          </button>
+          @if (!purchase()) {
+            <button matButton="outlined" type="button" (click)="delete(transaction)">
+              <mat-icon>delete</mat-icon>
+              Excluir
+            </button>
+          }
         </div>
       </header>
 
@@ -106,6 +127,18 @@
               }
             </dd>
           </div>
+          @if (purchase(); as purchase) {
+            <div>
+              <dt>Parcelamento</dt>
+              <dd>
+                {{ installmentLabel(transaction) }}
+                <span class="transaction-detail__hint"
+                  >(compra de {{ purchase.amount | money }} em {{ purchase.installmentCount }}x;
+                  editar ou excluir vale para todas as parcelas)</span
+                >
+              </dd>
+            </div>
+          }
           @if (categoryOf(transaction, lookups()); as category) {
             <div>
               <dt>Categoria</dt>

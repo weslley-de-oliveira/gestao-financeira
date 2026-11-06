@@ -19,6 +19,7 @@ import { MoneyMaskDirective } from '../../../shared/directives/money-mask.direct
 import {
   EDITABLE_TRANSACTION_TYPES,
   Transaction,
+  isInstallment,
   isInvoicePayment,
 } from '../../../shared/models/transaction';
 import { AccountsFacade } from '../../accounts/accounts.facade';
@@ -46,7 +47,7 @@ import { PAID_INVOICE_MESSAGE } from '../transaction-actions';
 import { PaidInvoiceError, TransactionsFacade } from '../transactions.facade';
 
 /** `not-editable`: pagamentos de fatura só são criados e desfeitos pela tela de Faturas. */
-type LoadState = 'loading' | 'ready' | 'not-found' | 'not-editable' | 'error';
+type LoadState = 'loading' | 'ready' | 'not-found' | 'not-editable' | 'installment' | 'error';
 
 /** Mensagens para as referências recusadas pela facade (conta ou categoria indisponível). */
 const REFERENCE_ERRORS: Partial<Record<keyof TransactionInput, string>> = {
@@ -269,6 +270,10 @@ export class TransactionFormPage implements OnInit {
       }
       if (transaction && isInvoicePayment(transaction)) {
         this.loadState.set('not-editable');
+        return;
+      }
+      if (transaction && isInstallment(transaction)) {
+        this.loadState.set('installment');
         return;
       }
       this.original.set(transaction);

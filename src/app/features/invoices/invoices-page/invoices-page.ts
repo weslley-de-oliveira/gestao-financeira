@@ -25,6 +25,7 @@ import { AccountsFacade } from '../../accounts/accounts.facade';
 import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
 import { INVOICE_STATUS_LABELS, Invoice, canPayInvoice } from '../domain/invoice-rules';
 import { InvoicePaymentError, InvoicesFacade, monthLabel } from '../invoices.facade';
+import { installmentLabel } from '../../transactions/transaction-display';
 
 /** Mensagens das recusas de pagamento. */
 const PAYMENT_ERRORS: Readonly<Record<string, string>> = {
@@ -108,6 +109,7 @@ export class InvoicesPage implements OnInit {
 
   protected readonly statusLabels = INVOICE_STATUS_LABELS;
   protected readonly monthLabel = monthLabel;
+  protected readonly installmentLabel = installmentLabel;
 
   constructor() {
     // Cartão ou mês escolhidos mudaram: carrega as faturas do cartão e a do mês.
