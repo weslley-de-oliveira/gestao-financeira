@@ -84,10 +84,12 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "gestao-financeira:build:production"
+              "buildTarget": "gestao-financeira:build:production",
+              "proxyConfig": "proxy.conf.json"
             },
             "development": {
-              "buildTarget": "gestao-financeira:build:development"
+              "buildTarget": "gestao-financeira:build:development",
+              "proxyConfig": "proxy.conf.json"
             },
             "demo": {
               "buildTarget": "gestao-financeira:build:demo"

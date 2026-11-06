@@ -175,9 +175,12 @@ describe('DashboardPage', () => {
   });
 
   it('shows a general error when nothing loads', async () => {
-    vi.spyOn(TestBed.inject(InMemoryTransactionRepository), 'listByUser').mockReturnValue(
-      throwError(() => new Error('offline')),
-    );
+    for (const repository of [
+      TestBed.inject(InMemoryAccountRepository),
+      TestBed.inject(InMemoryTransactionRepository),
+    ]) {
+      vi.spyOn(repository, 'listByUser').mockReturnValue(throwError(() => new Error('offline')));
+    }
 
     await open();
 

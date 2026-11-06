@@ -1,6 +1,9 @@
 import { InjectionToken } from '@angular/core';
 
-/** URL base da API. Em desenvolvimento, o JSON Server (`npm run start:api`). */
+/**
+ * URL base da API, na mesma origem do front: em desenvolvimento, o proxy do `ng serve`
+ * (`proxy.conf.json`) encaminha `/api` para a API local.
+ */
 export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL', {
-  factory: () => 'http://localhost:3000',
+  factory: () => '/api/v1',
 });

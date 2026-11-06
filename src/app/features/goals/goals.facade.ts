@@ -1,10 +1,11 @@
+import { NewRecord } from '../../data-access/repositories/new-record';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { SessionCleanup } from '../../core/auth/session-cleanup';
 import { TODAY } from '../../core/services/today';
 import { GoalChanges, GoalRepository } from '../../data-access/repositories/goal.repository';
-import { Goal, GoalContribution, GoalWithProgress } from '../../shared/models/goal';
+import { Goal, GoalWithProgress } from '../../shared/models/goal';
 import { toIsoDate } from '../../shared/utils/date';
 import {
   ContributionInput,
@@ -69,14 +70,12 @@ export class GoalsFacade {
   async create(input: GoalInput): Promise<GoalWithProgress> {
     const normalized = normalizeGoalInput(input);
     this.assertDeadline(normalized.deadline);
-    const goal: Goal = {
+    const goal: NewRecord<Goal> = {
       ...normalized,
-      id: crypto.randomUUID(),
       userId: this.userId(),
       contributions: [],
       isPaused: false,
       isArchived: false,
-      createdAt: new Date().toISOString(),
     };
     return this.store(await firstValueFrom(this.repository.create(goal)));
   }
@@ -112,16 +111,10 @@ export class GoalsFacade {
   async addContribution(id: string, input: ContributionInput): Promise<GoalWithProgress> {
     const normalized = normalizeContributionInput(input, this.todayIso());
     const goal = await this.getOwned(id);
-    const contribution: GoalContribution = {
-      ...normalized,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-    };
-    const contributions = [...goal.contributions, contribution];
-    if (goalBalance({ ...goal, contributions }) < 0) {
+    if (goalBalance({ ...goal, contributions: [...goal.contributions, normalized] }) < 0) {
       throw new InsufficientGoalBalanceError();
     }
-    return this.save(id, { contributions });
+    return this.store(await firstValueFrom(this.repository.addContribution(goal, normalized)));
   }
 
   /** Excluir um aporte também não pode deixar o acumulado negativo. */
@@ -134,7 +127,9 @@ export class GoalsFacade {
     if (goalBalance({ ...goal, contributions }) < 0) {
       throw new InsufficientGoalBalanceError();
     }
-    return this.save(id, { contributions });
+    return this.store(
+      await firstValueFrom(this.repository.removeContribution(goal, contributionId)),
+    );
   }
 
   private assertDeadline(deadline: string | null): void {

@@ -7,6 +7,7 @@ import { MatIcon } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
+import { IncorrectPasswordError } from '../../../core/auth/auth.errors';
 import { AuthService } from '../../../core/auth/auth.service';
 import {
   DecryptionFailedError,
@@ -71,13 +72,16 @@ export class SecurityPage {
   protected readonly decrypted = signal<string | null>(null);
   protected readonly decryptError = signal<string | null>(null);
 
-  /** Confirmação da exclusão: o e-mail da conta, digitado. */
-  private readonly confirmation = signal({ email: '' });
+  /** Confirmação da exclusão: o e-mail da conta, digitado, e a senha atual. */
+  private readonly confirmation = signal({ email: '', password: '' });
   protected readonly confirmForm = form(this.confirmation);
   protected readonly canDelete = computed(
-    () => this.confirmation().email.trim().toLowerCase() === this.user()?.email,
+    () =>
+      this.confirmation().email.trim().toLowerCase() === this.user()?.email &&
+      this.confirmation().password.length > 0,
   );
   protected readonly deleting = signal(false);
+  protected readonly deleteError = signal<string | null>(null);
 
   protected async encrypt(event: Event): Promise<void> {
     event.preventDefault();
@@ -128,11 +132,17 @@ export class SecurityPage {
       return;
     }
     this.deleting.set(true);
+    this.deleteError.set(null);
     try {
-      await this.auth.deleteAccount();
+      await this.auth.deleteAccount(this.confirmation().password);
       await this.router.navigateByUrl('/login');
       this.snackBar.open('Conta e dados fictícios excluídos.', 'Fechar', { duration: 5000 });
-    } catch {
+    } catch (error) {
+      if (error instanceof IncorrectPasswordError) {
+        this.deleteError.set('Senha incorreta.');
+        this.confirmation.update((value) => ({ ...value, password: '' }));
+        return;
+      }
       this.snackBar.open('Não foi possível excluir os dados. Tente novamente.', 'Fechar', {
         duration: 5000,
       });

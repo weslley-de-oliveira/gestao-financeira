@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from '../app/data-access/repositories/new-record';
 import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import {
@@ -6,7 +7,7 @@ import {
 } from '../app/data-access/repositories/credit-card.repository';
 import { CreditCard } from '../app/shared/models/credit-card';
 
-/** Repositório de cartões em memória, para testes sem JSON Server. */
+/** Repositório de cartões em memória, para testes sem API. */
 @Injectable()
 export class InMemoryCreditCardRepository extends CreditCardRepository {
   readonly records: CreditCard[] = [];
@@ -20,7 +21,8 @@ export class InMemoryCreditCardRepository extends CreditCardRepository {
     return of(card ? clone(card) : null);
   }
 
-  create(card: CreditCard): Observable<CreditCard> {
+  create(input: NewRecord<CreditCard>): Observable<CreditCard> {
+    const card = withIdentity<CreditCard>(input);
     this.records.push(clone(card));
     return of(clone(card));
   }

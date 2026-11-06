@@ -12,3 +12,11 @@ export class EmailAlreadyRegisteredError extends Error {
     this.name = 'EmailAlreadyRegisteredError';
   }
 }
+
+/** A senha atual informada para confirmar uma operação sensível (excluir a conta) está errada. */
+export class IncorrectPasswordError extends Error {
+  constructor() {
+    super('Incorrect password');
+    this.name = 'IncorrectPasswordError';
+  }
+}

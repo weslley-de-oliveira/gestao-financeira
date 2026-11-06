@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from '../repositories/new-record';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { Category } from '../../shared/models/category';
@@ -18,7 +19,8 @@ export class LocalCategoryRepository extends CategoryRepository {
     return this.categories.findById(id).pipe(map((dto) => (dto ? toCategory(dto) : null)));
   }
 
-  create(category: Category): Observable<Category> {
+  create(input: NewRecord<Category>): Observable<Category> {
+    const category = withIdentity<Category>(input);
     return this.categories.insert(toCategoryDto(category)).pipe(map(toCategory));
   }
 

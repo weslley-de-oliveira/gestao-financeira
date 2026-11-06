@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from '../repositories/new-record';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { Transaction } from '../../shared/models/transaction';
@@ -18,7 +19,8 @@ export class LocalTransactionRepository extends TransactionRepository {
     return this.transactions.findById(id).pipe(map((dto) => (dto ? toTransaction(dto) : null)));
   }
 
-  create(transaction: Transaction): Observable<Transaction> {
+  create(input: NewRecord<Transaction>): Observable<Transaction> {
+    const transaction = withIdentity<Transaction>(input);
     return this.transactions.insert(toTransactionDto(transaction)).pipe(map(toTransaction));
   }
 

@@ -1,37 +1,18 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
-import { UserDataRepository } from '../../data-access/repositories/user-data.repository';
-import { UserRepository } from '../../data-access/repositories/user.repository';
 import { USER_NAME_MAX_LENGTH, User } from '../../shared/models/user';
 import { PreferencesService } from '../preferences/preferences.service';
-import { EncryptedSessionStorage } from '../security/encrypted-session-storage';
-import { PasswordHasher } from '../security/password-hasher';
-import { EmailAlreadyRegisteredError, InvalidCredentialsError } from './auth.errors';
+import { AuthGateway, LoginCredentials, RegistrationData } from './auth.gateway';
 import { SessionCleanup } from './session-cleanup';
 
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export interface RegistrationData {
-  name: string;
-  email: string;
-  password: string;
-}
-
-const SESSION_KEY = 'gf.session';
+export type { LoginCredentials, RegistrationData } from './auth.gateway';
 
 /**
- * Autenticação demonstrativa sobre o JSON Server: não oferece segurança de produção.
- * A sessão guarda apenas os dados públicos do usuário, criptografados no sessionStorage.
+ * Usuário atual das telas. A autenticação em si fica no `AuthGateway`: local (demo)
+ * ou a API, conforme os providers de dados da build.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly users = inject(UserRepository);
-  private readonly hasher = inject(PasswordHasher);
-  private readonly session = inject(EncryptedSessionStorage);
-  private readonly userData = inject(UserDataRepository);
+  private readonly gateway = inject(AuthGateway);
   private readonly preferences = inject(PreferencesService);
   private readonly cleanup = inject(SessionCleanup);
   private readonly _currentUser = signal<User | null>(null);
@@ -40,41 +21,21 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this._currentUser() !== null);
 
   async restoreSession(): Promise<void> {
-    this._currentUser.set(await this.session.getItem<User>(SESSION_KEY));
+    this._currentUser.set(await this.gateway.restore());
   }
 
-  async login({ email, password }: LoginCredentials): Promise<void> {
-    const record = await firstValueFrom(this.users.findByEmail(normalizeEmail(email)));
-    if (!record || !(await this.hasher.verify(password, record.passwordHash))) {
-      throw new InvalidCredentialsError();
-    }
-    await this.startSession(record.user);
+  async login(credentials: LoginCredentials): Promise<void> {
+    this._currentUser.set(await this.gateway.login(credentials));
   }
 
-  async register({ name, email, password }: RegistrationData): Promise<void> {
-    const normalizedEmail = normalizeEmail(email);
-    if (await firstValueFrom(this.users.findByEmail(normalizedEmail))) {
-      throw new EmailAlreadyRegisteredError();
-    }
-    const { user } = await firstValueFrom(
-      this.users.create({
-        user: {
-          id: crypto.randomUUID(),
-          name: name.trim(),
-          email: normalizedEmail,
-          createdAt: new Date().toISOString(),
-        },
-        passwordHash: await this.hasher.hash(password),
-      }),
-    );
-    await this.startSession(user);
+  async register(data: RegistrationData): Promise<void> {
+    this._currentUser.set(await this.gateway.register(data));
   }
 
-  /** Encerra a sessão: apaga a sessão criptografada e o estado em memória das telas. */
+  /** Encerra a sessão e apaga o estado em memória das telas. */
   async logout(): Promise<void> {
-    await this.session.removeItem(SESSION_KEY);
-    this._currentUser.set(null);
-    this.cleanup.run();
+    await this.gateway.logout();
+    this.endSession();
   }
 
   /** Só o nome pode ser alterado: e-mail e senha são dados de autenticação, com fluxo próprio. */
@@ -83,19 +44,29 @@ export class AuthService {
     if (!normalized || normalized.length > USER_NAME_MAX_LENGTH) {
       throw new RangeError('Invalid name');
     }
-    const updated = await firstValueFrom(this.users.updateName(this.requireUser().id, normalized));
-    await this.startSession(updated);
+    const updated = await this.gateway.updateName(this.requireUser(), normalized);
+    this._currentUser.set(updated);
     return updated;
   }
 
   /**
-   * Apaga o usuário e todos os dados fictícios dele na API, as preferências deste navegador e a
-   * sessão. Não pode ser desfeito.
+   * Apaga o usuário e todos os dados dele, confirmando com a senha atual (errada →
+   * `IncorrectPasswordError`), além das preferências deste navegador e da sessão. Não pode ser
+   * desfeito.
    */
-  async deleteAccount(): Promise<void> {
-    await firstValueFrom(this.userData.deleteAllForUser(this.requireUser().id));
+  async deleteAccount(password: string): Promise<void> {
+    await this.gateway.deleteAccount(this.requireUser(), password);
     this.preferences.reset();
     await this.logout();
+  }
+
+  /**
+   * Esquece o usuário sem falar com o servidor: usado quando a sessão já não vale mais (por
+   * exemplo, a API respondeu 401).
+   */
+  endSession(): void {
+    this._currentUser.set(null);
+    this.cleanup.run();
   }
 
   private requireUser(): User {
@@ -105,13 +76,4 @@ export class AuthService {
     }
     return user;
   }
-
-  private async startSession(user: User): Promise<void> {
-    await this.session.setItem(SESSION_KEY, user);
-    this._currentUser.set(user);
-  }
-}
-
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
 }

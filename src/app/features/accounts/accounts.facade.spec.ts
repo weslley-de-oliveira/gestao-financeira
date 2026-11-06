@@ -3,6 +3,7 @@ import { throwError } from 'rxjs';
 import { InMemoryAccountRepository } from '../../../testing/in-memory-account.repository';
 import { TEST_PROVIDERS } from '../../../testing/test-providers';
 import { AuthService } from '../../core/auth/auth.service';
+import { TransactionRepository } from '../../data-access/repositories/transaction.repository';
 import { AccountNotFoundError, AccountsFacade } from './accounts.facade';
 import { AccountInput, InvalidAccountInputError } from './domain/account-input';
 
@@ -57,6 +58,17 @@ describe('AccountsFacade', () => {
     expect(facade.status()).toBe('ready');
     expect(facade.accounts().map((account) => account.name)).toEqual(['Conta Principal']);
     expect(await facade.getById('other')).toBeNull();
+  });
+
+  it('uses the balance computed by the server, without loading the transactions', async () => {
+    await facade.create(input);
+    repository.records[0].currentBalance = 98_765;
+    const listTransactions = vi.spyOn(TestBed.inject(TransactionRepository), 'listByUser');
+
+    await facade.load();
+
+    expect(facade.accounts()[0].currentBalance).toBe(98_765);
+    expect(listTransactions).not.toHaveBeenCalled();
   });
 
   it('rejects invalid or non-finite values before persisting', async () => {

@@ -1,4 +1,6 @@
 import { Provider } from '@angular/core';
+import { AuthGateway } from '../app/core/auth/auth.gateway';
+import { LocalAuthGateway } from '../app/core/auth/local-auth.gateway';
 import { TODAY } from '../app/core/services/today';
 import { PBKDF2_ITERATIONS } from '../app/core/security/password-hasher';
 import { AccountRepository } from '../app/data-access/repositories/account.repository';
@@ -24,10 +26,11 @@ import { InMemoryUserRepository } from './in-memory-user.repository';
 export const TEST_TODAY = new Date(2026, 10, 15);
 
 /**
- * Substitui o JSON Server por memória e o Chart.js por um registro dos gráficos, fixa a data
+ * Substitui a API por memória e o Chart.js por um registro dos gráficos, fixa a data
  * atual e reduz as iterações do PBKDF2 para acelerar os testes.
  */
 export const TEST_PROVIDERS: Provider[] = [
+  { provide: AuthGateway, useClass: LocalAuthGateway },
   InMemoryUserRepository,
   { provide: UserRepository, useExisting: InMemoryUserRepository },
   InMemoryAccountRepository,

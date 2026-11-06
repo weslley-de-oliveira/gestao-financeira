@@ -7,7 +7,10 @@ export interface UserWithCredentials {
   passwordHash: PasswordHash;
 }
 
-/** Contrato de acesso aos usuários. A implementação atual usa HTTP (JSON Server). */
+/**
+ * Contrato de acesso aos usuários da autenticação local (demo e testes). Na API, cadastro e login
+ * ficam com o servidor (`ApiAuthGateway`).
+ */
 export abstract class UserRepository {
   /** `email` deve estar normalizado (sem espaços e em minúsculas). */
   abstract findByEmail(email: string): Observable<UserWithCredentials | null>;

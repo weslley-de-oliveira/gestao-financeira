@@ -133,3 +133,16 @@ function findPayment(
     ) ?? null
   );
 }
+
+/**
+ * Motivo da recusa: fatura inexistente, que não pode ser paga (aberta, sem compras ou já paga),
+ * ou conta de pagamento do cartão indisponível (arquivada ou removida).
+ */
+export type InvoicePaymentFailure = 'not-found' | 'not-payable' | 'payment-account';
+
+export class InvoicePaymentError extends Error {
+  constructor(readonly reason: InvoicePaymentFailure) {
+    super(`Invoice payment refused: ${reason}`);
+    this.name = 'InvoicePaymentError';
+  }
+}

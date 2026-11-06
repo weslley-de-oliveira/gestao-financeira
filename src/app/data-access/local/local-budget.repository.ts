@@ -1,3 +1,4 @@
+import { NewRecord, withIdentity } from '../repositories/new-record';
 import { Injectable, inject } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { Budget } from '../../shared/models/budget';
@@ -18,7 +19,8 @@ export class LocalBudgetRepository extends BudgetRepository {
     return this.budgets.findById(id).pipe(map((dto) => (dto ? toBudget(dto) : null)));
   }
 
-  create(budget: Budget): Observable<Budget> {
+  create(input: NewRecord<Budget>): Observable<Budget> {
+    const budget = withIdentity<Budget>(input);
     return this.budgets.insert(toBudgetDto(budget)).pipe(map(toBudget));
   }
 

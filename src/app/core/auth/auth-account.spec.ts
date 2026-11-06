@@ -17,6 +17,7 @@ import { seedTransactions } from '../../../testing/transaction-fixtures';
 import { AccountsFacade } from '../../features/accounts/accounts.facade';
 import { PREFERENCES_STORAGE_KEY, PreferencesService } from '../preferences/preferences.service';
 import { PeriodService } from '../services/period.service';
+import { IncorrectPasswordError } from './auth.errors';
 import { AuthService } from './auth.service';
 
 describe('AuthService account management', () => {
@@ -66,7 +67,7 @@ describe('AuthService account management', () => {
     seedAccounts('someone-else', { id: 'other-account' });
     TestBed.inject(PreferencesService).setTheme('dark');
 
-    await auth.deleteAccount();
+    await auth.deleteAccount('senha123');
 
     const collections: { userId: string }[][] = [
       TestBed.inject(InMemoryAccountRepository).records,
@@ -84,5 +85,15 @@ describe('AuthService account management', () => {
     expect(localStorage.getItem(PREFERENCES_STORAGE_KEY)).toBeNull();
     expect(auth.currentUser()).toBeNull();
     await expect(auth.login({ email: 'ana@exemplo.com', password: 'senha123' })).rejects.toThrow();
+  });
+
+  it('asks for the current password before deleting, keeping everything when it is wrong', async () => {
+    seedAccounts(userId, {});
+
+    await expect(auth.deleteAccount('senha-errada')).rejects.toBeInstanceOf(IncorrectPasswordError);
+
+    expect(TestBed.inject(InMemoryAccountRepository).records).toHaveLength(1);
+    expect(TestBed.inject(InMemoryUserRepository).records).toHaveLength(1);
+    expect(auth.currentUser()?.email).toBe('ana@exemplo.com');
   });
 });

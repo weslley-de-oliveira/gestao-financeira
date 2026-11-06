@@ -81,3 +81,73 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  e2e-api:
+    name: E2E contra a API real (Playwright + Postgres)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HUSKY: 0
+      # A API é clonada nesta pasta; o Playwright a inicia a partir do código-fonte.
+      API_DIR: api
+      DATABASE_URL: postgres://gestao:gestao@localhost:5433/gestao_financeira
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: gestao
+          POSTGRES_PASSWORD: gestao
+          POSTGRES_DB: gestao_financeira
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U gestao -d gestao_financeira"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Checkout API
+        uses: actions/checkout@v7
+        with:
+          repository: weslley-de-oliveira/gestao-financeira-api
+          path: api
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install API dependencies
+        run: npm ci
+        working-directory: api
+
+      # Banco vazio a cada execução: migrações e a conta de demonstração do seed.
+      - name: Migrate and seed the database
+        run: npm run db:migrate && npm run db:seed
+        working-directory: api
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E tests against the API
+        run: npm run e2e:api
+
+      - name: Upload Playwright report
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-api
+          path: playwright-report-api/
+          retention-days: 7

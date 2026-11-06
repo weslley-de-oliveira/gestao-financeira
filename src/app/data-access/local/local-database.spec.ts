@@ -86,8 +86,8 @@ describe('LocalDatabase and local repositories', () => {
   });
 
   it('keeps changes in localStorage for the next visit', async () => {
-    const created = account();
-    await firstValueFrom(setup().accounts.create(created));
+    // O id e a data de criação são gerados ao gravar.
+    const created = await firstValueFrom(setup().accounts.create(account()));
 
     TestBed.resetTestingModule();
     const found = await firstValueFrom(setup().accounts.findById(created.id));

@@ -1,16 +1,18 @@
+import { NewRecord } from './new-record';
 import { Observable } from 'rxjs';
 import { Budget } from '../../shared/models/budget';
 
 export type BudgetChanges = Partial<Pick<Budget, 'limits' | 'alertThreshold'>>;
 
-/** Contrato de acesso aos orçamentos. A implementação atual usa HTTP (JSON Server). */
+/** Contrato de acesso aos orçamentos: na API (`data-access/api`) ou no `localStorage` (demo). */
 export abstract class BudgetRepository {
   abstract listByUser(userId: string): Observable<Budget[]>;
 
   /** Retorna `null` quando o orçamento não existe. */
   abstract findById(id: string): Observable<Budget | null>;
 
-  abstract create(budget: Budget): Observable<Budget>;
+  /** Grava o registro novo; o id e a data de criação são definidos ao gravar. */
+  abstract create(budget: NewRecord<Budget>): Observable<Budget>;
 
   abstract update(id: string, changes: BudgetChanges): Observable<Budget>;
 

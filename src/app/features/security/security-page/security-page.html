@@ -157,8 +157,8 @@
         site no navegador remove também as preferências.
       </li>
       <li>
-        <strong>No ambiente de desenvolvimento:</strong> <code>npm run db:reset</code> restaura a
-        API simulada ao estado inicial, apagando os dados de todos os usuários.
+        <strong>No ambiente de desenvolvimento:</strong> <code>npm run db:seed</code>, no
+        repositório da API, recria a conta de demonstração com os dados iniciais.
       </li>
     </ul>
 
@@ -173,6 +173,18 @@
         <input matInput type="email" autocomplete="off" [formField]="confirmForm.email" />
         <mat-hint>{{ user()?.email }}</mat-hint>
       </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Senha atual</mat-label>
+        <input
+          matInput
+          type="password"
+          autocomplete="current-password"
+          [formField]="confirmForm.password"
+        />
+      </mat-form-field>
+      @if (deleteError(); as message) {
+        <p class="security__result--error" role="alert">{{ message }}</p>
+      }
       <div>
         <button
           matButton="filled"

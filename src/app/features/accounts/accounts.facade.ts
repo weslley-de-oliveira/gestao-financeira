@@ -1,3 +1,4 @@
+import { NewRecord } from '../../data-access/repositories/new-record';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
@@ -49,12 +50,8 @@ export class AccountsFacade {
   async load(): Promise<void> {
     this._status.set('loading');
     try {
-      const userId = this.userId();
-      const [accounts, movements] = await Promise.all([
-        firstValueFrom(this.repository.listByUser(userId)),
-        firstValueFrom(this.transactions.listByUser(userId)),
-      ]);
-      this.movements = movements;
+      const accounts = await firstValueFrom(this.repository.listByUser(this.userId()));
+      this.movements = await this.movementsFor(accounts);
       this._accounts.set(accounts.map((account) => this.withBalance(account)));
       this._status.set('ready');
     } catch {
@@ -69,17 +66,12 @@ export class AccountsFacade {
     if (!account || account.userId !== userId) {
       return null;
     }
-    this.movements = await firstValueFrom(this.transactions.listByUser(userId));
+    this.movements = await this.movementsFor([account]);
     return this.withBalance(account);
   }
 
   async create(input: AccountInput): Promise<AccountWithBalance> {
-    const account: Account = {
-      ...normalizeAccountInput(input),
-      id: crypto.randomUUID(),
-      userId: this.userId(),
-      createdAt: new Date().toISOString(),
-    };
+    const account: NewRecord<Account> = { ...normalizeAccountInput(input), userId: this.userId() };
     return this.store(await firstValueFrom(this.repository.create(account)));
   }
 
@@ -111,9 +103,22 @@ export class AccountsFacade {
     return stored;
   }
 
+  /**
+   * Transações para calcular os saldos que o repositório não trouxe prontos. A API já devolve o
+   * saldo de cada conta, e a lista completa de transações não precisa ser carregada.
+   */
+  private async movementsFor(accounts: readonly Account[]): Promise<readonly BalanceMovement[]> {
+    return accounts.every((account) => account.currentBalance !== undefined)
+      ? []
+      : firstValueFrom(this.transactions.listByUser(this.userId()));
+  }
+
   /** Saldo atual pela regra única: saldo inicial + transações realizadas da conta. */
   private withBalance(account: Account): AccountWithBalance {
-    return { ...account, currentBalance: calculateBalance(account, this.movements) };
+    return {
+      ...account,
+      currentBalance: account.currentBalance ?? calculateBalance(account, this.movements),
+    };
   }
 
   private userId(): string {
