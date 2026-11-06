@@ -108,6 +108,9 @@ A aplicação segue uma arquitetura orientada a funcionalidades (`core`, `shared
 - **API** (`data-access/api/`): a API real, com os tipos do contrato gerados do OpenAPI (`npm run api:types`). Um interceptor converte as recusas da API (Problem Details) nos erros que as telas já exibem e, numa sessão expirada, leva ao login. Nenhuma tela baixa a lista completa de transações: a listagem pede uma página por vez (filtros, ordenação e cursor no servidor) e os totais em `GET /v1/transactions/summary`; dashboard, faturas, consumo dos orçamentos, saldos, uso dos cartões e uso das categorias vêm calculados do servidor. As edições enviam `If-Match` com a versão que o formulário carregou (alterada em outra aba → aviso, sem sobrescrever); o pagamento de fatura envia `Idempotency-Key` e repete uma vez, com a mesma chave, se a resposta se perder.
 - **localStorage** (`data-access/local/`): usada na demo (`ng build -c demo`) e nos E2E. A configuração `demo` troca as implementações por `fileReplacements`, sem mudar nenhuma tela ou regra de negócio; os mesmos cálculos são feitos no navegador, sobre a lista completa (`TransactionSource`). Esse contrato só é registrado na demo e nos testes: na build publicada, nada consegue baixar a lista completa.
 
+- **Content Security Policy** (`vercel.json`): scripts só do próprio domínio, mais o hash do único script inline do Angular (o que aplica o CSS crítico); estilos inline permitidos (Angular e Material os injetam); fontes do Google Fonts; pedidos só à mesma origem (`/api`); a página não pode ser embutida em outro site. Ao atualizar o Angular, se o script inline mudar, os E2E acusam a violação: recalcule o hash (`sha256` do conteúdo do `<script>` em `dist/gestao-financeira/browser/index.html`).
+- **Filtros na URL:** a tela de Transações guarda busca, tipo, conta, categoria, status e ordenação na URL (`?busca=…&tipo=expense`), sem criar entradas no histórico; voltar, recarregar ou compartilhar o link mantém a lista. O período fica no seletor da barra superior.
+
 ```text
 db/
   db.seed.json   # Seed fictício da demo, gerado por npm run seed
@@ -126,7 +129,7 @@ vercel.json      # Build publicada, rewrite de /api para a API, fallback da SPA 
 ## Qualidade
 
 - **Testes unitários e de componentes** (Vitest + harnesses do Material): regras de domínio, facades, repositórios, formulários e telas, inclusive a validação do seed contra as regras do app.
-- **E2E** (Playwright, contra a build de demo): login, cadastro, navegação, lançamento de transação, pagamento de fatura, persistência e restauração dos dados. O relógio do navegador é fixado na data de referência do seed para resultados determinísticos.
+- **E2E** (Playwright, contra a build de demo): login, cadastro, navegação, lançamento de transação, pagamento de fatura, filtros de Transações na URL, persistência e restauração dos dados. O relógio do navegador é fixado na data de referência do seed para resultados determinísticos, e todas as páginas rodam com a Content Security Policy do `vercel.json` valendo: qualquer violação falha o teste.
 - **E2E contra a API real** (`npm run e2e:api`): sessão em cookie (restauração, expiração e saída), saldo calculado pelo servidor, dashboard numa chamada só, listagem de transações paginada, ordenada e totalizada no servidor (sem baixar a lista completa), troca de senha e exclusão da conta com senha. Na CI, com Postgres e o seed da API.
 - **Acessibilidade**: axe-core (WCAG 2.0/2.1 A e AA) em todas as telas principais, nos temas claro e escuro.
 - **Responsividade**: navegação pelo menu recolhido e ausência de rolagem horizontal num celular (Pixel 7).
