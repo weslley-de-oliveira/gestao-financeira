@@ -132,6 +132,29 @@ describe('TransactionsFacade', () => {
     expect((await accounts.getById('account-1'))?.currentBalance).toBe(100_000);
   });
 
+  it('returns the most recent transactions of an account and how many there are', async () => {
+    seedTransactions(
+      userId,
+      { description: 'Antiga', date: '2026-10-01' },
+      { description: 'Nova', date: '2026-11-12' },
+      { description: 'Do meio', date: '2026-11-01', accountId: 'account-2' },
+      {
+        description: 'Transferência',
+        date: '2026-11-02',
+        type: 'transfer',
+        accountId: 'account-2',
+        destinationAccountId: 'account-1',
+        categoryId: null,
+      },
+    );
+    seedTransactions('someone-else', { description: 'De outra pessoa' });
+
+    const { items, count } = await facade.recent({ accountId: 'account-1' }, 2);
+
+    expect(items.map((item) => item.description)).toEqual(['Nova', 'Transferência']);
+    expect(count).toBe(3);
+  });
+
   it('does not touch transactions of other users', async () => {
     seedTransactions('someone-else', { id: 'other' });
 

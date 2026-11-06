@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
+import { Component, OnInit, inject, input, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIcon } from '@angular/material/icon';
@@ -8,6 +8,7 @@ import { ACCOUNT_TYPE_LABELS, AccountWithBalance } from '../../../shared/models/
 import { IconAvatar } from '../../../shared/components/icon-avatar/icon-avatar';
 import { IsoDatePipe } from '../../../shared/pipes/iso-date.pipe';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
+import { Transaction } from '../../../shared/models/transaction';
 import { AccountArchiveAction } from '../account-archive';
 import { TransactionsFacade } from '../../transactions/transactions.facade';
 import { signForAccount } from '../../transactions/transaction-display';
@@ -44,17 +45,9 @@ export class AccountDetailPage implements OnInit {
   protected readonly account = signal<AccountWithBalance | null>(null);
   protected readonly loadState = signal<LoadState>('loading');
   protected readonly typeLabels = ACCOUNT_TYPE_LABELS;
-  /** Transações em que a conta é origem ou destino, das mais recentes para as mais antigas. */
-  private readonly linkedTransactions = computed(() =>
-    this.transactionsFacade
-      .transactions()
-      .filter((t) => t.accountId === this.id() || t.destinationAccountId === this.id())
-      .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)),
-  );
-  protected readonly recentTransactions = computed(() =>
-    this.linkedTransactions().slice(0, RECENT_TRANSACTIONS),
-  );
-  protected readonly linkedCount = computed(() => this.linkedTransactions().length);
+  /** Transações mais recentes em que a conta é origem ou destino. */
+  protected readonly recentTransactions = signal<Transaction[]>([]);
+  protected readonly linkedCount = signal(0);
   protected readonly signForAccount = signForAccount;
 
   ngOnInit(): void {
@@ -64,11 +57,13 @@ export class AccountDetailPage implements OnInit {
   protected async load(): Promise<void> {
     this.loadState.set('loading');
     try {
-      const [account] = await Promise.all([
+      const [account, linked] = await Promise.all([
         this.facade.getById(this.id()),
-        this.transactionsFacade.load(),
+        this.transactionsFacade.recent({ accountId: this.id() }, RECENT_TRANSACTIONS),
       ]);
       this.account.set(account);
+      this.recentTransactions.set(linked.items);
+      this.linkedCount.set(linked.count);
       this.loadState.set(account ? 'ready' : 'not-found');
     } catch {
       this.loadState.set('error');

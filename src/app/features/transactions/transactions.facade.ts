@@ -14,6 +14,7 @@ import {
   isCardPurchase,
   isInvoicePayment,
 } from '../../shared/models/transaction';
+import { TransactionFilters } from '../../shared/models/transaction-query';
 import { isInvoicePaidFor } from '../invoices/domain/invoice-rules';
 import {
   InvalidTransactionInputError,
@@ -75,6 +76,24 @@ export class TransactionsFacade {
     } catch {
       this._status.set('error');
     }
+  }
+
+  /**
+   * As transações mais recentes que passam nos filtros e quantas são no total (por exemplo, as de
+   * uma conta ou de um cartão), sem carregar a lista completa.
+   */
+  async recent(
+    filters: TransactionFilters,
+    limit: number,
+  ): Promise<{ items: Transaction[]; count: number }> {
+    const userId = this.userId();
+    const [page, totals] = await Promise.all([
+      firstValueFrom(
+        this.repository.query(userId, { filters, sort: 'date-desc', cursor: null, limit }),
+      ),
+      firstValueFrom(this.repository.summarize(userId, filters)),
+    ]);
+    return { items: page.items, count: totals.count };
   }
 
   /** Retorna `null` se a transação não existir ou pertencer a outro usuário. */
