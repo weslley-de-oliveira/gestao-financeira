@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { EMPTY, Observable, expand, map, reduce } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { EMPTY, Observable, expand, map, reduce, retry, throwError, timer } from 'rxjs';
 import { InvoicePaymentError } from '../../features/invoices/domain/invoice-rules';
 import {
   InvalidTransactionInputError,
@@ -19,6 +20,9 @@ import type {
   ApiTransaction,
   ApiTransactionPage,
 } from './api-types';
+
+/** Espera antes de repetir um pagamento cuja resposta se perdeu (rede ou API acordando). */
+export const PAYMENT_RETRY_DELAY_MS = 1000;
 
 /** Maior página aceita pela API. */
 const PAGE_SIZE = 100;
@@ -101,8 +105,18 @@ export class ApiTransactionRepository extends TransactionRepository {
       .pipe(map(() => undefined));
   }
 
+  /**
+   * Uma `Idempotency-Key` por pagamento: se a resposta se perder (rede, proxy), a nova tentativa
+   * usa a mesma chave, e a API devolve o pagamento já feito em vez de pagar de novo.
+   */
   override payInvoice(payment: NewRecord<Transaction>): Observable<Transaction> {
-    return this.http.post<ApiInvoice>(this.paymentUrl(payment), null).pipe(
+    const headers = { 'Idempotency-Key': crypto.randomUUID() };
+    return this.http.post<ApiInvoice>(this.paymentUrl(payment), null, { headers }).pipe(
+      retry({
+        count: 1,
+        delay: (error: unknown) =>
+          isTransient(error) ? timer(PAYMENT_RETRY_DELAY_MS) : throwError(() => error),
+      }),
       map((invoice) => this.toTransaction(invoicePayment(invoice))),
       toDomainError(notPayable),
     );
@@ -197,6 +211,11 @@ function invalidLink(problem: ApiProblemError): Error | null {
 /** Fatura que mudou de situação desde que a tela carregou (já paga, sem compras, aberta). */
 function notPayable(problem: ApiProblemError): Error | null {
   return problem.status === 409 ? new InvoicePaymentError('not-payable') : null;
+}
+
+/** Falha em que a requisição pode ter chegado à API sem a resposta chegar ao navegador. */
+function isTransient(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && [0, 502, 503, 504].includes(error.status);
 }
 
 function invoicePayment(invoice: ApiInvoice): ApiTransaction {

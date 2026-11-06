@@ -331,6 +331,68 @@ describe('API repositories', () => {
     });
   });
 
+  describe('invoice payment', () => {
+    const url = `/api/v1/credit-cards/${CARD_ID}/invoices/2026-11/payment`;
+    const payment: Omit<Transaction, 'id' | 'createdAt'> = {
+      userId: USER_ID,
+      type: 'invoice-payment',
+      description: 'Pagamento de fatura',
+      amount: 25_000,
+      date: '2026-11-05',
+      accountId: ACCOUNT_ID,
+      creditCardId: CARD_ID,
+      invoiceMonth: '2026-11',
+      destinationAccountId: null,
+      categoryId: null,
+      status: 'completed',
+      notes: null,
+    };
+    const paid = apiTransaction({
+      type: 'invoice-payment',
+      creditCardId: CARD_ID,
+      invoiceMonth: '2026-11',
+      categoryId: null,
+    });
+
+    it('repeats a payment whose response was lost with the same Idempotency-Key', async () => {
+      vi.useFakeTimers();
+      try {
+        const result = firstValueFrom(TestBed.inject(ApiTransactionRepository).payInvoice(payment));
+        const first = http.expectOne({ url, method: 'POST' });
+        const key = first.request.headers.get('Idempotency-Key');
+        expect(key).toMatch(/^[0-9a-f-]{36}$/);
+        first.error(new ProgressEvent('error'), { status: 0, statusText: 'Unknown Error' });
+
+        await vi.advanceTimersByTimeAsync(1000);
+        const retry = http.expectOne({ url, method: 'POST' });
+        expect(retry.request.headers.get('Idempotency-Key')).toBe(key);
+        retry.flush({ payment: paid } as Partial<ApiInvoice>, {
+          headers: { 'Idempotent-Replayed': 'true' },
+        });
+
+        expect((await result).type).toBe('invoice-payment');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('does not repeat a payment the API refused, and uses a new key each time', async () => {
+      const repository = TestBed.inject(ApiTransactionRepository);
+      const refused = firstValueFrom(repository.payInvoice(payment));
+      const first = http.expectOne({ url, method: 'POST' });
+      first.flush({ status: 409 }, { status: 409, statusText: 'Conflict' });
+      await expect(refused).rejects.toMatchObject({ status: 409 });
+
+      const next = firstValueFrom(repository.payInvoice(payment));
+      const second = http.expectOne({ url, method: 'POST' });
+      expect(second.request.headers.get('Idempotency-Key')).not.toBe(
+        first.request.headers.get('Idempotency-Key'),
+      );
+      second.flush({ payment: paid } as Partial<ApiInvoice>);
+      await next;
+    });
+  });
+
   describe('budgets', () => {
     it('sends only the current limit and keeps the history from the response', async () => {
       const apiBudget: ApiBudget = {
