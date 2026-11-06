@@ -57,12 +57,8 @@ export class CreditCardsFacade {
   async load(): Promise<void> {
     this._status.set('loading');
     try {
-      const userId = this.userId();
-      const [cards, transactions] = await Promise.all([
-        firstValueFrom(this.repository.listByUser(userId)),
-        firstValueFrom(this.transactions.listByUser(userId)),
-      ]);
-      this.purchases = transactions;
+      const cards = await firstValueFrom(this.repository.listByUser(this.userId()));
+      this.purchases = await this.purchasesFor(cards);
       this._cards.set(cards.map((card) => this.withUsage(card)));
       this._status.set('ready');
     } catch {
@@ -77,7 +73,7 @@ export class CreditCardsFacade {
     if (!card || card.userId !== userId) {
       return null;
     }
-    this.purchases = await firstValueFrom(this.transactions.listByUser(userId));
+    this.purchases = await this.purchasesFor([card]);
     return this.withUsage(card);
   }
 
@@ -131,8 +127,20 @@ export class CreditCardsFacade {
     return stored;
   }
 
-  private withUsage(card: CreditCard): CreditCardWithUsage {
-    return calculateCardUsage(card, this.purchases, toIsoDate(this.today()));
+  /**
+   * Transações para calcular o uso dos cartões que o repositório não trouxe pronto. A API já
+   * devolve o uso de cada cartão, e a lista completa de transações não precisa ser carregada.
+   */
+  private async purchasesFor(cards: readonly CreditCard[]): Promise<readonly Transaction[]> {
+    return cards.every((card) => card.usage !== undefined)
+      ? []
+      : firstValueFrom(this.transactions.listByUser(this.userId()));
+  }
+
+  private withUsage({ usage, ...card }: CreditCard): CreditCardWithUsage {
+    return usage
+      ? { ...card, ...usage }
+      : calculateCardUsage(card, this.purchases, toIsoDate(this.today()));
   }
 
   private userId(): string {

@@ -58,6 +58,7 @@ export class ApiAccountRepository extends AccountRepository {
       icon: item.icon,
       isArchived: item.isArchived,
       createdAt: item.createdAt,
+      currentBalance: item.currentBalance,
     };
   }
 }

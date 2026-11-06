@@ -40,6 +40,21 @@ export interface CreditCard {
   color: string;
   isArchived: boolean;
   createdAt: string;
+  /**
+   * Uso do limite já calculado pelo servidor (API). Ausente nos repositórios locais: a facade
+   * calcula pelas transações.
+   */
+  usage?: CardUsage;
+}
+
+/** Uso do limite e próxima fatura de um cartão. */
+export interface CardUsage {
+  /** Compras ainda não pagas. */
+  usedLimit: Cents;
+  /** Limite − utilizado; negativo quando o limite foi ultrapassado. */
+  availableLimit: Cents;
+  /** Fatura em aberto hoje e o total das compras já lançadas nela. */
+  nextInvoice: InvoiceCycle & { amount: Cents };
 }
 
 /** Fatura de um cartão: compras de `start` a `end` (inclusive), fechada em `closingDate`. */
@@ -55,11 +70,4 @@ export interface InvoiceCycle {
 }
 
 /** Cartão com o uso do limite e a próxima fatura, calculados (não persistidos). */
-export interface CreditCardWithUsage extends CreditCard {
-  /** Compras ainda não pagas. */
-  usedLimit: Cents;
-  /** Limite − utilizado; negativo quando o limite foi ultrapassado. */
-  availableLimit: Cents;
-  /** Fatura em aberto hoje e o total das compras já lançadas nela. */
-  nextInvoice: InvoiceCycle & { amount: Cents };
-}
+export type CreditCardWithUsage = Omit<CreditCard, 'usage'> & CardUsage;

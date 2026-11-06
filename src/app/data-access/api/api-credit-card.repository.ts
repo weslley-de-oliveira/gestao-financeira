@@ -75,6 +75,11 @@ export class ApiCreditCardRepository extends CreditCardRepository {
       color: item.color,
       isArchived: item.isArchived,
       createdAt: item.createdAt,
+      usage: {
+        usedLimit: item.usedLimit,
+        availableLimit: item.availableLimit,
+        nextInvoice: item.nextInvoice,
+      },
     };
   }
 }

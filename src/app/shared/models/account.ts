@@ -29,6 +29,11 @@ export interface Account {
   icon: string;
   isArchived: boolean;
   createdAt: string;
+  /**
+   * Saldo atual já calculado pelo servidor (API). Ausente nos repositórios locais: a facade
+   * calcula pelas transações.
+   */
+  currentBalance?: Cents;
 }
 
 /** Conta com o saldo atual, calculado pela regra de domínio (não é persistido). */

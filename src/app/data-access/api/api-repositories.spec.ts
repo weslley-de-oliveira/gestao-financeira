@@ -97,7 +97,7 @@ describe('API repositories', () => {
   });
 
   describe('accounts', () => {
-    it('lists archived accounts too and fills the owner from the session', async () => {
+    it('lists archived accounts too, with the owner from the session and the server balance', async () => {
       const list = firstValueFrom(TestBed.inject(ApiAccountRepository).listByUser());
       http
         .expectOne({ url: '/api/v1/accounts?includeArchived=true', method: 'GET' })
@@ -105,7 +105,7 @@ describe('API repositories', () => {
 
       const [account] = await list;
       expect(account.userId).toBe(USER_ID);
-      expect(account).not.toHaveProperty('currentBalance');
+      expect(account.currentBalance).toBe(125_000);
     });
 
     it('returns null when the account is not found (404)', async () => {

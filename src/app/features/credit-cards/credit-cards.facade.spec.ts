@@ -3,6 +3,7 @@ import { seedAccounts } from '../../../testing/account-fixtures';
 import { signInTestUser } from '../../../testing/auth-fixtures';
 import { InMemoryCreditCardRepository } from '../../../testing/in-memory-credit-card.repository';
 import { TEST_PROVIDERS } from '../../../testing/test-providers';
+import { TransactionRepository } from '../../data-access/repositories/transaction.repository';
 import { seedTransactions } from '../../../testing/transaction-fixtures';
 import { CreditCardNotFoundError, CreditCardsFacade } from './credit-cards.facade';
 import { CreditCardInput, InvalidCreditCardInputError } from './domain/credit-card-input';
@@ -59,6 +60,26 @@ describe('CreditCardsFacade', () => {
       availableLimit: 237_655,
       nextInvoice: { closingDate: '2026-12-05', dueDate: '2026-12-12', amount: 12_345 },
     });
+  });
+
+  it('uses the usage computed by the server, without loading the transactions', async () => {
+    await facade.create(input);
+    const nextInvoice = {
+      referenceMonth: '2026-12',
+      start: '2026-11-05',
+      end: '2026-12-04',
+      closingDate: '2026-12-05',
+      dueDate: '2026-12-12',
+      amount: 1_000,
+    };
+    repository.records[0].usage = { usedLimit: 40_000, availableLimit: 260_000, nextInvoice };
+    const listTransactions = vi.spyOn(TestBed.inject(TransactionRepository), 'listByUser');
+
+    await facade.load();
+
+    expect(facade.cards()[0]).toMatchObject({ usedLimit: 40_000, nextInvoice });
+    expect(facade.cards()[0]).not.toHaveProperty('usage');
+    expect(listTransactions).not.toHaveBeenCalled();
   });
 
   it('requires an active payment account of the user', async () => {
