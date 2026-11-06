@@ -16,6 +16,6 @@ export class PublicLayout {
     { icon: 'insights', text: 'Dashboard com receitas, despesas e evolução do saldo' },
     { icon: 'credit_card', text: 'Cartões e faturas sem despesas duplicadas' },
     { icon: 'savings', text: 'Orçamentos por categoria e metas com ritmo mensal' },
-    { icon: 'shield_lock', text: 'Sessão criptografada e senha com hash no navegador' },
+    { icon: 'shield_lock', text: 'Sessão protegida e senha guardada só como hash' },
   ];
 }

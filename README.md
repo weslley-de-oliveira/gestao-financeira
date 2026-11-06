@@ -10,10 +10,11 @@ Organiza contas, receitas, despesas, transferências, cartões de crédito, fatu
 
 ## Demo
 
-A [demo publicada](https://gestao-financeira-tau-five.vercel.app) (Vercel, atualizada a cada push na `main`, com preview em cada pull request) roda inteiramente no navegador: os dados ficam no `localStorage` e começam com um conjunto fictício de seis meses de movimentações.
+A [demo publicada](https://gestao-financeira-tau-five.vercel.app) (Vercel, atualizada a cada push na `main`, com preview em cada pull request) usa a [API própria](https://github.com/weslley-de-oliveira/gestao-financeira-api), no Render, com o banco no Neon. A Vercel encaminha `/api/*` para a API (`vercel.json`): o navegador fala só com a origem do front, e o cookie de sessão é dessa origem.
 
-- Entre com **Entrar com a conta de demonstração** (`demo@exemplo.com` / `demo1234`) ou crie uma conta.
-- Para voltar ao estado inicial, use **Restaurar dados iniciais** na tela de login ou em Configurações.
+- Entre com **Entrar com a conta de demonstração** (`demo@exemplo.com` / `demo1234`), com seis meses de dados fictícios, ou crie uma conta. A conta de demonstração é compartilhada por quem visita o projeto.
+- A API roda no plano gratuito e hiberna sem uso: a primeira visita depois disso pode levar até um minuto (a tela de carregamento explica a espera).
+- A versão com os dados só no navegador (`localStorage`) continua disponível com `npm run start:demo` e é a usada nos testes E2E de demo; nela, **Restaurar dados iniciais** volta ao estado inicial.
 
 ## Funcionalidades
 
@@ -52,7 +53,7 @@ A [demo publicada](https://gestao-financeira-tau-five.vercel.app) (Vercel, atual
 | angular-eslint + ESLint, Prettier                   | Análise estática e formatação                             |
 | Husky + lint-staged + commitlint                    | Validações antes do commit e Conventional Commits         |
 | GitHub Actions                                      | CI: formatação, lint, testes unitários, build e E2E       |
-| [Vercel](https://vercel.com)                        | Hospedagem da demo                                        |
+| [Vercel](https://vercel.com)                        | Hospedagem do front, com `rewrite` de `/api` para a API   |
 
 ## Requisitos
 
@@ -87,7 +88,7 @@ npm run start:demo
 | `npm run seed`         | Gera novamente o seed da demo (`db/db.seed.json`)        |
 | `npm run api:types`    | Gera os tipos do contrato a partir do OpenAPI da API     |
 | `npm run build`        | Gera o build de produção em `dist/`                      |
-| `npm run build:demo`   | Gera o build da demo publicada                           |
+| `npm run build:demo`   | Gera o build da demo com dados no navegador              |
 | `npm test`             | Executa os testes unitários com Vitest                   |
 | `npm run e2e`          | Executa os testes E2E e de acessibilidade com Playwright |
 | `npm run e2e:api`      | Executa os testes E2E contra a API real                  |
@@ -119,7 +120,7 @@ src/
   styles.scss    # Tema do Angular Material e estilos globais
   styles/        # Parciais SCSS compartilhados (breakpoints etc.)
 public/          # Arquivos estáticos
-vercel.json      # Build da demo, fallback da SPA e cabeçalhos de segurança
+vercel.json      # Build publicada, rewrite de /api para a API, fallback da SPA e cabeçalhos
 ```
 
 ## Qualidade

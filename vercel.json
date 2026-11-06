@@ -2,9 +2,15 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "HUSKY=0 npm ci",
-  "buildCommand": "npm run build:demo",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist/gestao-financeira/browser",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://gestao-financeira-api-nz81.onrender.com/:path*"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
