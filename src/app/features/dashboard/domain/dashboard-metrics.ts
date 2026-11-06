@@ -1,16 +1,18 @@
 import { addDays, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale/pt-BR';
 import { Account } from '../../../shared/models/account';
+import { BalancePoint, IncomeExpensePoint } from '../../../shared/models/dashboard';
 import { DateRange, isInRange } from '../../../shared/models/period';
 import { Transaction } from '../../../shared/models/transaction';
-import { IsoDate, parseIsoDate, toIsoDate } from '../../../shared/utils/date';
-import { Cents } from '../../../shared/utils/money';
+import { parseIsoDate, toIsoDate } from '../../../shared/utils/date';
 import { movementEffect } from '../../accounts/domain/account-balance';
 import {
   defaultTransactionQuery,
   queryTransactions,
 } from '../../transactions/domain/transaction-query';
 import { summarizeTransactions } from '../../transactions/domain/transaction-rules';
+
+export type { BalancePoint, IncomeExpensePoint } from '../../../shared/models/dashboard';
 
 /** Faixa de datas agrupada num ponto do gráfico de receitas × despesas. */
 export interface PeriodBucket extends DateRange {
@@ -49,12 +51,6 @@ export function periodBuckets(range: DateRange): PeriodBucket[] {
   return buckets;
 }
 
-export interface IncomeExpensePoint {
-  label: string;
-  income: Cents;
-  expense: Cents;
-}
-
 /**
  * Receitas e despesas de cada bloco do período, pela mesma regra dos cards
  * (`summarizeTransactions`): só realizadas, sem transferências.
@@ -69,11 +65,6 @@ export function incomeVsExpense(
     );
     return { label: bucket.label, income, expense };
   });
-}
-
-export interface BalancePoint {
-  date: IsoDate;
-  balance: Cents;
 }
 
 /**

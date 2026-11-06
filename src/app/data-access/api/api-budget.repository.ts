@@ -65,15 +65,7 @@ export class ApiBudgetRepository extends BudgetRepository {
   }
 
   private toBudget(item: ApiBudget): Budget {
-    return {
-      id: item.id,
-      userId: this.session.id(),
-      categoryId: item.categoryId,
-      limits: item.limits.map(({ month, amount }) => ({ month, amount })),
-      alertThreshold: item.alertThreshold,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    };
+    return toBudgetModel(item, this.session.id());
   }
 }
 
@@ -85,4 +77,17 @@ function currentLimit(limits: Budget['limits']): number {
 /** Categoria inexistente ou que não é de despesa: o formulário marca o campo. */
 function invalidCategory(problem: ApiProblemError): Error | null {
   return problem.field === 'categoryId' ? new InvalidBudgetInputError('categoryId') : null;
+}
+
+/** Converte o formato da API no modelo do app; o dono é o usuário da sessão. */
+export function toBudgetModel(item: ApiBudget, userId: string): Budget {
+  return {
+    id: item.id,
+    userId,
+    categoryId: item.categoryId,
+    limits: item.limits.map(({ month, amount }) => ({ month, amount })),
+    alertThreshold: item.alertThreshold,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
 }

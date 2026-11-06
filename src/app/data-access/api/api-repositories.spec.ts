@@ -7,6 +7,7 @@ import { Transaction } from '../../shared/models/transaction';
 import { ApiAccountRepository } from './api-account.repository';
 import { ApiBudgetRepository } from './api-budget.repository';
 import { ApiCategoryRepository } from './api-category.repository';
+import { ApiDashboardRepository } from './api-dashboard.repository';
 import { ApiGoalRepository } from './api-goal.repository';
 import { SessionUser } from './api-http';
 import { ApiTransactionRepository } from './api-transaction.repository';
@@ -90,6 +91,7 @@ describe('API repositories', () => {
         ApiTransactionRepository,
         ApiBudgetRepository,
         ApiGoalRepository,
+        ApiDashboardRepository,
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -390,6 +392,69 @@ describe('API repositories', () => {
       );
       second.flush({ payment: paid } as Partial<ApiInvoice>);
       await next;
+    });
+  });
+
+  describe('dashboard', () => {
+    it('asks the API for the summary of the period and maps it to the app models', async () => {
+      const summary = firstValueFrom(
+        TestBed.inject(ApiDashboardRepository).load(USER_ID, {
+          start: '2026-11-01',
+          end: '2026-11-30',
+        }),
+      );
+      const request = http.expectOne(
+        (req) => req.url === '/api/v1/dashboard' && req.method === 'GET',
+      );
+      expect(request.request.params.get('from')).toBe('2026-11-01');
+      expect(request.request.params.get('to')).toBe('2026-11-30');
+      request.flush({
+        from: '2026-11-01',
+        to: '2026-11-30',
+        summary: { income: 500_000, expense: 25_000, net: 475_000, pendingCount: 1 },
+        balance: { total: 125_000, activeAccounts: 1 },
+        incomeVsExpense: [
+          { label: '01–07', start: '2026-11-01', end: '2026-11-07', income: 500_000, expense: 0 },
+        ],
+        balanceEvolution: [{ date: '2026-11-01', balance: 100_000 }],
+        recentTransactions: [apiTransaction()],
+        budgetHighlights: [
+          {
+            id: 'b1',
+            categoryId: CATEGORY_ID,
+            alertThreshold: 80,
+            limitAmount: 50_000,
+            limits: [{ month: '2026-11', amount: 50_000 }],
+            progress: {
+              month: '2026-11',
+              limit: 50_000,
+              spent: 25_000,
+              pending: 0,
+              available: 25_000,
+              percent: 50,
+              state: 'ok',
+            },
+            createdAt: '2026-11-01T12:00:00.000Z',
+            updatedAt: '2026-11-01T12:00:00.000Z',
+          },
+        ],
+        goalHighlights: [apiGoal],
+      });
+
+      const dashboard = await summary;
+      expect(dashboard.summary.pendingCount).toBe(1);
+      expect(dashboard.incomeVsExpense).toEqual([{ label: '01–07', income: 500_000, expense: 0 }]);
+      expect(dashboard.recentTransactions[0].userId).toBe(USER_ID);
+      expect(dashboard.budgetHighlights[0]).toMatchObject({
+        budget: { id: 'b1', userId: USER_ID },
+        spent: 25_000,
+        state: 'ok',
+      });
+      expect(dashboard.goalHighlights[0]).toMatchObject({
+        id: apiGoal.id,
+        userId: USER_ID,
+        status: 'in-progress',
+      });
     });
   });
 

@@ -5,12 +5,14 @@ import { ApiAccountRepository } from './api/api-account.repository';
 import { ApiBudgetRepository } from './api/api-budget.repository';
 import { ApiCategoryRepository } from './api/api-category.repository';
 import { ApiCreditCardRepository } from './api/api-credit-card.repository';
+import { ApiDashboardRepository } from './api/api-dashboard.repository';
 import { ApiGoalRepository } from './api/api-goal.repository';
 import { ApiTransactionRepository } from './api/api-transaction.repository';
 import { AccountRepository } from './repositories/account.repository';
 import { BudgetRepository } from './repositories/budget.repository';
 import { CategoryRepository } from './repositories/category.repository';
 import { CreditCardRepository } from './repositories/credit-card.repository';
+import { DashboardRepository } from './repositories/dashboard.repository';
 import { GoalRepository } from './repositories/goal.repository';
 import { TransactionRepository } from './repositories/transaction.repository';
 
@@ -29,5 +31,6 @@ export function provideDataAccess(): Provider[] {
     { provide: CreditCardRepository, useClass: ApiCreditCardRepository },
     { provide: BudgetRepository, useClass: ApiBudgetRepository },
     { provide: GoalRepository, useClass: ApiGoalRepository },
+    { provide: DashboardRepository, useClass: ApiDashboardRepository },
   ];
 }

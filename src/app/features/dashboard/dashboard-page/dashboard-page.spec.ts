@@ -12,6 +12,8 @@ import { InMemoryTransactionRepository } from '../../../../testing/in-memory-tra
 import { TEST_PROVIDERS } from '../../../../testing/test-providers';
 import { seedTransactions } from '../../../../testing/transaction-fixtures';
 import { appConfig } from '../../../app.config';
+import { DashboardRepository } from '../../../data-access/repositories/dashboard.repository';
+import { AccountsFacade } from '../../accounts/accounts.facade';
 import { PeriodService } from '../../../core/services/period.service';
 
 describe('DashboardPage', () => {
@@ -152,26 +154,33 @@ describe('DashboardPage', () => {
     expect(charts().map((chart) => chart.type)).toEqual(['line']);
   });
 
-  it('keeps the other widgets working when the accounts fail to load', async () => {
+  it('keeps the summary when only the account names fail to load', async () => {
     seedMonth();
-    vi.spyOn(TestBed.inject(InMemoryAccountRepository), 'listByUser').mockReturnValueOnce(
-      throwError(() => new Error('offline')),
-    );
+    // Contas e cartões só dão os nomes das transações recentes.
+    vi.spyOn(TestBed.inject(AccountsFacade), 'load').mockResolvedValue();
 
     await open();
 
-    expect(text()).toMatch(/Saldo total\s*Indisponível/);
+    expect(text()).toMatch(/Saldo total R\$ 5\.849,10/);
     expect(text()).toMatch(/Receitas \+R\$ 5\.000,00/);
-    expect(text()).toContain('Não foi possível calcular a evolução do saldo.');
+    expect(text()).toContain('Salário');
+  });
+
+  it('loads the whole summary in one request and retries it after a failure', async () => {
+    seedMonth();
+    const repository = TestBed.inject(DashboardRepository);
+    const load = vi.spyOn(repository, 'load');
+    load.mockReturnValueOnce(throwError(() => new Error('offline')));
+
+    await open();
+    expect(text()).toContain('Não foi possível carregar o dashboard.');
 
     const loader = TestbedHarnessEnvironment.loader(harness.fixture);
-    const [retry] = await loader.getAllHarnesses(
-      MatButtonHarness.with({ text: 'Tentar novamente' }),
-    );
-    await retry.click();
+    await (await loader.getHarness(MatButtonHarness.with({ text: 'Tentar novamente' }))).click();
     await harness.fixture.whenStable();
 
     expect(text()).toMatch(/Saldo total R\$ 5\.849,10/);
+    expect(load).toHaveBeenCalledTimes(2);
   });
 
   it('shows a general error when nothing loads', async () => {

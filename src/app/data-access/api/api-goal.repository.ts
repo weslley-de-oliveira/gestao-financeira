@@ -99,29 +99,7 @@ export class ApiGoalRepository extends GoalRepository {
   }
 
   private toGoal(item: ApiGoal): Goal {
-    return {
-      id: item.id,
-      userId: this.session.id(),
-      name: item.name,
-      description: item.description,
-      targetAmount: item.targetAmount,
-      initialAmount: item.initialAmount,
-      contributions: item.contributions.map(({ id, type, amount, date, note, createdAt }) => ({
-        id,
-        type,
-        amount,
-        date,
-        note,
-        createdAt,
-      })),
-      deadline: item.deadline,
-      color: item.color,
-      icon: item.icon,
-      isPaused: item.isPaused,
-      isArchived: item.isArchived,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    };
+    return toGoalModel(item, this.session.id());
   }
 }
 
@@ -136,4 +114,31 @@ function goalProblem(problem: ApiProblemError): Error | null {
   return problem.field === 'deadline' || problem.field === 'date'
     ? new InvalidGoalInputError(problem.field)
     : null;
+}
+
+/** Converte o formato da API no modelo do app; o dono é o usuário da sessão. */
+export function toGoalModel(item: ApiGoal, userId: string): Goal {
+  return {
+    id: item.id,
+    userId,
+    name: item.name,
+    description: item.description,
+    targetAmount: item.targetAmount,
+    initialAmount: item.initialAmount,
+    contributions: item.contributions.map(({ id, type, amount, date, note, createdAt }) => ({
+      id,
+      type,
+      amount,
+      date,
+      note,
+      createdAt,
+    })),
+    deadline: item.deadline,
+    color: item.color,
+    icon: item.icon,
+    isPaused: item.isPaused,
+    isArchived: item.isArchived,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
 }

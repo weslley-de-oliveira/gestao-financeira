@@ -44,3 +44,20 @@ test('goes back to the login, keeping the page, when the session ends on the ser
 
   await expect(page).toHaveURL(/\/login\?returnUrl=%2Ftransactions$/);
 });
+
+test('loads the dashboard summary in one request, without the transaction list', async ({
+  page,
+}) => {
+  const calls: string[] = [];
+  page.on('request', (request) => {
+    const { pathname } = new URL(request.url());
+    if (pathname.startsWith('/api/v1/')) calls.push(pathname);
+  });
+
+  await login(page, DEMO.email, DEMO.password);
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByText('Saldo atual de')).toBeVisible();
+
+  expect(calls).toContain('/api/v1/dashboard');
+  expect(calls).not.toContain('/api/v1/transactions');
+});

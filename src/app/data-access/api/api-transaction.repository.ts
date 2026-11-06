@@ -148,23 +148,7 @@ export class ApiTransactionRepository extends TransactionRepository {
   }
 
   private toTransaction(item: ApiTransaction): Transaction {
-    return {
-      id: item.id,
-      userId: this.session.id(),
-      type: item.type,
-      description: item.description,
-      amount: item.amount,
-      date: item.date,
-      accountId: item.accountId,
-      creditCardId: item.creditCardId,
-      invoiceMonth: item.invoiceMonth,
-      destinationAccountId: item.destinationAccountId,
-      categoryId: item.categoryId,
-      status: item.status,
-      notes: item.notes,
-      createdAt: item.createdAt,
-      updatedAt: item.updatedAt,
-    };
+    return toTransactionModel(item, this.session.id());
   }
 }
 
@@ -230,4 +214,25 @@ function required(id: string | null): string {
     throw new Error('Missing required link');
   }
   return id;
+}
+
+/** Converte o formato da API no modelo do app; o dono é o usuário da sessão. */
+export function toTransactionModel(item: ApiTransaction, userId: string): Transaction {
+  return {
+    id: item.id,
+    userId,
+    type: item.type,
+    description: item.description,
+    amount: item.amount,
+    date: item.date,
+    accountId: item.accountId,
+    creditCardId: item.creditCardId,
+    invoiceMonth: item.invoiceMonth,
+    destinationAccountId: item.destinationAccountId,
+    categoryId: item.categoryId,
+    status: item.status,
+    notes: item.notes,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
 }
