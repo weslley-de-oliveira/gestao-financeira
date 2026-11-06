@@ -1276,7 +1276,7 @@ export interface paths {
     post?: never;
     /**
      * Exclui uma transação
-     * @description Remove a transação de vez. Pagamento de fatura responde 409 (é desfeito pela fatura), assim como compra de fatura já paga (desfaça o pagamento antes).
+     * @description Remove a transação de vez. Pagamento de fatura responde 409 (é desfeito pela fatura), assim como compra de fatura já paga (desfaça o pagamento antes) e parcela de compra parcelada (`/problems/installment`: exclua a compra inteira).
      */
     delete: {
       parameters: {
@@ -1338,7 +1338,7 @@ export interface paths {
     head?: never;
     /**
      * Edita uma transação
-     * @description Os campos enviados são aplicados sobre a transação e o resultado segue as regras do cadastro. Ao trocar o tipo, os campos que não servem ao novo tipo são descartados (a categoria, ao virar transferência; a conta de destino, ao virar receita ou despesa). `notes: null` remove as observações. Contas e categoria que a transação já tinha continuam aceitas mesmo se arquivadas depois; trocar por uma arquivada responde 409, assim como editar pagamento de fatura e editar compra de fatura já paga (ou movê-la para uma fatura paga).
+     * @description Os campos enviados são aplicados sobre a transação e o resultado segue as regras do cadastro. Ao trocar o tipo, os campos que não servem ao novo tipo são descartados (a categoria, ao virar transferência; a conta de destino, ao virar receita ou despesa). `notes: null` remove as observações. Contas e categoria que a transação já tinha continuam aceitas mesmo se arquivadas depois; trocar por uma arquivada responde 409, assim como editar pagamento de fatura e editar compra de fatura já paga (ou movê-la para uma fatura paga) e editar uma parcela sozinha (`/problems/installment`: altere a compra parcelada).
      */
     patch: {
       parameters: {
@@ -1431,6 +1431,271 @@ export interface paths {
         };
         /** @description Default Response */
         412: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+      };
+    };
+    trace?: never;
+  };
+  '/v1/installment-purchases': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Registra uma compra parcelada
+     * @description Divide o valor total em `installmentCount` parcelas (2 a 24; a sobra dos centavos fica na 1ª), uma por fatura seguida: a 1ª na data da compra e as demais no mesmo dia, ajustado ao ciclo de cada fatura. Cartão e categoria de despesa precisam ser do usuário (senão, 422 no campo) e estar ativos (arquivado responde 409). Se alguma parcela cairia numa fatura já paga, responde 409. Com `Idempotency-Key`, repetir o pedido devolve a mesma compra, sem duplicar as parcelas.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: {
+          /** @description Chave única por operação (ex.: um UUID gerado ao abrir a confirmação). Repetir a requisição com a mesma chave em até 24 horas devolve a resposta da primeira, sem executar de novo. */
+          'idempotency-key'?: string;
+        };
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateInstallmentPurchaseInput'];
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['InstallmentPurchase'];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/installment-purchases/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Detalha uma compra parcelada
+     * @description O resumo da compra e todas as parcelas, da 1ª à última. Inexistente ou de outro usuário responde 404.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['InstallmentPurchase'];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    /**
+     * Exclui a compra parcelada
+     * @description Apaga todas as parcelas. Se alguma estiver numa fatura já paga, responde 409 e nada muda: desfaça o pagamento antes.
+     */
+    delete: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Compra excluída. */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+      };
+    };
+    options?: never;
+    head?: never;
+    /**
+     * Altera a compra parcelada
+     * @description Altera descrição, categoria e observações de todas as parcelas, inclusive as de faturas já pagas (esses campos não mudam os valores). Valor, número de parcelas, cartão e data não mudam: exclua a compra e registre de novo. Categoria nova precisa ser de despesa, do usuário (senão, 422) e ativa (arquivada responde 409).
+     */
+    patch: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateInstallmentPurchaseInput'];
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['InstallmentPurchase'];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        409: {
           headers: {
             [name: string]: unknown;
           };
@@ -2062,7 +2327,7 @@ export interface paths {
     };
     /**
      * Lista os orçamentos com o consumo do mês
-     * @description Orçamentos que valem no mês (padrão: o atual), em ordem alfabética da categoria, com o consumo: só despesas realizadas contam (compras no cartão incluídas, pela data da compra); as pendentes aparecem à parte.
+     * @description Orçamentos que valem no mês (padrão: o atual), em ordem alfabética da categoria, com o consumo: só despesas realizadas contam (compras no cartão incluídas, pela data da compra; numa compra parcelada, cada parcela no mês dela); as pendentes aparecem à parte.
      */
     get: {
       parameters: {
@@ -3139,7 +3404,7 @@ export interface components {
   schemas: {
     ProblemDetailsInput: {
       /**
-       * @description Tipo do problema: `/problems/validation-error` (422 com `errors`), `/problems/paid-invoice` (409: compra de fatura já paga), `/problems/archived-reference` (409: conta, cartão ou categoria arquivada); `about:blank` quando o status já basta.
+       * @description Tipo do problema: `/problems/validation-error` (422 com `errors`), `/problems/paid-invoice` (409: compra de fatura já paga), `/problems/archived-reference` (409: conta, cartão ou categoria arquivada), `/problems/installment` (409: parcela alterada sozinha; use a compra parcelada); `about:blank` quando o status já basta.
        * @example about:blank
        */
       type: string;
@@ -3493,6 +3758,12 @@ export interface components {
        */
       status: 'completed' | 'pending';
       notes: string | null;
+      /** @description Compra parcelada a que a parcela pertence (`/v1/installment-purchases/{id}`); `null` fora de parcelamento. */
+      installmentGroupId: string | null;
+      /** @description Número da parcela (1 a `installmentCount`). */
+      installmentNumber: number | null;
+      /** @description Total de parcelas da compra. */
+      installmentCount: number | null;
       /** Format: date-time */
       createdAt: string;
       /**
@@ -3700,9 +3971,54 @@ export interface components {
       payment: components['schemas']['TransactionInput'] | null;
       purchases: components['schemas']['TransactionInput'][];
     };
+    CreateInstallmentPurchaseInput: {
+      /** @example Mercado do mês */
+      description: string;
+      /**
+       * @description Valor total da compra, em centavos; a sobra da divisão fica na 1ª parcela.
+       * @example 123456
+       */
+      amount: number;
+      /**
+       * Format: date
+       * @description Data da compra: a data da 1ª parcela.
+       * @example 2026-11-05
+       */
+      date: string;
+      /** Format: uuid */
+      creditCardId: string;
+      /** Format: uuid */
+      categoryId: string;
+      installmentCount: number;
+      notes?: string | null;
+    };
+    UpdateInstallmentPurchaseInput: {
+      /** @example Mercado do mês */
+      description?: string;
+      /** Format: uuid */
+      categoryId?: string;
+      notes?: string | null;
+    };
+    InstallmentPurchaseInput: {
+      /**
+       * Format: uuid
+       * @description O `installmentGroupId` das parcelas.
+       */
+      id: string;
+      description: string;
+      /** @description Soma das parcelas, em centavos. */
+      amount: number;
+      installmentCount: number;
+      /** Format: uuid */
+      creditCardId: string;
+      /** Format: uuid */
+      categoryId: string;
+      notes: string | null;
+      installments: components['schemas']['TransactionInput'][];
+    };
     ProblemDetails: {
       /**
-       * @description Tipo do problema: `/problems/validation-error` (422 com `errors`), `/problems/paid-invoice` (409: compra de fatura já paga), `/problems/archived-reference` (409: conta, cartão ou categoria arquivada); `about:blank` quando o status já basta.
+       * @description Tipo do problema: `/problems/validation-error` (422 com `errors`), `/problems/paid-invoice` (409: compra de fatura já paga), `/problems/archived-reference` (409: conta, cartão ou categoria arquivada), `/problems/installment` (409: parcela alterada sozinha; use a compra parcelada); `about:blank` quando o status já basta.
        * @example about:blank
        */
       type: string;
@@ -4056,6 +4372,12 @@ export interface components {
        */
       status: 'completed' | 'pending';
       notes: string | null;
+      /** @description Compra parcelada a que a parcela pertence (`/v1/installment-purchases/{id}`); `null` fora de parcelamento. */
+      installmentGroupId: string | null;
+      /** @description Número da parcela (1 a `installmentCount`). */
+      installmentNumber: number | null;
+      /** @description Total de parcelas da compra. */
+      installmentCount: number | null;
       /** Format: date-time */
       createdAt: string;
       /**
@@ -4262,6 +4584,51 @@ export interface components {
       /** @description A transação `invoice-payment` da fatura, se paga. */
       payment: components['schemas']['Transaction'] | null;
       purchases: components['schemas']['Transaction'][];
+    };
+    CreateInstallmentPurchase: {
+      /** @example Mercado do mês */
+      description: string;
+      /**
+       * @description Valor total da compra, em centavos; a sobra da divisão fica na 1ª parcela.
+       * @example 123456
+       */
+      amount: number;
+      /**
+       * Format: date
+       * @description Data da compra: a data da 1ª parcela.
+       * @example 2026-11-05
+       */
+      date: string;
+      /** Format: uuid */
+      creditCardId: string;
+      /** Format: uuid */
+      categoryId: string;
+      installmentCount: number;
+      notes: unknown;
+    };
+    UpdateInstallmentPurchase: {
+      /** @example Mercado do mês */
+      description?: string;
+      /** Format: uuid */
+      categoryId?: string;
+      notes?: unknown;
+    };
+    InstallmentPurchase: {
+      /**
+       * Format: uuid
+       * @description O `installmentGroupId` das parcelas.
+       */
+      id: string;
+      description: string;
+      /** @description Soma das parcelas, em centavos. */
+      amount: number;
+      installmentCount: number;
+      /** Format: uuid */
+      creditCardId: string;
+      /** Format: uuid */
+      categoryId: string;
+      notes: string | null;
+      installments: components['schemas']['Transaction'][];
     };
   };
   responses: never;
