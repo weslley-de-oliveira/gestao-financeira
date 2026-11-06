@@ -173,6 +173,18 @@
         <input matInput type="email" autocomplete="off" [formField]="confirmForm.email" />
         <mat-hint>{{ user()?.email }}</mat-hint>
       </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Senha atual</mat-label>
+        <input
+          matInput
+          type="password"
+          autocomplete="current-password"
+          [formField]="confirmForm.password"
+        />
+      </mat-form-field>
+      @if (deleteError(); as message) {
+        <p class="security__result--error" role="alert">{{ message }}</p>
+      }
       <div>
         <button
           matButton="filled"

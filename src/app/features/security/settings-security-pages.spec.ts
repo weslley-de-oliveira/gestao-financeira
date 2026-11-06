@@ -172,7 +172,7 @@ describe('settings and security pages', () => {
       expect(await field.getTextErrors()).toEqual(['Use pelo menos 8 caracteres.']);
     });
 
-    it('deletes the account only after the e-mail is typed', async () => {
+    it('deletes the account only after the e-mail and the current password are typed', async () => {
       await open('/security');
       const button = await loader.getHarness(
         MatButtonHarness.with({ text: /Excluir conta e dados/ }),
@@ -180,6 +180,7 @@ describe('settings and security pages', () => {
       expect(await button.isDisabled()).toBe(true);
 
       await (await input('Digite seu e-mail para confirmar')).setValue('outra@exemplo.com');
+      await (await input('Senha atual')).setValue('senha123');
       expect(await button.isDisabled()).toBe(true);
 
       await (await input('Digite seu e-mail para confirmar')).setValue('ANA@exemplo.com');
@@ -188,6 +189,22 @@ describe('settings and security pages', () => {
 
       await vi.waitFor(() => expect(TestBed.inject(Router).url).toBe('/login'), CRYPTO_WAIT);
       expect(TestBed.inject(InMemoryUserRepository).records).toEqual([]);
+    });
+
+    it('keeps the account and warns when the current password is wrong', async () => {
+      await open('/security');
+      await (await input('Digite seu e-mail para confirmar')).setValue('ana@exemplo.com');
+      await (await input('Senha atual')).setValue('senha-errada');
+
+      await (
+        await loader.getHarness(MatButtonHarness.with({ text: /Excluir conta e dados/ }))
+      ).click();
+
+      await vi.waitFor(() => {
+        harness.fixture.detectChanges();
+        expect(harness.fixture.nativeElement.textContent).toContain('Senha incorreta.');
+      }, CRYPTO_WAIT);
+      expect(TestBed.inject(InMemoryUserRepository).records).toHaveLength(1);
     });
   });
 });

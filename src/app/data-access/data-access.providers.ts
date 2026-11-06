@@ -1,4 +1,6 @@
 import { Provider } from '@angular/core';
+import { AuthGateway } from '../core/auth/auth.gateway';
+import { LocalAuthGateway } from '../core/auth/local-auth.gateway';
 import { AccountRepository } from './repositories/account.repository';
 import { BudgetRepository } from './repositories/budget.repository';
 import { CategoryRepository } from './repositories/category.repository';
@@ -22,6 +24,7 @@ import { UserRepository } from './repositories/user.repository';
  */
 export function provideDataAccess(): Provider[] {
   return [
+    { provide: AuthGateway, useClass: LocalAuthGateway },
     { provide: UserRepository, useClass: HttpUserRepository },
     { provide: UserDataRepository, useClass: HttpUserDataRepository },
     { provide: AccountRepository, useClass: HttpAccountRepository },
