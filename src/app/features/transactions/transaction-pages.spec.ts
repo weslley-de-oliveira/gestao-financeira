@@ -242,7 +242,34 @@ describe('transaction pages', () => {
       });
     });
 
-    it('paginates on the client', async () => {
+    it('restores the filters from the URL and keeps the applied ones in it', async () => {
+      seedTransactions(
+        userId,
+        { description: 'Mercado' },
+        { description: 'Salário', type: 'income', categoryId: 'category-2' },
+        { description: 'Salário atrasado', type: 'income', categoryId: 'category-2' },
+      );
+      const router = TestBed.inject(Router);
+
+      await open('/transactions?tipo=income&busca=atras&ordem=amount-desc');
+      expect(rowDescriptions()).toEqual(['Salário atrasado']);
+
+      await (await select('Tipo')).clickOptions({ text: 'Despesas' });
+      await harness.fixture.whenStable();
+      expect(router.parseUrl(router.url).queryParams).toEqual({
+        busca: 'atras',
+        ordem: 'amount-desc',
+        tipo: 'expense',
+      });
+    });
+
+    it('turns the link params of other pages into the filter params', async () => {
+      await open('/transactions?accountId=account-2');
+
+      expect(TestBed.inject(Router).url).toBe('/transactions?conta=account-2');
+    });
+
+    it('paginates page by page', async () => {
       seedTransactions(
         userId,
         ...Array.from({ length: 12 }, (_, index) => ({

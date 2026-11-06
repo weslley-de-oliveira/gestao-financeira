@@ -1,5 +1,7 @@
 import { DateRange, isInRange } from '../../../shared/models/period';
 import {
+  TRANSACTION_STATUSES,
+  TRANSACTION_TYPES,
   Transaction,
   TransactionStatus,
   TransactionType,
@@ -174,4 +176,55 @@ export function compareTransactions(a: Transaction, b: Transaction, sort: Transa
     case 'amount-asc':
       return a.amount - b.amount || byCreation;
   }
+}
+
+/** Parâmetros da URL da listagem, em português, um por filtro. */
+export const TRANSACTION_QUERY_PARAMS = {
+  search: 'busca',
+  type: 'tipo',
+  accountId: 'conta',
+  categoryId: 'categoria',
+  status: 'status',
+  sort: 'ordem',
+} as const satisfies Record<keyof TransactionQuery, string>;
+
+/** Parâmetros que outras telas usam para abrir a listagem já filtrada. */
+const LINK_PARAMS = ['accountId', 'creditCardId', 'categoryId'] as const;
+
+type QueryParamValues = Readonly<Record<string, string | null | undefined>>;
+
+/**
+ * Filtros a partir dos parâmetros da URL; valores desconhecidos ficam no padrão. Também aceita
+ * os parâmetros dos links de outras telas (`accountId`, `creditCardId`, `categoryId`).
+ */
+export function fromQueryParams(params: QueryParamValues): TransactionQuery {
+  const query = defaultTransactionQuery();
+  const value = (key: keyof TransactionQuery) => params[TRANSACTION_QUERY_PARAMS[key]] ?? null;
+  const type = value('type');
+  const status = value('status');
+  const sort = value('sort');
+  return {
+    search: value('search') ?? query.search,
+    type: TRANSACTION_TYPES.find((item) => item === type) ?? query.type,
+    accountId: value('accountId') ?? params['accountId'] ?? params['creditCardId'] ?? ALL,
+    categoryId: value('categoryId') ?? params['categoryId'] ?? ALL,
+    status: TRANSACTION_STATUSES.find((item) => item === status) ?? query.status,
+    sort: TRANSACTION_SORT_OPTIONS.find((option) => option.value === sort)?.value ?? query.sort,
+  };
+}
+
+/**
+ * Parâmetros da URL para os filtros: só os diferentes do padrão. Os demais (e os dos links de
+ * outras telas) vão como `null`, para o roteador tirá-los da URL.
+ */
+export function toQueryParams(query: TransactionQuery): Record<string, string | null> {
+  const defaults = defaultTransactionQuery();
+  const params: Record<string, string | null> = Object.fromEntries(
+    LINK_PARAMS.map((key) => [key, null]),
+  );
+  for (const key of Object.keys(TRANSACTION_QUERY_PARAMS) as (keyof TransactionQuery)[]) {
+    const value = key === 'search' ? query.search.trim() : query[key];
+    params[TRANSACTION_QUERY_PARAMS[key]] = value === defaults[key] ? null : value;
+  }
+  return params;
 }

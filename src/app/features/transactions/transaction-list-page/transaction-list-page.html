@@ -9,7 +9,7 @@
   </a>
 </header>
 
-@switch (status()) {
+@switch (loadStatus()) {
   @case ('loading') {
     <mat-progress-bar mode="indeterminate" aria-label="Carregando transações" />
   }
