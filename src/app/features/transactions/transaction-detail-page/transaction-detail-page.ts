@@ -40,7 +40,15 @@ import {
 } from '../transaction-display';
 import { HasRefundsError, PaidInvoiceError, TransactionsFacade } from '../transactions.facade';
 import { InvalidTransactionInputError } from '../domain/transaction-rules';
-import { InstallmentPurchase } from '../../installments/domain/installment-rules';
+import {
+  InstallmentPurchase,
+  InvalidAnticipationCountError,
+  NothingToAnticipateError,
+  NothingToCancelError,
+} from '../../installments/domain/installment-rules';
+import { openAnticipationDialog } from '../../installments/anticipation-dialog/anticipation-dialog';
+import { invoiceCycleFor } from '../../credit-cards/domain/invoice-cycle';
+import { toIsoDate } from '../../../shared/utils/date';
 import { openInstallmentPurchaseDialog } from '../../installments/installment-purchase-dialog/installment-purchase-dialog';
 import { InstallmentPurchasesFacade } from '../../installments/installment-purchases.facade';
 import { openConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
@@ -78,6 +86,7 @@ export class TransactionDetailPage {
   private readonly refundsFacade = inject(RefundsFacade);
   private readonly injector = inject(Injector);
   private readonly today = inject(TODAY);
+  private readonly money = new MoneyPipe();
 
   /** Parâmetro `:id` da rota. */
   readonly id = input.required<string>();
@@ -248,6 +257,52 @@ export class TransactionDetailPage {
     });
   }
 
+  /** Leva as últimas parcelas escolhidas para a fatura atual do cartão. */
+  protected async anticipate(purchase: InstallmentPurchase): Promise<void> {
+    const card = this.lookups().creditCards.get(purchase.creditCardId);
+    if (!card) {
+      return;
+    }
+    const count = await firstValueFrom(
+      openAnticipationDialog(this.dialog, {
+        purchase,
+        invoiceMonth: invoiceCycleFor(card, toIsoDate(this.today())).referenceMonth,
+      }),
+    );
+    if (!count) {
+      return;
+    }
+    await this.run(async () => {
+      await this.installmentsFacade.anticipate(purchase.id, count);
+      this.notify(count === 1 ? 'Parcela antecipada.' : `${count} parcelas antecipadas.`);
+      await this.load();
+    });
+  }
+
+  /** Estorna o que falta das parcelas ainda não cobradas, depois de confirmar. */
+  protected async cancelInstallments(purchase: InstallmentPurchase): Promise<void> {
+    const { count, amount } = purchase.cancellable;
+    const which =
+      count === 1
+        ? 'A parcela que ainda não foi cobrada será estornada'
+        : `As ${count} parcelas que ainda não foram cobradas serão estornadas`;
+    const confirmed = await firstValueFrom(
+      openConfirmDialog(this.dialog, {
+        title: `Cancelar as parcelas de "${purchase.description}"?`,
+        message: `${which} (${this.money.transform(amount)}), cada uma na sua fatura. As parcelas de faturas fechadas não mudam. Para desfazer, exclua os estornos.`,
+        confirmLabel: 'Cancelar as parcelas',
+      }),
+    );
+    if (!confirmed) {
+      return;
+    }
+    await this.run(async () => {
+      await this.installmentsFacade.cancel(purchase.id);
+      this.notify(count === 1 ? 'Parcela cancelada.' : 'Parcelas canceladas.');
+      await this.load();
+    });
+  }
+
   private async run(action: () => Promise<void>): Promise<void> {
     this.busy.set(true);
     try {
@@ -260,7 +315,12 @@ export class TransactionDetailPage {
             ? 'Uma das parcelas tem estornos. Exclua os estornos, no detalhe da parcela, antes de excluir a compra.'
             : error instanceof InvalidTransactionInputError
               ? 'Escolha uma categoria de despesa ativa.'
-              : 'Não foi possível concluir a operação. Tente novamente.',
+              : error instanceof NothingToAnticipateError ||
+                  error instanceof InvalidAnticipationCountError
+                ? 'As parcelas que podem ser antecipadas mudaram. Confira a compra e tente de novo.'
+                : error instanceof NothingToCancelError
+                  ? 'Não há mais parcelas a cancelar: as restantes já estão em faturas fechadas ou foram estornadas.'
+                  : 'Não foi possível concluir a operação. Tente novamente.',
       );
     } finally {
       this.busy.set(false);

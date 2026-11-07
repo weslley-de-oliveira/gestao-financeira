@@ -66,6 +66,28 @@
               <mat-icon>delete</mat-icon>
               Excluir a compra
             </button>
+            @if (purchase.anticipatableCount > 0) {
+              <button
+                matButton="outlined"
+                type="button"
+                [disabled]="busy()"
+                (click)="anticipate(purchase)"
+              >
+                <mat-icon>fast_forward</mat-icon>
+                Antecipar parcelas
+              </button>
+            }
+            @if (purchase.cancellable.count > 0) {
+              <button
+                matButton="outlined"
+                type="button"
+                [disabled]="busy()"
+                (click)="cancelInstallments(purchase)"
+              >
+                <mat-icon>block</mat-icon>
+                Cancelar parcelas
+              </button>
+            }
           } @else if (transaction.type === 'refund') {
             @if (refundedExpense(); as expense) {
               <button matButton="outlined" type="button" (click)="editRefund(transaction, expense)">
