@@ -200,6 +200,9 @@ function toCreateBody(transaction: NewRecord<Transaction>): ApiCreateEntry | Api
   if (type === 'invoice-payment') {
     throw new Error('Invoice payments are created through payInvoice');
   }
+  if (type === 'refund') {
+    throw new Error('Refunds are created through the refunds of the expense');
+  }
   return {
     type,
     description,
@@ -283,5 +286,6 @@ export function toTransactionModel(item: ApiTransaction, userId: string): Transa
     installmentGroupId: item.installmentGroupId,
     installmentNumber: item.installmentNumber,
     installmentCount: item.installmentCount,
+    refundedTransactionId: item.refundedTransactionId,
   };
 }

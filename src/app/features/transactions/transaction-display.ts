@@ -15,17 +15,19 @@ export const TRANSACTION_TYPE_ICONS: Readonly<Record<TransactionType, string>> =
   income: 'arrow_upward',
   transfer: 'swap_horiz',
   'invoice-payment': 'credit_score',
+  refund: 'undo',
 };
 
 /**
- * Sinal exibido antes do valor: despesas e pagamentos de fatura saem, receitas entram,
- * transferências só movem.
+ * Sinal exibido antes do valor: despesas e pagamentos de fatura saem, receitas e estornos entram
+ * (na conta, ou como crédito na fatura), transferências só movem.
  */
 export const TRANSACTION_SIGNS: Readonly<Record<TransactionType, string>> = {
   expense: '−',
   income: '+',
   transfer: '',
   'invoice-payment': '−',
+  refund: '+',
 };
 
 /** Nomes de contas, categorias e cartões por id, para exibir as transações. */
