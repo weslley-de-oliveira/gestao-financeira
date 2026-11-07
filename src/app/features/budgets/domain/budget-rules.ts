@@ -79,7 +79,8 @@ export function withLimitFrom(
 
 /**
  * Consumo do orçamento no mês: despesas da categoria pela data (compras no cartão incluídas, pela
- * data da compra). Só as realizadas contam; as pendentes ficam à parte como previstas.
+ * data da compra). Só as realizadas contam, menos os estornos do mês (na categoria da despesa
+ * estornada; o gasto não fica negativo); as pendentes ficam à parte como previstas.
  * Transferências e pagamentos de fatura não são despesas e não entram. Retorna `null` se o
  * orçamento não vale no mês.
  */
@@ -93,14 +94,21 @@ export function budgetProgress(
     return null;
   }
   const range = monthRange(month);
+  const categoryOf = new Map(transactions.map((item) => [item.id, item.categoryId]));
+  let refunded = 0;
   let spent = 0;
   let pending = 0;
   for (const transaction of transactions) {
-    if (
-      transaction.type !== 'expense' ||
-      transaction.categoryId !== budget.categoryId ||
-      !isInRange(transaction.date, range)
-    ) {
+    if (!isInRange(transaction.date, range)) {
+      continue;
+    }
+    if (transaction.type === 'refund') {
+      if (categoryOf.get(transaction.refundedTransactionId ?? '') === budget.categoryId) {
+        refunded += transaction.amount;
+      }
+      continue;
+    }
+    if (transaction.type !== 'expense' || transaction.categoryId !== budget.categoryId) {
       continue;
     }
     if (transaction.status === 'pending') {
@@ -109,6 +117,7 @@ export function budgetProgress(
       spent += transaction.amount;
     }
   }
+  spent = Math.max(0, spent - refunded);
   const percent = (spent / limit) * 100;
   return {
     budget,

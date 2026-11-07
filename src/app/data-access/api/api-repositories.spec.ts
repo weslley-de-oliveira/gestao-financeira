@@ -405,19 +405,33 @@ describe('API repositories', () => {
       expect(invoice.payment).toMatchObject({ id: 'payment', userId: USER_ID });
     });
 
-    it('loads one invoice with its purchases, and null for an unknown card', async () => {
+    it('loads one invoice with its purchases and refunds, and null for an unknown card', async () => {
       const repository = TestBed.inject(ApiInvoiceRepository);
       const found = firstValueFrom(repository.findByMonth(USER_ID, CARD_ID, '2026-11'));
-      http
-        .expectOne(`/api/v1/credit-cards/${CARD_ID}/invoices/2026-11`)
-        .flush({ ...cycle, purchases: [apiTransaction({ id: 'p1', accountId: null })] });
+      http.expectOne(`/api/v1/credit-cards/${CARD_ID}/invoices/2026-11`).flush({
+        ...cycle,
+        purchases: [apiTransaction({ id: 'p1', accountId: null })],
+        refunds: [
+          apiTransaction({
+            id: 'r1',
+            type: 'refund',
+            accountId: null,
+            categoryId: null,
+            refundedTransactionId: 'p1',
+          }),
+        ],
+      });
       const missing = firstValueFrom(repository.findByMonth(USER_ID, 'outro', '2026-11'));
       http
         .expectOne('/api/v1/credit-cards/outro/invoices/2026-11')
         .flush({ status: 404 }, { status: 404, statusText: 'Not Found' });
 
-      expect((await found)?.purchases.map((purchase) => [purchase.id, purchase.userId])).toEqual([
+      const invoice = await found;
+      expect(invoice?.purchases.map((purchase) => [purchase.id, purchase.userId])).toEqual([
         ['p1', USER_ID],
+      ]);
+      expect(invoice?.refunds.map((refund) => [refund.id, refund.refundedTransactionId])).toEqual([
+        ['r1', 'p1'],
       ]);
       expect(await missing).toBeNull();
     });

@@ -37,10 +37,11 @@ export class ApiInvoiceRepository extends InvoiceRepository {
       return of(null);
     }
     return this.http.get<ApiInvoice>(`${this.invoicesUrl(creditCardId)}/${referenceMonth}`).pipe(
-      map(({ payment, purchases, ...invoice }) => ({
+      map(({ payment, purchases, refunds, ...invoice }) => ({
         ...invoice,
         payment: payment && this.toTransaction(payment),
         purchases: purchases.map((purchase) => this.toTransaction(purchase)),
+        refunds: refunds.map((refund) => this.toTransaction(refund)),
       })),
       nullWhenNotFound(),
     );
