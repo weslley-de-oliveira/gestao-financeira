@@ -36,6 +36,17 @@
           </p>
         </div>
         <div class="transaction-detail__actions">
+          @if (canRefund(transaction) && remaining() > 0) {
+            <button
+              matButton="outlined"
+              type="button"
+              [disabled]="busy()"
+              (click)="registerRefund(transaction)"
+            >
+              <mat-icon>undo</mat-icon>
+              Registrar estorno
+            </button>
+          }
           @if (purchase(); as purchase) {
             <button
               matButton="outlined"
@@ -55,6 +66,13 @@
               <mat-icon>delete</mat-icon>
               Excluir a compra
             </button>
+          } @else if (transaction.type === 'refund') {
+            @if (refundedExpense(); as expense) {
+              <button matButton="outlined" type="button" (click)="editRefund(transaction, expense)">
+                <mat-icon>edit</mat-icon>
+                Editar estorno
+              </button>
+            }
           } @else if (isEditable(transaction)) {
             <a matButton="outlined" [routerLink]="['/transactions', transaction.id, 'edit']">
               <mat-icon>edit</mat-icon>
@@ -73,7 +91,7 @@
               Ver fatura
             </a>
           }
-          @if (canChangeStatus(transaction)) {
+          @if (canChangeStatus(transaction) && refunds().length === 0) {
             <button matButton="outlined" type="button" (click)="toggleStatus(transaction)">
               <mat-icon>{{ transaction.status === 'pending' ? 'task_alt' : 'schedule' }}</mat-icon>
               {{
@@ -108,7 +126,7 @@
           <div>
             <dt>
               {{
-                isCardPurchase(transaction)
+                isCardPurchase(transaction) || isCardRefund(transaction)
                   ? 'Pagamento'
                   : transaction.type === 'transfer'
                     ? 'Contas'
@@ -119,6 +137,11 @@
               {{ accountLabel(transaction, lookups()) }}
               @if (isCardPurchase(transaction)) {
                 <span class="transaction-detail__hint">(entra na fatura do cartão)</span>
+              }
+              @if (isCardRefund(transaction)) {
+                <span class="transaction-detail__hint"
+                  >(abate a fatura do cartão em que a data cai)</span
+                >
               }
               @if (isInvoicePayment(transaction)) {
                 <span class="transaction-detail__hint"
@@ -139,7 +162,22 @@
               </dd>
             </div>
           }
-          @if (categoryOf(transaction, lookups()); as category) {
+          @if (transaction.type === 'refund') {
+            <div>
+              <dt>Estorno de</dt>
+              <dd>
+                @if (refundedExpense(); as expense) {
+                  <a [routerLink]="['/transactions', expense.id]">{{ expense.description }}</a>
+                  <span class="transaction-detail__hint"
+                    >(despesa de {{ expense.amount | money }} em {{ expense.date | isoDate }})</span
+                  >
+                } @else {
+                  Despesa não encontrada
+                }
+              </dd>
+            </div>
+          }
+          @if (categoryOf(refundedExpense() ?? transaction, lookups()); as category) {
             <div>
               <dt>Categoria</dt>
               <dd class="transaction-detail__category">
@@ -158,6 +196,40 @@
           }
         </dl>
       </mat-card>
+
+      @if (refunds().length > 0) {
+        <section class="transaction-detail__refunds" aria-labelledby="refunds-title">
+          <h2 id="refunds-title" class="transaction-detail__section-title">Estornos</h2>
+          <mat-card appearance="outlined">
+            <ul class="transaction-detail__refund-list">
+              @for (refund of refunds(); track refund.id) {
+                <li>
+                  <a class="transaction-detail__refund" [routerLink]="['/transactions', refund.id]">
+                    <mat-icon aria-hidden="true">undo</mat-icon>
+                    <span class="transaction-detail__refund-text">
+                      <span>{{ refund.description }}</span>
+                      <span class="transaction-detail__hint">{{ refund.date | isoDate }}</span>
+                    </span>
+                    <span class="transaction-detail__refund-amount"
+                      >+{{ refund.amount | money }}</span
+                    >
+                  </a>
+                </li>
+              }
+            </ul>
+            <dl class="transaction-detail__net">
+              <div>
+                <dt>Estornado</dt>
+                <dd>{{ refundedTotal() | money }}</dd>
+              </div>
+              <div>
+                <dt>Valor líquido</dt>
+                <dd>{{ transaction.amount - refundedTotal() | money }}</dd>
+              </div>
+            </dl>
+          </mat-card>
+        </section>
+      }
     }
   }
 }

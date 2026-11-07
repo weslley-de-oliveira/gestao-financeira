@@ -118,6 +118,30 @@ describe('InvoicesPage', () => {
     expect(text()).toContain('O pagamento fica disponível depois do fechamento.');
   });
 
+  it('subtracts the refunds from the invoice and shows a credit without payment', async () => {
+    seedPurchases();
+    seedTransactions(userId, {
+      type: 'refund',
+      description: 'Estorno: Sapato',
+      accountId: null,
+      creditCardId: 'card-1',
+      categoryId: null,
+      amount: 15_000,
+      date: '2026-11-12',
+      refundedTransactionId: 'transaction-1',
+    });
+
+    await open('/invoices?creditCardId=card-1&month=2026-12');
+
+    const content = text();
+    expect(content).toContain('Compras (1) e estornos (1)');
+    expect(content).toContain('Estorno: Sapato');
+    expect(content).toMatch(/−R\$\s150,00/);
+    expect(content).toMatch(/Crédito de R\$\s50,10/);
+    expect(content).toContain('Os estornos superam as compras');
+    expect(content).not.toContain('Pagar');
+  });
+
   it('pays the invoice after confirmation and undoes the payment', async () => {
     seedPurchases();
     await open('/invoices?creditCardId=card-1&month=2026-11');

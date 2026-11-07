@@ -10,6 +10,7 @@ import { ApiDashboardRepository } from './api/api-dashboard.repository';
 import { ApiGoalRepository } from './api/api-goal.repository';
 import { ApiInstallmentPurchaseRepository } from './api/api-installment-purchase.repository';
 import { ApiInvoiceRepository } from './api/api-invoice.repository';
+import { ApiRefundRepository } from './api/api-refund.repository';
 import { ApiTransactionRepository } from './api/api-transaction.repository';
 import { AccountRepository } from './repositories/account.repository';
 import { BudgetProgressRepository } from './repositories/budget-progress.repository';
@@ -20,6 +21,7 @@ import { DashboardRepository } from './repositories/dashboard.repository';
 import { GoalRepository } from './repositories/goal.repository';
 import { InstallmentPurchaseRepository } from './repositories/installment-purchase.repository';
 import { InvoiceRepository } from './repositories/invoice.repository';
+import { RefundRepository } from './repositories/refund.repository';
 import { TransactionRepository } from './repositories/transaction.repository';
 
 /**
@@ -37,6 +39,7 @@ export function provideDataAccess(): Provider[] {
     { provide: CreditCardRepository, useClass: ApiCreditCardRepository },
     { provide: InvoiceRepository, useClass: ApiInvoiceRepository },
     { provide: InstallmentPurchaseRepository, useClass: ApiInstallmentPurchaseRepository },
+    { provide: RefundRepository, useClass: ApiRefundRepository },
     { provide: BudgetRepository, useClass: ApiBudgetRepository },
     { provide: BudgetProgressRepository, useClass: ApiBudgetProgressRepository },
     { provide: GoalRepository, useClass: ApiGoalRepository },

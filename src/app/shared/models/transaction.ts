@@ -1,10 +1,20 @@
 import { Cents } from '../utils/money';
 
-export const TRANSACTION_TYPES = ['expense', 'income', 'transfer', 'invoice-payment'] as const;
+export const TRANSACTION_TYPES = [
+  'expense',
+  'income',
+  'transfer',
+  'invoice-payment',
+  'refund',
+] as const;
 
 /**
  * `invoice-payment` é o pagamento de uma fatura de cartão: debita a conta de pagamento, mas não é
  * despesa (as compras já foram contadas). É criado e desfeito apenas pela tela de Faturas.
+ *
+ * `refund` é o estorno de uma despesa realizada, na conta ou no cartão dela: devolve o valor à
+ * conta ou abate a fatura, e reduz o gasto da categoria da despesa no mês do estorno. É criado
+ * pelo detalhe da despesa.
  */
 export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
@@ -18,6 +28,7 @@ export const TRANSACTION_TYPE_LABELS: Readonly<Record<TransactionType, string>> 
   income: 'Receita',
   transfer: 'Transferência',
   'invoice-payment': 'Pagamento de fatura',
+  refund: 'Estorno',
 };
 
 export const TRANSACTION_STATUSES = ['completed', 'pending'] as const;
@@ -56,7 +67,10 @@ export interface Transaction {
   invoiceMonth: string | null;
   /** Apenas em transferências. */
   destinationAccountId: string | null;
-  /** Obrigatória em receitas e despesas, compatível com o tipo; `null` nos demais tipos. */
+  /**
+   * Obrigatória em receitas e despesas, compatível com o tipo; `null` nos demais tipos (o estorno
+   * conta na categoria da despesa estornada).
+   */
   categoryId: string | null;
   status: TransactionStatus;
   notes: string | null;
@@ -70,6 +84,8 @@ export interface Transaction {
   installmentGroupId?: string | null;
   installmentNumber?: number | null;
   installmentCount?: number | null;
+  /** Despesa estornada; só em `refund`. Ausente (ou `null`) nas demais transações. */
+  refundedTransactionId?: string | null;
 }
 
 /** Compra no cartão de crédito: despesa sem conta, lançada na fatura do cartão. */
@@ -79,6 +95,16 @@ export function isCardPurchase(transaction: Pick<Transaction, 'type' | 'creditCa
 
 export function isInvoicePayment(transaction: Pick<Transaction, 'type'>): boolean {
   return transaction.type === 'invoice-payment';
+}
+
+/** Estorno de uma despesa: na conta dela (devolve o valor) ou no cartão (abate a fatura). */
+export function isRefund(transaction: Pick<Transaction, 'type'>): boolean {
+  return transaction.type === 'refund';
+}
+
+/** Estorno lançado no cartão: abate a fatura em que a data dele cai. */
+export function isCardRefund(transaction: Pick<Transaction, 'type' | 'creditCardId'>): boolean {
+  return transaction.type === 'refund' && transaction.creditCardId !== null;
 }
 
 /** Parcela de uma compra parcelada: só muda pela compra inteira. */

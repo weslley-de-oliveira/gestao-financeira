@@ -17,12 +17,18 @@ import {
   PaidInvoiceError,
 } from '../../features/invoices/domain/invoice-rules';
 import { InstallmentNotEditableError } from '../../features/installments/domain/installment-rules';
+import {
+  HasRefundsError,
+  InvalidRefundInputError,
+  NotRefundableError,
+} from '../../features/refunds/domain/refund-rules';
 import { InvalidTransactionInputError } from '../../features/transactions/domain/transaction-rules';
 import { Goal } from '../../shared/models/goal';
 import { Transaction } from '../../shared/models/transaction';
 import { ApiBudgetRepository } from './api-budget.repository';
 import { ApiCreditCardRepository } from './api-credit-card.repository';
 import { ApiGoalRepository } from './api-goal.repository';
+import { ApiRefundRepository } from './api-refund.repository';
 import { SessionUser } from './api-http';
 import { ApiTransactionRepository } from './api-transaction.repository';
 import { API_BASE_URL } from './api.config';
@@ -78,6 +84,7 @@ describe('API refusals as domain errors', () => {
         ApiCreditCardRepository,
         ApiBudgetRepository,
         ApiGoalRepository,
+        ApiRefundRepository,
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -147,6 +154,42 @@ describe('API refusals as domain errors', () => {
       );
 
     await expect(deleted).rejects.toBeInstanceOf(InstallmentNotEditableError);
+  });
+
+  it('turns the conflict of an expense with refunds into HasRefundsError', async () => {
+    const deleted = firstValueFrom(TestBed.inject(ApiTransactionRepository).delete('t1'));
+    http
+      .match(() => true)[0]
+      .flush(
+        { type: '/problems/has-refunds', title: 'Conflito', status: 409, detail: 'Tem estornos.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+
+    await expect(deleted).rejects.toBeInstanceOf(HasRefundsError);
+  });
+
+  it('refuses a refund of what is not a completed expense, in a paid invoice or too large', async () => {
+    const repository = TestBed.inject(ApiRefundRepository);
+    const input = { description: 'Estorno', amount: 1, date: '2026-11-05', notes: null };
+
+    const notRefundable = firstValueFrom(repository.create(USER_ID, transaction, input));
+    refuse(409);
+    await expect(notRefundable).rejects.toBeInstanceOf(NotRefundableError);
+
+    const paid = firstValueFrom(repository.create(USER_ID, transaction, input));
+    http
+      .match(() => true)[0]
+      .flush(
+        { type: '/problems/paid-invoice', title: 'Conflito', status: 409, detail: 'Paga.' },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await expect(paid).rejects.toBeInstanceOf(PaidInvoiceError);
+
+    const tooLarge = firstValueFrom(repository.create(USER_ID, transaction, input));
+    refuse(422, 'amount');
+    const error = await tooLarge.catch((reason: unknown) => reason);
+    expect(error).toBeInstanceOf(InvalidRefundInputError);
+    expect(error).toMatchObject({ field: 'amount' });
   });
 
   it('keeps other transaction refusals as ApiProblemError, with the server reason', async () => {

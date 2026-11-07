@@ -12,6 +12,7 @@ import { ApiDashboardRepository } from './api-dashboard.repository';
 import { ApiGoalRepository } from './api-goal.repository';
 import { ApiInstallmentPurchaseRepository } from './api-installment-purchase.repository';
 import { ApiInvoiceRepository } from './api-invoice.repository';
+import { ApiRefundRepository } from './api-refund.repository';
 import { SessionUser } from './api-http';
 import { ApiTransactionRepository } from './api-transaction.repository';
 import { API_BASE_URL } from './api.config';
@@ -53,6 +54,7 @@ function apiTransaction(overrides: Partial<ApiTransaction> = {}): ApiTransaction
     installmentGroupId: null,
     installmentNumber: null,
     installmentCount: null,
+    refundedTransactionId: null,
     createdAt: '2026-11-05T12:00:00.000Z',
     updatedAt: '2026-11-05T12:00:00.000Z',
     ...overrides,
@@ -101,6 +103,7 @@ describe('API repositories', () => {
         ApiDashboardRepository,
         ApiInvoiceRepository,
         ApiInstallmentPurchaseRepository,
+        ApiRefundRepository,
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -404,19 +407,33 @@ describe('API repositories', () => {
       expect(invoice.payment).toMatchObject({ id: 'payment', userId: USER_ID });
     });
 
-    it('loads one invoice with its purchases, and null for an unknown card', async () => {
+    it('loads one invoice with its purchases and refunds, and null for an unknown card', async () => {
       const repository = TestBed.inject(ApiInvoiceRepository);
       const found = firstValueFrom(repository.findByMonth(USER_ID, CARD_ID, '2026-11'));
-      http
-        .expectOne(`/api/v1/credit-cards/${CARD_ID}/invoices/2026-11`)
-        .flush({ ...cycle, purchases: [apiTransaction({ id: 'p1', accountId: null })] });
+      http.expectOne(`/api/v1/credit-cards/${CARD_ID}/invoices/2026-11`).flush({
+        ...cycle,
+        purchases: [apiTransaction({ id: 'p1', accountId: null })],
+        refunds: [
+          apiTransaction({
+            id: 'r1',
+            type: 'refund',
+            accountId: null,
+            categoryId: null,
+            refundedTransactionId: 'p1',
+          }),
+        ],
+      });
       const missing = firstValueFrom(repository.findByMonth(USER_ID, 'outro', '2026-11'));
       http
         .expectOne('/api/v1/credit-cards/outro/invoices/2026-11')
         .flush({ status: 404 }, { status: 404, statusText: 'Not Found' });
 
-      expect((await found)?.purchases.map((purchase) => [purchase.id, purchase.userId])).toEqual([
+      const invoice = await found;
+      expect(invoice?.purchases.map((purchase) => [purchase.id, purchase.userId])).toEqual([
         ['p1', USER_ID],
+      ]);
+      expect(invoice?.refunds.map((refund) => [refund.id, refund.refundedTransactionId])).toEqual([
+        ['r1', 'p1'],
       ]);
       expect(await missing).toBeNull();
     });
@@ -494,6 +511,69 @@ describe('API repositories', () => {
         .expectOne({ url: '/api/v1/installment-purchases/group', method: 'DELETE' })
         .flush(null, { status: 204, statusText: 'No Content' });
       await deleted;
+    });
+  });
+
+  describe('refunds', () => {
+    const expense: Transaction = {
+      id: 'e1',
+      userId: USER_ID,
+      type: 'expense',
+      description: 'Mercado',
+      amount: 25_000,
+      date: '2026-11-05',
+      accountId: ACCOUNT_ID,
+      creditCardId: null,
+      invoiceMonth: null,
+      destinationAccountId: null,
+      categoryId: CATEGORY_ID,
+      status: 'completed',
+      notes: null,
+      createdAt: '2026-11-05T12:00:00.000Z',
+    };
+    const apiRefund = apiTransaction({
+      id: 'r1',
+      type: 'refund',
+      description: 'Estorno: Mercado',
+      amount: 5_000,
+      categoryId: null,
+      refundedTransactionId: 'e1',
+    });
+
+    it('creates with an Idempotency-Key, sending only the refund fields', async () => {
+      const created = firstValueFrom(
+        TestBed.inject(ApiRefundRepository).create(USER_ID, expense, {
+          description: 'Estorno: Mercado',
+          amount: 5_000,
+          date: '2026-11-06',
+          notes: null,
+        }),
+      );
+      const request = http.expectOne({ url: '/api/v1/transactions/e1/refunds', method: 'POST' });
+      expect(request.request.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/);
+      expect(request.request.body).toEqual({
+        description: 'Estorno: Mercado',
+        amount: 5_000,
+        date: '2026-11-06',
+        notes: null,
+      });
+      request.flush(apiRefund);
+
+      expect(await created).toMatchObject({
+        id: 'r1',
+        userId: USER_ID,
+        type: 'refund',
+        refundedTransactionId: 'e1',
+      });
+    });
+
+    it('lists the refunds of an expense', async () => {
+      const listed = firstValueFrom(
+        TestBed.inject(ApiRefundRepository).listByExpense(USER_ID, 'e1'),
+      );
+      http.expectOne({ url: '/api/v1/transactions/e1/refunds', method: 'GET' }).flush([apiRefund]);
+
+      expect((await listed).map((item) => [item.id, item.userId])).toEqual([['r1', USER_ID]]);
     });
   });
 

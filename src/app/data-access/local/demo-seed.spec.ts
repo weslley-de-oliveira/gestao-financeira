@@ -136,6 +136,24 @@ describe('db/db.seed.json', () => {
     }
   });
 
+  it('has refunds of completed expenses, in their account or card, up to their amount', () => {
+    const refunds = transactions.filter((transaction) => transaction.type === 'refund');
+    // Um estorno em conta e um no cartão.
+    expect(refunds.map((refund) => refund.creditCardId !== null).sort()).toEqual([false, true]);
+    for (const refund of refunds) {
+      const expense = transactions.find((item) => item.id === refund.refundedTransactionId);
+      expect(expense, refund.description).toMatchObject({ type: 'expense', status: 'completed' });
+      expect(refund).toMatchObject({
+        status: 'completed',
+        categoryId: null,
+        accountId: expense?.accountId,
+        creditCardId: expense?.creditCardId,
+      });
+      expect(refund.amount).toBeLessThanOrEqual(expense?.amount ?? 0);
+      expect(refund.date >= (expense?.date ?? '') && refund.date <= anchor).toBe(true);
+    }
+  });
+
   it('keeps the invoices consistent after shifting the dates', () => {
     const shifted = toLocalCollections(seed, new Date(2027, 6, 20));
     const shiftedTransactions = shifted.transactions.map(toTransaction);

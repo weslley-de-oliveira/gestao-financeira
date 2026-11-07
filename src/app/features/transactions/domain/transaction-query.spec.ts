@@ -134,7 +134,7 @@ describe('transaction query', () => {
 
     it('reads the filters back, ignoring unknown values', () => {
       expect(
-        fromQueryParams({ busca: 'farmácia', tipo: 'refund', status: 'pending', ordem: 'nome' }),
+        fromQueryParams({ busca: 'farmácia', tipo: 'reembolso', status: 'pending', ordem: 'nome' }),
       ).toEqual({ ...defaultTransactionQuery(), search: 'farmácia', status: 'pending' });
     });
 

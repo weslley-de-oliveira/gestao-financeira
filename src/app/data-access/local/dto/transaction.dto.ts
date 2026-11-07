@@ -26,6 +26,8 @@ export interface TransactionDto {
   installmentGroupId?: string | null;
   installmentNumber?: number | null;
   installmentCount?: number | null;
+  /** Só nos estornos: a despesa estornada. */
+  refundedTransactionId?: string | null;
 }
 
 export function toTransaction(dto: TransactionDto): Transaction {
@@ -49,6 +51,7 @@ export function toTransaction(dto: TransactionDto): Transaction {
       installmentNumber: dto.installmentNumber ?? null,
       installmentCount: dto.installmentCount ?? null,
     }),
+    ...(dto.refundedTransactionId && { refundedTransactionId: dto.refundedTransactionId }),
   };
 }
 

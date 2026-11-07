@@ -44,7 +44,9 @@
             class="summary-card__value"
             [class.summary-card__value--expense]="summary().expense > 0"
           >
-            {{ summary().expense > 0 ? '−' : '' }}{{ summary().expense | money }}
+            <!-- Negativas quando os estornos do período superam as despesas. -->
+            {{ summary().expense > 0 ? '−' : summary().expense < 0 ? '+' : ''
+            }}{{ (summary().expense < 0 ? summary().expense * -1 : summary().expense) | money }}
           </strong>
         </mat-card>
         <mat-card appearance="outlined" class="summary-card">
@@ -76,6 +78,7 @@
             <mat-option value="income">Receitas</mat-option>
             <mat-option value="transfer">Transferências</mat-option>
             <mat-option value="invoice-payment">Pagamentos de fatura</mat-option>
+            <mat-option value="refund">Estornos</mat-option>
           </mat-select>
         </mat-form-field>
 
@@ -299,6 +302,12 @@
       <mat-icon>visibility</mat-icon>
       <span>Visualizar</span>
     </a>
+    @if (transaction.refundedTransactionId) {
+      <a mat-menu-item [routerLink]="transaction.refundedTransactionId">
+        <mat-icon>receipt</mat-icon>
+        <span>Ver despesa estornada</span>
+      </a>
+    }
     @if (isEditable(transaction)) {
       <a mat-menu-item [routerLink]="[transaction.id, 'edit']">
         <mat-icon>edit</mat-icon>

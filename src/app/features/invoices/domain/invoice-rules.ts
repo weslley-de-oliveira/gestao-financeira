@@ -1,6 +1,11 @@
 import { CreditCard, InvoiceCycle } from '../../../shared/models/credit-card';
 import { isInRange } from '../../../shared/models/period';
-import { Transaction, isCardPurchase, isInvoicePayment } from '../../../shared/models/transaction';
+import {
+  Transaction,
+  isCardPurchase,
+  isCardRefund,
+  isInvoicePayment,
+} from '../../../shared/models/transaction';
 import { IsoDate } from '../../../shared/utils/date';
 import { Cents } from '../../../shared/utils/money';
 import { invoiceCycleFor, invoiceCycleForMonth } from '../../credit-cards/domain/invoice-cycle';
@@ -19,14 +24,17 @@ export const INVOICE_STATUS_LABELS: Readonly<Record<InvoiceStatus, string>> = {
 type CardDays = Pick<CreditCard, 'id' | 'closingDay' | 'dueDay'>;
 
 /**
- * Fatura calculada a partir das transações: não é persistida. O total é sempre a soma das compras
- * do ciclo, e o pagamento é a transação `invoice-payment` do cartão e do mês de referência.
+ * Fatura calculada a partir das transações: não é persistida. O total é a soma das compras do
+ * ciclo menos os estornos lançados nele (negativo: a fatura tem crédito, que não passa para a
+ * seguinte), e o pagamento é a transação `invoice-payment` do cartão e do mês de referência.
  */
 export interface Invoice extends InvoiceCycle {
   creditCardId: string;
   total: Cents;
   /** Compras do ciclo, das mais recentes para as mais antigas. */
   purchases: Transaction[];
+  /** Estornos lançados no ciclo, dos mais recentes para os mais antigos. */
+  refunds: Transaction[];
   payment: Transaction | null;
   status: InvoiceStatus;
 }
@@ -56,21 +64,25 @@ export function buildInvoice(
   today: IsoDate,
 ): Invoice {
   const cycle = invoiceCycleForMonth(card, referenceMonth);
-  const purchases = transactions
-    .filter(
-      (transaction) =>
-        isCardPurchase(transaction) &&
-        transaction.creditCardId === card.id &&
-        isInRange(transaction.date, cycle),
-    )
-    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+  const inCycle = (matches: (transaction: Transaction) => boolean) =>
+    transactions
+      .filter(
+        (transaction) =>
+          matches(transaction) &&
+          transaction.creditCardId === card.id &&
+          isInRange(transaction.date, cycle),
+      )
+      .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+  const purchases = inCycle(isCardPurchase);
+  const refunds = inCycle(isCardRefund);
   const payment = findPayment(card.id, transactions, referenceMonth);
 
   return {
     ...cycle,
     creditCardId: card.id,
-    total: purchases.reduce((total, purchase) => total + purchase.amount, 0),
+    total: sum(purchases) - sum(refunds),
     purchases,
+    refunds,
     payment,
     status: invoiceStatus(cycle, payment, today),
   };
@@ -78,7 +90,7 @@ export function buildInvoice(
 
 /**
  * Faturas de um cartão, da mais recente para a mais antiga: a aberta hoje e todas as que têm
- * compras ou pagamento.
+ * compras, estornos ou pagamento.
  */
 export function listInvoices(
   card: CardDays,
@@ -90,7 +102,7 @@ export function listInvoices(
     if (transaction.creditCardId !== card.id) {
       continue;
     }
-    if (isCardPurchase(transaction)) {
+    if (isCardPurchase(transaction) || isCardRefund(transaction)) {
       months.add(invoiceCycleFor(card, transaction.date).referenceMonth);
     } else if (isInvoicePayment(transaction) && transaction.invoiceMonth) {
       months.add(transaction.invoiceMonth);
@@ -101,14 +113,17 @@ export function listInvoices(
     .map((month) => buildInvoice(card, transactions, month, today));
 }
 
-/** Só se paga o valor total de uma fatura já fechada, com compras e ainda sem pagamento. */
+/**
+ * Só se paga o valor total de uma fatura já fechada, com saldo a pagar (com crédito ou zerada pelos
+ * estornos, não) e ainda sem pagamento.
+ */
 export function canPayInvoice(invoice: Pick<Invoice, 'status' | 'total'>): boolean {
   return (invoice.status === 'closed' || invoice.status === 'overdue') && invoice.total > 0;
 }
 
 /**
- * Uma compra numa fatura já paga não pode ser criada, alterada nem excluída: o total pago
- * deixaria de conferir com os itens. Desfaça o pagamento antes.
+ * Uma compra (ou um estorno) numa fatura já paga não pode ser criada, alterada nem excluída: o
+ * total pago deixaria de conferir com os itens. Desfaça o pagamento antes.
  */
 export function isInvoicePaidFor(
   card: CardDays,
@@ -117,6 +132,10 @@ export function isInvoicePaidFor(
 ): boolean {
   const { referenceMonth } = invoiceCycleFor(card, purchaseDate);
   return findPayment(card.id, transactions, referenceMonth) !== null;
+}
+
+function sum(transactions: readonly Transaction[]): Cents {
+  return transactions.reduce((total, transaction) => total + transaction.amount, 0);
 }
 
 function findPayment(
@@ -147,11 +166,27 @@ export class InvoicePaymentError extends Error {
   }
 }
 
-/** Fatura na listagem do cartão: os mesmos dados, com a quantidade de compras no lugar delas. */
-export type InvoiceSummary = Omit<Invoice, 'purchases'> & { purchaseCount: number };
+/**
+ * Fatura na listagem do cartão: os mesmos dados, com a quantidade de compras no lugar delas (e
+ * sem os estornos, já descontados do total).
+ */
+export type InvoiceSummary = Omit<Invoice, 'purchases' | 'refunds'> & { purchaseCount: number };
 
-export function toInvoiceSummary({ purchases, ...invoice }: Invoice): InvoiceSummary {
-  return { ...invoice, purchaseCount: purchases.length };
+export function toInvoiceSummary(invoice: Invoice): InvoiceSummary {
+  const { creditCardId, total, payment, status } = invoice;
+  const { referenceMonth, start, end, closingDate, dueDate } = invoice;
+  return {
+    referenceMonth,
+    start,
+    end,
+    closingDate,
+    dueDate,
+    creditCardId,
+    total,
+    payment,
+    status,
+    purchaseCount: invoice.purchases.length,
+  };
 }
 
 /** A compra pertence a uma fatura já paga; é preciso desfazer o pagamento antes de alterá-la. */

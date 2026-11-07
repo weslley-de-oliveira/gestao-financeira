@@ -88,7 +88,9 @@
           class="summary-card__value"
           [class.summary-card__value--expense]="summary().expense > 0"
         >
-          {{ summary().expense > 0 ? '−' : '' }}{{ summary().expense | money }}
+          <!-- Negativas quando os estornos do período superam as despesas. -->
+          {{ summary().expense > 0 ? '−' : summary().expense < 0 ? '+' : ''
+          }}{{ (summary().expense < 0 ? summary().expense * -1 : summary().expense) | money }}
         </strong>
         <span class="summary-card__hint">Realizadas no período</span>
       } @else {

@@ -148,7 +148,10 @@ export interface TransactionSummary {
   pendingCount: number;
 }
 
-/** Totais de receitas e despesas realizadas. Transferências não entram nos totais. */
+/**
+ * Totais de receitas e despesas realizadas. Transferências e pagamentos de fatura não entram nos
+ * totais; estornos são despesa negativa: reduzem as despesas do período em que acontecem.
+ */
 export function summarizeTransactions(transactions: readonly Transaction[]): TransactionSummary {
   let income = 0;
   let expense = 0;
@@ -160,6 +163,8 @@ export function summarizeTransactions(transactions: readonly Transaction[]): Tra
       income += transaction.amount;
     } else if (transaction.type === 'expense') {
       expense += transaction.amount;
+    } else if (transaction.type === 'refund') {
+      expense -= transaction.amount;
     }
   }
   return { income, expense, net: income - expense, pendingCount };

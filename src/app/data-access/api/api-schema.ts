@@ -1029,7 +1029,7 @@ export interface paths {
           /** @description Data final do período, inclusiva. */
           to?: string;
           /** @description Só as transações deste tipo. */
-          type?: 'expense' | 'income' | 'transfer' | 'invoice-payment';
+          type?: 'expense' | 'income' | 'transfer' | 'invoice-payment' | 'refund';
           /** @description `completed` (realizada, altera o saldo) ou `pending` (pendente, não altera). */
           status?: 'completed' | 'pending';
           /** @description Transações que saem ou entram nesta conta (origem ou destino). */
@@ -1158,7 +1158,7 @@ export interface paths {
           /** @description Data final do período, inclusiva. */
           to?: string;
           /** @description Só as transações deste tipo. */
-          type?: 'expense' | 'income' | 'transfer' | 'invoice-payment';
+          type?: 'expense' | 'income' | 'transfer' | 'invoice-payment' | 'refund';
           /** @description `completed` (realizada, altera o saldo) ou `pending` (pendente, não altera). */
           status?: 'completed' | 'pending';
           /** @description Transações que saem ou entram nesta conta (origem ou destino). */
@@ -1276,7 +1276,7 @@ export interface paths {
     post?: never;
     /**
      * Exclui uma transação
-     * @description Remove a transação de vez. Pagamento de fatura responde 409 (é desfeito pela fatura), assim como compra de fatura já paga (desfaça o pagamento antes) e parcela de compra parcelada (`/problems/installment`: exclua a compra inteira).
+     * @description Remove a transação de vez. Pagamento de fatura responde 409 (é desfeito pela fatura), assim como compra de fatura já paga (desfaça o pagamento antes) e parcela de compra parcelada (`/problems/installment`: exclua a compra inteira). Despesa com estornos também responde 409 (`/problems/has-refunds`): exclua os estornos antes.
      */
     delete: {
       parameters: {
@@ -1338,7 +1338,7 @@ export interface paths {
     head?: never;
     /**
      * Edita uma transação
-     * @description Os campos enviados são aplicados sobre a transação e o resultado segue as regras do cadastro. Ao trocar o tipo, os campos que não servem ao novo tipo são descartados (a categoria, ao virar transferência; a conta de destino, ao virar receita ou despesa). `notes: null` remove as observações. Contas e categoria que a transação já tinha continuam aceitas mesmo se arquivadas depois; trocar por uma arquivada responde 409, assim como editar pagamento de fatura e editar compra de fatura já paga (ou movê-la para uma fatura paga) e editar uma parcela sozinha (`/problems/installment`: altere a compra parcelada).
+     * @description Os campos enviados são aplicados sobre a transação e o resultado segue as regras do cadastro. Ao trocar o tipo, os campos que não servem ao novo tipo são descartados (a categoria, ao virar transferência; a conta de destino, ao virar receita ou despesa). `notes: null` remove as observações. Contas e categoria que a transação já tinha continuam aceitas mesmo se arquivadas depois; trocar por uma arquivada responde 409, assim como editar pagamento de fatura e editar compra de fatura já paga (ou movê-la para uma fatura paga) e editar uma parcela sozinha (`/problems/installment`: altere a compra parcelada). Num estorno, só mudam descrição, valor (até o que falta estornar) e data. Uma despesa com estornos só muda descrição, categoria e observações; o resto responde 409 (`/problems/has-refunds`).
      */
     patch: {
       parameters: {
@@ -1449,6 +1449,142 @@ export interface paths {
         };
       };
     };
+    trace?: never;
+  };
+  '/v1/transactions/{id}/refunds': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Lista os estornos de uma despesa
+     * @description Estornos da despesa, dos mais antigos aos mais recentes.
+     */
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Transaction'][];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+      };
+    };
+    put?: never;
+    /**
+     * Estorna uma despesa
+     * @description Cria um estorno (`refund`) da despesa realizada, na conta ou no cartão dela: devolve o valor à conta ou abate a fatura em que a data do estorno cai, e reduz o gasto da categoria da despesa no mês do estorno. Pode haver vários estornos, até o valor da despesa (passar disso, ou data anterior à despesa, responde 422 no campo). Outro tipo de transação, ou despesa pendente, responde 409; no cartão, estorno numa fatura já paga também. Com `Idempotency-Key`, repetir o pedido devolve o mesmo estorno.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: {
+          /** @description Chave única por operação (ex.: um UUID gerado ao abrir a confirmação). Repetir a requisição com a mesma chave em até 24 horas devolve a resposta da primeira, sem executar de novo. */
+          'idempotency-key'?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['CreateRefundInput'];
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Transaction'];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   '/v1/installment-purchases': {
@@ -3404,7 +3540,7 @@ export interface components {
   schemas: {
     ProblemDetailsInput: {
       /**
-       * @description Tipo do problema: `/problems/validation-error` (422 com `errors`), `/problems/paid-invoice` (409: compra de fatura já paga), `/problems/archived-reference` (409: conta, cartão ou categoria arquivada), `/problems/installment` (409: parcela alterada sozinha; use a compra parcelada); `about:blank` quando o status já basta.
+       * @description Tipo do problema: `/problems/validation-error` (422 com `errors`), `/problems/paid-invoice` (409: compra de fatura já paga), `/problems/archived-reference` (409: conta, cartão ou categoria arquivada), `/problems/installment` (409: parcela alterada sozinha; use a compra parcelada), `/problems/has-refunds` (409: despesa com estornos); `about:blank` quando o status já basta.
        * @example about:blank
        */
       type: string;
@@ -3737,7 +3873,7 @@ export interface components {
        * @description `expense` (despesa), `income` (receita), `transfer` (transferência) ou `invoice-payment` (pagamento de fatura).
        * @enum {string}
        */
-      type: 'expense' | 'income' | 'transfer' | 'invoice-payment';
+      type: 'expense' | 'income' | 'transfer' | 'invoice-payment' | 'refund';
       description: string;
       /** @description Centavos, sempre positivo: o tipo define o efeito. */
       amount: number;
@@ -3764,6 +3900,8 @@ export interface components {
       installmentNumber: number | null;
       /** @description Total de parcelas da compra. */
       installmentCount: number | null;
+      /** @description Despesa estornada; só em `refund` (a categoria do estorno é a dela). */
+      refundedTransactionId: string | null;
       /** Format: date-time */
       createdAt: string;
       /**
@@ -3852,6 +3990,25 @@ export interface components {
       net: number;
       /** @description Quantidade de pendentes, de qualquer tipo (fora dos totais). */
       pendingCount: number;
+    };
+    CreateRefundInput: {
+      /**
+       * @description Padrão: "Estorno: " seguido da descrição da despesa.
+       * @example Mercado do mês
+       */
+      description?: string;
+      /**
+       * @description Valor estornado, em centavos; no máximo o que falta estornar da despesa.
+       * @example 123456
+       */
+      amount: number;
+      /**
+       * Format: date
+       * @description Data do estorno; não pode ser anterior à despesa.
+       * @example 2026-11-05
+       */
+      date: string;
+      notes?: string | null;
     };
     DashboardInput: {
       /**
@@ -3970,6 +4127,8 @@ export interface components {
       /** @description A transação `invoice-payment` da fatura, se paga. */
       payment: components['schemas']['TransactionInput'] | null;
       purchases: components['schemas']['TransactionInput'][];
+      /** @description Estornos lançados no ciclo. */
+      refunds: components['schemas']['TransactionInput'][];
     };
     CreateInstallmentPurchaseInput: {
       /** @example Mercado do mês */
@@ -4018,7 +4177,7 @@ export interface components {
     };
     ProblemDetails: {
       /**
-       * @description Tipo do problema: `/problems/validation-error` (422 com `errors`), `/problems/paid-invoice` (409: compra de fatura já paga), `/problems/archived-reference` (409: conta, cartão ou categoria arquivada), `/problems/installment` (409: parcela alterada sozinha; use a compra parcelada); `about:blank` quando o status já basta.
+       * @description Tipo do problema: `/problems/validation-error` (422 com `errors`), `/problems/paid-invoice` (409: compra de fatura já paga), `/problems/archived-reference` (409: conta, cartão ou categoria arquivada), `/problems/installment` (409: parcela alterada sozinha; use a compra parcelada), `/problems/has-refunds` (409: despesa com estornos); `about:blank` quando o status já basta.
        * @example about:blank
        */
       type: string;
@@ -4351,7 +4510,7 @@ export interface components {
        * @description `expense` (despesa), `income` (receita), `transfer` (transferência) ou `invoice-payment` (pagamento de fatura).
        * @enum {string}
        */
-      type: 'expense' | 'income' | 'transfer' | 'invoice-payment';
+      type: 'expense' | 'income' | 'transfer' | 'invoice-payment' | 'refund';
       description: string;
       /** @description Centavos, sempre positivo: o tipo define o efeito. */
       amount: number;
@@ -4378,6 +4537,8 @@ export interface components {
       installmentNumber: number | null;
       /** @description Total de parcelas da compra. */
       installmentCount: number | null;
+      /** @description Despesa estornada; só em `refund` (a categoria do estorno é a dela). */
+      refundedTransactionId: string | null;
       /** Format: date-time */
       createdAt: string;
       /**
@@ -4466,6 +4627,25 @@ export interface components {
       net: number;
       /** @description Quantidade de pendentes, de qualquer tipo (fora dos totais). */
       pendingCount: number;
+    };
+    CreateRefund: {
+      /**
+       * @description Padrão: "Estorno: " seguido da descrição da despesa.
+       * @example Mercado do mês
+       */
+      description?: string;
+      /**
+       * @description Valor estornado, em centavos; no máximo o que falta estornar da despesa.
+       * @example 123456
+       */
+      amount: number;
+      /**
+       * Format: date
+       * @description Data do estorno; não pode ser anterior à despesa.
+       * @example 2026-11-05
+       */
+      date: string;
+      notes: unknown;
     };
     Dashboard: {
       /**
@@ -4584,6 +4764,8 @@ export interface components {
       /** @description A transação `invoice-payment` da fatura, se paga. */
       payment: components['schemas']['Transaction'] | null;
       purchases: components['schemas']['Transaction'][];
+      /** @description Estornos lançados no ciclo. */
+      refunds: components['schemas']['Transaction'][];
     };
     CreateInstallmentPurchase: {
       /** @example Mercado do mês */

@@ -339,14 +339,55 @@ installmentPurchase({
   card: travelCard,
 });
 
+/**
+ * Estorno de uma despesa realizada: na conta ou no cartão dela, sem categoria (é a da despesa).
+ * No cartão, cai numa fatura ainda aberta, para não mexer em fatura paga.
+ */
+function refund(original, { day, share }) {
+  transaction({
+    type: 'refund',
+    description: `Estorno: ${original.description}`.slice(0, 80),
+    amount: Math.round(original.amount * share),
+    date: isoDate(monthAt(0), day),
+    accountId: original.accountId,
+    creditCardId: original.creditCardId,
+    refundedTransactionId: original.id,
+  });
+}
+
+const lastMonth = isoMonth(monthAt(-1));
+const refundable = (predicate) =>
+  transactions.find(
+    (item) =>
+      item.type === 'expense' &&
+      item.status === 'completed' &&
+      !item.installmentGroupId &&
+      item.date.startsWith(lastMonth) &&
+      predicate(item),
+  );
+// Compra devolvida em parte (cai na fatura aberta: depois do fechamento do dia 3) e uma despesa
+// em conta estornada por inteiro.
+refund(
+  refundable(
+    (item) => item.creditCardId === mainCard.id && item.categoryId === category('Compras'),
+  ),
+  { day: Math.min(anchorDay, 4), share: 0.4 },
+);
+refund(
+  refundable((item) => item.accountId !== null && item.categoryId === category('Alimentação')),
+  { day: Math.min(anchorDay, 2), share: 1 },
+);
+
 // Pagamentos das faturas já vencidas; a fatura fechada mais recente fica para a demo pagar.
 for (const creditCard of creditCards) {
   const totals = new Map();
   for (const purchase of transactions) {
-    if (purchase.creditCardId === creditCard.id && purchase.type === 'expense') {
+    // Total da fatura: compras menos estornos lançados nela.
+    const sign = { expense: 1, refund: -1 }[purchase.type];
+    if (purchase.creditCardId === creditCard.id && sign) {
       const invoice = invoiceFor(creditCard, purchase.date);
       const current = totals.get(invoice.referenceMonth) ?? { invoice, total: 0 };
-      current.total += purchase.amount;
+      current.total += sign * purchase.amount;
       totals.set(invoice.referenceMonth, current);
     }
   }
