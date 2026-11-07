@@ -21,6 +21,7 @@ import {
   Transaction,
   isInstallment,
   isInvoicePayment,
+  isRefund,
 } from '../../../shared/models/transaction';
 import { AccountsFacade } from '../../accounts/accounts.facade';
 import { CategoriesFacade } from '../../categories/categories.facade';
@@ -43,11 +44,12 @@ import {
   toTransactionInput,
   transactionSchema,
 } from '../forms/transaction.schema';
-import { PAID_INVOICE_MESSAGE } from '../transaction-actions';
-import { PaidInvoiceError, TransactionsFacade } from '../transactions.facade';
+import { HAS_REFUNDS_MESSAGE, PAID_INVOICE_MESSAGE } from '../transaction-actions';
+import { HasRefundsError, PaidInvoiceError, TransactionsFacade } from '../transactions.facade';
 
 /** `not-editable`: pagamentos de fatura só são criados e desfeitos pela tela de Faturas. */
-type LoadState = 'loading' | 'ready' | 'not-found' | 'not-editable' | 'installment' | 'error';
+type LoadState =
+  'loading' | 'ready' | 'not-found' | 'not-editable' | 'installment' | 'refund' | 'error';
 
 /** Mensagens para as referências recusadas pela facade (conta ou categoria indisponível). */
 const REFERENCE_ERRORS: Partial<Record<keyof TransactionInput, string>> = {
@@ -244,7 +246,9 @@ export class TransactionFormPage implements OnInit {
         this.errorMessage.set(
           error instanceof PaidInvoiceError
             ? PAID_INVOICE_MESSAGE
-            : 'Não foi possível salvar a transação. Tente novamente em instantes.',
+            : error instanceof HasRefundsError
+              ? `${HAS_REFUNDS_MESSAGE} Descrição, categoria e observações podem mudar.`
+              : 'Não foi possível salvar a transação. Tente novamente em instantes.',
         );
       }
       return undefined;
@@ -274,6 +278,10 @@ export class TransactionFormPage implements OnInit {
       }
       if (transaction && isInstallment(transaction)) {
         this.loadState.set('installment');
+        return;
+      }
+      if (transaction && isRefund(transaction)) {
+        this.loadState.set('refund');
         return;
       }
       this.original.set(transaction);

@@ -341,6 +341,142 @@ describe('transaction pages', () => {
       expect(records()).toHaveLength(0);
     });
 
+    describe('refund', () => {
+      async function dialogLoader(): Promise<MatDialogHarness> {
+        return TestbedHarnessEnvironment.documentRootLoader(harness.fixture).getHarness(
+          MatDialogHarness,
+        );
+      }
+
+      async function dialogInput(label: string): Promise<MatInputHarness> {
+        const dialog = await dialogLoader();
+        const formField = await dialog.getHarness(
+          MatFormFieldHarness.with({ floatingLabelText: label }),
+        );
+        return (await formField.getControl(MatInputHarness))!;
+      }
+
+      async function submitDialog(button: string): Promise<void> {
+        const dialog = await dialogLoader();
+        await (await dialog.getHarness(MatButtonHarness.with({ text: button }))).click();
+        await harness.fixture.whenStable();
+      }
+
+      it('refunds the expense with what is left as default and shows the net value', async () => {
+        const [expense] = seedTransactions(userId, { description: 'Mercado', amount: 25_000 });
+        await open(`/transactions/${expense.id}`);
+
+        await (
+          await loader.getHarness(MatButtonHarness.with({ text: /Registrar estorno/ }))
+        ).click();
+        expect(await (await dialogInput('Valor')).getValue()).toBe('250,00');
+        expect(await (await dialogInput('Descrição')).getValue()).toBe('Estorno: Mercado');
+        await (await dialogInput('Valor')).setValue('100,00');
+        await submitDialog('Estornar');
+
+        await vi.waitFor(() => expect(text()).toContain('Valor líquido'));
+        expect(records()[1]).toMatchObject({
+          type: 'refund',
+          amount: 10_000,
+          date: '2026-11-15',
+          accountId: 'account-1',
+          refundedTransactionId: expense.id,
+        });
+        expect(text()).toMatch(/\+R\$\s100,00/);
+        expect(text()).toMatch(/Valor líquido\s*R\$\s150,00/);
+        const labels = await Promise.all(
+          (await loader.getAllHarnesses(MatButtonHarness)).map((button) => button.getText()),
+        );
+        expect(labels.join(' ')).not.toContain('Marcar como pendente');
+      });
+
+      it('keeps the dialog open when the amount is more than what is left', async () => {
+        const [expense] = seedTransactions(userId, { amount: 25_000 });
+        seedTransactions(userId, {
+          type: 'refund',
+          amount: 20_000,
+          categoryId: null,
+          refundedTransactionId: expense.id,
+        });
+        await open(`/transactions/${expense.id}`);
+
+        await (
+          await loader.getHarness(MatButtonHarness.with({ text: /Registrar estorno/ }))
+        ).click();
+        await (await dialogInput('Valor')).setValue('60,00');
+        await submitDialog('Estornar');
+
+        const dialog = await dialogLoader();
+        expect(await (await dialog.host()).text()).toContain(
+          'O estorno pode ser de no máximo R$ 50,00, o que falta estornar.',
+        );
+        expect(records()).toHaveLength(2);
+      });
+
+      it('shows the refunded expense, edits the refund and goes back to the expense on delete', async () => {
+        const [expense] = seedTransactions(userId, { description: 'Mercado', amount: 25_000 });
+        const [refund] = seedTransactions(userId, {
+          type: 'refund',
+          description: 'Estorno: Mercado',
+          amount: 5_000,
+          date: '2026-11-12',
+          categoryId: null,
+          refundedTransactionId: expense.id,
+        });
+        await open(`/transactions/${refund.id}`);
+
+        expect(text()).toContain('Estorno de');
+        expect(text()).toMatch(/\+R\$\s50,00/);
+        await (await loader.getHarness(MatButtonHarness.with({ text: /Editar estorno/ }))).click();
+        await (await dialogInput('Valor')).setValue('70,00');
+        await submitDialog('Salvar');
+        await vi.waitFor(() => expect(records()[1].amount).toBe(7_000));
+        await vi.waitFor(() => expect(document.querySelector('app-refund-dialog')).toBeNull());
+
+        await (
+          await loader.getHarness(MatButtonHarness.with({ text: /^delete Excluir$/ }))
+        ).click();
+        await confirmDialog('Excluir');
+        await vi.waitFor(() =>
+          expect(TestBed.inject(Router).url).toBe(`/transactions/${expense.id}`),
+        );
+        expect(records()).toHaveLength(1);
+      });
+
+      it('keeps an expense with refunds on delete, explaining why', async () => {
+        const [expense] = seedTransactions(userId, { amount: 25_000 });
+        seedTransactions(userId, {
+          type: 'refund',
+          amount: 5_000,
+          categoryId: null,
+          refundedTransactionId: expense.id,
+        });
+        await open(`/transactions/${expense.id}`);
+
+        await (
+          await loader.getHarness(MatButtonHarness.with({ text: /^delete Excluir$/ }))
+        ).click();
+        await confirmDialog('Excluir');
+
+        await vi.waitFor(() =>
+          expect(document.body.textContent).toContain('Esta despesa tem estornos'),
+        );
+        expect(records()).toHaveLength(2);
+      });
+
+      it('does not open a refund in the transaction form', async () => {
+        const [expense] = seedTransactions(userId, {});
+        const [refund] = seedTransactions(userId, {
+          type: 'refund',
+          categoryId: null,
+          refundedTransactionId: expense.id,
+        });
+        await open(`/transactions/${refund.id}/edit`);
+
+        expect(text()).toContain('Estornos são editados no detalhe deles');
+      });
+    });
+
     describe('installment', () => {
       async function installmentPurchase() {
         seedCreditCards(userId, { name: 'Roxinho' });

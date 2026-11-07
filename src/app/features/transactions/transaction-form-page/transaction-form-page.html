@@ -28,6 +28,13 @@
     </p>
     <a matButton="outlined" [routerLink]="['/transactions', id()]">Ver a parcela</a>
   }
+  @case ('refund') {
+    <p class="transaction-form__message" role="alert">
+      Estornos são editados no detalhe deles: valor, data, descrição e observações. A conta ou o
+      cartão e a categoria são os da despesa estornada.
+    </p>
+    <a matButton="outlined" [routerLink]="['/transactions', id()]">Ver o estorno</a>
+  }
   @case ('error') {
     <p class="transaction-form__message" role="alert">
       Não foi possível carregar os dados. Tente novamente em instantes.

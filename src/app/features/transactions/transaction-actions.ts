@@ -4,10 +4,13 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { firstValueFrom } from 'rxjs';
 import { openConfirmDialog } from '../../shared/components/confirm-dialog/confirm-dialog';
 import { Transaction, isInvoicePayment } from '../../shared/models/transaction';
-import { PaidInvoiceError, TransactionsFacade } from './transactions.facade';
+import { HasRefundsError, PaidInvoiceError, TransactionsFacade } from './transactions.facade';
 
 export const PAID_INVOICE_MESSAGE =
   'A fatura desta compra já foi paga. Desfaça o pagamento na tela de Faturas para alterá-la.';
+
+export const HAS_REFUNDS_MESSAGE =
+  'Esta despesa tem estornos: exclua os estornos, no detalhe dela, antes de excluí-la ou de mudar valor, data, conta, cartão, tipo ou status.';
 
 /** Ações sobre uma transação com feedback, compartilhadas pela listagem e pelo detalhe. */
 @Injectable({ providedIn: 'root' })
@@ -27,8 +30,12 @@ export class TransactionActions {
           : 'Transação marcada como pendente.',
       );
       return updated;
-    } catch {
-      this.notify('Não foi possível atualizar a transação. Tente novamente.');
+    } catch (error) {
+      this.notify(
+        error instanceof HasRefundsError
+          ? HAS_REFUNDS_MESSAGE
+          : 'Não foi possível atualizar a transação. Tente novamente.',
+      );
       return null;
     }
   }
@@ -59,7 +66,9 @@ export class TransactionActions {
       this.notify(
         error instanceof PaidInvoiceError
           ? PAID_INVOICE_MESSAGE
-          : 'Não foi possível excluir a transação. Tente novamente.',
+          : error instanceof HasRefundsError
+            ? HAS_REFUNDS_MESSAGE
+            : 'Não foi possível excluir a transação. Tente novamente.',
       );
       return false;
     }

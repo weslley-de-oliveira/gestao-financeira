@@ -5,8 +5,10 @@ import {
   Transaction,
   TransactionType,
   isCardPurchase,
+  isCardRefund,
   isInstallment,
   isInvoicePayment,
+  isRefund,
 } from '../../shared/models/transaction';
 
 /** Ícone de cada tipo, exibido junto ao texto (o tipo nunca é indicado só por cor). */
@@ -42,14 +44,14 @@ export function byId<T extends { id: string }>(items: readonly T[]): ReadonlyMap
 }
 
 /**
- * "Corrente"; em transferências, "Corrente → Poupança"; em compras, "Cartão Nubank"; em
- * pagamentos de fatura, "Corrente → Fatura Nubank".
+ * "Corrente"; em transferências, "Corrente → Poupança"; em compras e estornos no cartão, "Cartão
+ * Nubank"; em pagamentos de fatura, "Corrente → Fatura Nubank".
  */
 export function accountLabel(transaction: Transaction, lookups: TransactionLookups): string {
   const account = (id: string | null) => (id && lookups.accounts.get(id)?.name) || 'Conta removida';
   const card = (id: string | null) => (id && lookups.creditCards.get(id)?.name) || null;
 
-  if (isCardPurchase(transaction)) {
+  if (isCardPurchase(transaction) || isCardRefund(transaction)) {
     const name = card(transaction.creditCardId);
     return name ? `Cartão ${name}` : 'Cartão de crédito';
   }
@@ -64,10 +66,10 @@ export function accountLabel(transaction: Transaction, lookups: TransactionLooku
 
 /**
  * Pagamentos de fatura só são criados e desfeitos pela tela de Faturas; parcelas só mudam pela
- * compra parcelada (no detalhe da parcela).
+ * compra parcelada (no detalhe da parcela); estornos, pelo diálogo do estorno (no detalhe dele).
  */
 export function isEditable(transaction: Pick<Transaction, 'type' | 'installmentGroupId'>): boolean {
-  return !isInvoicePayment(transaction) && !isInstallment(transaction);
+  return !isInvoicePayment(transaction) && !isInstallment(transaction) && !isRefund(transaction);
 }
 
 /** Parcelas não são excluídas sozinhas: exclui-se a compra parcelada inteira. */
@@ -84,9 +86,9 @@ export function installmentLabel(
     : null;
 }
 
-/** Compras no cartão e pagamentos de fatura são sempre realizados. */
+/** Compras no cartão, pagamentos de fatura e estornos são sempre realizados. */
 export function canChangeStatus(transaction: Pick<Transaction, 'type' | 'creditCardId'>): boolean {
-  return !isCardPurchase(transaction) && !isInvoicePayment(transaction);
+  return !isCardPurchase(transaction) && !isInvoicePayment(transaction) && !isRefund(transaction);
 }
 
 /**
