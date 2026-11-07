@@ -42,7 +42,8 @@ test('refunds part of a card purchase and finds the credit on the invoice', asyn
   await expect(page.getByText('Estorno de', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Excluir', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Excluir' }).click();
-  await expect(page.getByRole('heading', { name: 'Jaqueta E2E' })).toBeVisible();
+  // Nome exato: o título do estorno ("Estorno: Jaqueta E2E") também contém o da despesa.
+  await expect(page.getByRole('heading', { name: 'Jaqueta E2E', exact: true })).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByRole('button', { name: 'Excluir', exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Excluir' }).click();

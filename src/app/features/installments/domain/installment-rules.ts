@@ -1,10 +1,14 @@
 import { Transaction } from '../../../shared/models/transaction';
 import { IsoDate } from '../../../shared/utils/date';
 import { Cents } from '../../../shared/utils/money';
+import { InstallmentActionsSummary } from './installment-actions';
 import { MAX_INSTALLMENTS, MIN_INSTALLMENTS } from './installment-plan';
 
-/** Compra parcelada no cartão: o resumo e as parcelas (compras comuns), da 1ª à última. */
-export interface InstallmentPurchase {
+/**
+ * Compra parcelada no cartão: o resumo, as parcelas (compras comuns), da 1ª à última, e o que dá
+ * para antecipar e cancelar hoje.
+ */
+export interface InstallmentPurchase extends InstallmentActionsSummary {
   /** O `installmentGroupId` das parcelas. */
   id: string;
   userId: string;
@@ -49,6 +53,30 @@ export class InstallmentPurchaseNotFoundError extends Error {
   }
 }
 
+/** Nenhuma parcela de fatura futura sem estornos: não há o que antecipar. */
+export class NothingToAnticipateError extends Error {
+  constructor() {
+    super('No installments to anticipate');
+    this.name = 'NothingToAnticipateError';
+  }
+}
+
+/** Mais parcelas do que as que podem ser antecipadas (o resumo da tela ficou desatualizado). */
+export class InvalidAnticipationCountError extends Error {
+  constructor() {
+    super('Invalid anticipation count');
+    this.name = 'InvalidAnticipationCountError';
+  }
+}
+
+/** Nada a estornar na fatura atual nem nas futuras: não há o que cancelar. */
+export class NothingToCancelError extends Error {
+  constructor() {
+    super('No installments to cancel');
+    this.name = 'NothingToCancelError';
+  }
+}
+
 /** Número de parcelas aceito (2 a 24) e ao menos 1 centavo por parcela. */
 export function isValidInstallmentCount(count: number, amount: Cents): boolean {
   return (
@@ -59,8 +87,11 @@ export function isValidInstallmentCount(count: number, amount: Cents): boolean {
   );
 }
 
-/** A compra parcelada a partir das parcelas (todas do mesmo grupo). */
-export function toInstallmentPurchase(installments: readonly Transaction[]): InstallmentPurchase {
+/** A compra parcelada a partir das parcelas (todas do mesmo grupo) e do resumo das ações. */
+export function toInstallmentPurchase(
+  installments: readonly Transaction[],
+  actions: InstallmentActionsSummary,
+): InstallmentPurchase {
   const sorted = [...installments].sort(
     (a, b) => (a.installmentNumber ?? 0) - (b.installmentNumber ?? 0),
   );
@@ -78,5 +109,6 @@ export function toInstallmentPurchase(installments: readonly Transaction[]): Ins
     categoryId: first.categoryId,
     notes: first.notes,
     installments: sorted,
+    ...actions,
   };
 }

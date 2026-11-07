@@ -18,18 +18,18 @@ A [demo publicada](https://gestao-financeira-tau-five.vercel.app) (Vercel, atual
 
 ## Funcionalidades
 
-| Tela              | Destaques                                                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Login e cadastro  | Sessão em cookie HttpOnly (API) ou criptografada no navegador (demo, PBKDF2), com os guards de rota                            |
-| Dashboard         | Resumo do período, receitas × despesas, evolução do saldo, transações recentes, orçamentos e metas                             |
-| Contas            | Busca e filtros, saldo atual calculado, arquivamento                                                                           |
-| Transações        | Receitas, despesas e transferências, pendentes, compras no cartão, estornos, busca, filtros, ordenação e paginação no servidor |
-| Categorias        | Conjunto padrão, personalização, prevenção de duplicidade                                                                      |
-| Cartões e faturas | Limite utilizado e disponível, ciclo de fatura, status, pagamento que não duplica despesas, compras parceladas (2 a 24x)       |
-| Orçamentos        | Limite mensal por categoria com vigências, alerta e consumo do mês                                                             |
-| Metas             | Progresso, status, ritmo mensal até o prazo e histórico de aportes                                                             |
-| Configurações     | Perfil, tema claro/escuro/sistema, cor de destaque (7 paletas) e densidade                                                     |
-| Segurança         | Troca de senha, laboratório de criptografia (AES-256-GCM + PBKDF2) e exclusão da conta                                         |
+| Tela              | Destaques                                                                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Login e cadastro  | Sessão em cookie HttpOnly (API) ou criptografada no navegador (demo, PBKDF2), com os guards de rota                                                     |
+| Dashboard         | Resumo do período, receitas × despesas, evolução do saldo, transações recentes, orçamentos e metas                                                      |
+| Contas            | Busca e filtros, saldo atual calculado, arquivamento                                                                                                    |
+| Transações        | Receitas, despesas e transferências, pendentes, compras no cartão, estornos, busca, filtros, ordenação e paginação no servidor                          |
+| Categorias        | Conjunto padrão, personalização, prevenção de duplicidade                                                                                               |
+| Cartões e faturas | Limite utilizado e disponível, ciclo de fatura, status, pagamento que não duplica despesas, compras parceladas (2 a 24x), antecipar e cancelar parcelas |
+| Orçamentos        | Limite mensal por categoria com vigências, alerta e consumo do mês                                                                                      |
+| Metas             | Progresso, status, ritmo mensal até o prazo e histórico de aportes                                                                                      |
+| Configurações     | Perfil, tema claro/escuro/sistema, cor de destaque (7 paletas) e densidade                                                                              |
+| Segurança         | Troca de senha, laboratório de criptografia (AES-256-GCM + PBKDF2) e exclusão da conta                                                                  |
 
 ## Stack
 
@@ -110,6 +110,7 @@ A aplicação segue uma arquitetura orientada a funcionalidades (`core`, `shared
 
 - **Content Security Policy** (`vercel.json`): scripts só do próprio domínio, mais o hash do único script inline do Angular (o que aplica o CSS crítico); estilos inline permitidos (Angular e Material os injetam); fontes do Google Fonts; pedidos só à mesma origem (`/api`); a página não pode ser embutida em outro site. Ao atualizar o Angular, se o script inline mudar, os E2E acusam a violação: recalcule o hash (`sha256` do conteúdo do `<script>` em `dist/gestao-financeira/browser/index.html`).
 - **Compras parceladas:** cada parcela é uma compra comum no cartão, na fatura do seu mês ("Parcela 3 de 10" na listagem, na fatura e no detalhe), e conta no orçamento do mês dela. O limite reserva o total na hora. A divisão (sobra dos centavos na 1ª) e as datas seguem as mesmas funções da API (`features/installments/domain/installment-plan.ts`), usadas na prévia do formulário e na demo. A compra só muda inteira: descrição, categoria e observações pelo detalhe da parcela, ou excluir todas as parcelas (recusado se alguma estiver numa fatura paga).
+- **Antecipar e cancelar parcelas:** pelo detalhe de uma parcela, "Antecipar parcelas" leva as últimas para a fatura atual (a data delas passa a ser hoje; o desconto do banco vira um estorno da parcela antecipada), e "Cancelar parcelas" estorna o que falta das parcelas da fatura atual e das futuras, cada uma na sua fatura. Parcelas de faturas fechadas não mudam. As regras (`features/installments/domain/installment-actions.ts`) são as mesmas da API, que informa na compra quantas parcelas dá para antecipar e quanto o cancelamento estornaria.
 - **Estornos:** uma despesa realizada (em conta, no cartão ou uma parcela) recebe um ou mais estornos, até o valor dela, pelo detalhe ("Registrar estorno": o padrão é o que falta estornar, com a data de hoje). O estorno é uma transação `refund` ligada à despesa: na conta, devolve o valor; no cartão, abate a fatura em que a data cai e libera o limite (se passar das compras, a fatura mostra crédito, que não passa para a seguinte). No mês dele, reduz o gasto da categoria da despesa no orçamento e entra como despesa negativa nos totais e no dashboard. As regras (`features/refunds/domain/refund-rules.ts`) são as mesmas da API; uma despesa com estornos só muda descrição, categoria e observações, e só é excluída depois dos estornos.
 - **Filtros na URL:** a tela de Transações guarda busca, tipo, conta, categoria, status e ordenação na URL (`?busca=…&tipo=expense`), sem criar entradas no histórico; voltar, recarregar ou compartilhar o link mantém a lista. O período fica no seletor da barra superior.
 
@@ -131,8 +132,8 @@ vercel.json      # Build publicada, rewrite de /api para a API, fallback da SPA 
 ## Qualidade
 
 - **Testes unitários e de componentes** (Vitest + harnesses do Material): regras de domínio, facades, repositórios, formulários e telas, inclusive a validação do seed contra as regras do app.
-- **E2E** (Playwright, contra a build de demo): login, cadastro, navegação, lançamento de transação, pagamento de fatura, compra parcelada (prévia, faturas e exclusão), estorno de uma compra no cartão (detalhe e crédito na fatura), filtros de Transações na URL, persistência e restauração dos dados. O relógio do navegador é fixado na data de referência do seed para resultados determinísticos, e todas as páginas rodam com a Content Security Policy do `vercel.json` valendo: qualquer violação falha o teste.
-- **E2E contra a API real** (`npm run e2e:api`): sessão em cookie (restauração, expiração e saída), saldo calculado pelo servidor, dashboard numa chamada só, listagem de transações paginada, ordenada e totalizada no servidor (sem baixar a lista completa), compra parcelada registrada e excluída pela API, estorno de compra no cartão (fatura, limite e 409 ao excluir a despesa), troca de senha e exclusão da conta com senha. Na CI, com Postgres e o seed da API.
+- **E2E** (Playwright, contra a build de demo): login, cadastro, navegação, lançamento de transação, pagamento de fatura, compra parcelada (prévia, faturas e exclusão), estorno de uma compra no cartão (detalhe e crédito na fatura), antecipação e cancelamento de parcelas, filtros de Transações na URL, persistência e restauração dos dados. O relógio do navegador é fixado na data de referência do seed para resultados determinísticos, e todas as páginas rodam com a Content Security Policy do `vercel.json` valendo: qualquer violação falha o teste.
+- **E2E contra a API real** (`npm run e2e:api`): sessão em cookie (restauração, expiração e saída), saldo calculado pelo servidor, dashboard numa chamada só, listagem de transações paginada, ordenada e totalizada no servidor (sem baixar a lista completa), compra parcelada registrada e excluída pela API, estorno de compra no cartão (fatura, limite e 409 ao excluir a despesa), antecipação e cancelamento de parcelas (fatura zerada e limite liberado), troca de senha e exclusão da conta com senha. Na CI, com Postgres e o seed da API.
 - **Acessibilidade**: axe-core (WCAG 2.0/2.1 A e AA) em todas as telas principais, nos temas claro e escuro.
 - **Responsividade**: navegação pelo menu recolhido e ausência de rolagem horizontal num celular (Pixel 7).
 - **CI**: cada push na `main` e cada pull request passam por formatação, lint, testes unitários, build e E2E (demo e API real).

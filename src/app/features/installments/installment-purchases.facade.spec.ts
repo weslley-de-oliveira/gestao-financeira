@@ -9,9 +9,16 @@ import { seedTransactions } from '../../../testing/transaction-fixtures';
 import { CreditCardsFacade } from '../credit-cards/credit-cards.facade';
 import { InvoicesFacade } from '../invoices/invoices.facade';
 import { PaidInvoiceError } from '../invoices/domain/invoice-rules';
+import { RefundsFacade } from '../refunds/refunds.facade';
 import { InvalidTransactionInputError } from '../transactions/domain/transaction-rules';
 import { TransactionsFacade } from '../transactions/transactions.facade';
-import { InstallmentNotEditableError, InstallmentPurchaseInput } from './domain/installment-rules';
+import {
+  InstallmentNotEditableError,
+  InstallmentPurchaseInput,
+  InvalidAnticipationCountError,
+  NothingToAnticipateError,
+  NothingToCancelError,
+} from './domain/installment-rules';
 import {
   InstallmentPurchasesFacade,
   InvalidInstallmentCountError,
@@ -70,6 +77,28 @@ describe('InstallmentPurchasesFacade', () => {
       [3, 3_333, '2027-01-10', 'card-1', null, 'completed'],
     ]);
     expect(records().every((record) => record.installmentGroupId === purchase.id)).toBe(true);
+  });
+
+  it('tells what can be anticipated and cancelled today, minus the refunds', async () => {
+    // Parcelas em 10/11 (fatura atual, de 12/2026), 10/12 e 10/01 (faturas futuras).
+    const purchase = await facade.create(input);
+
+    expect(purchase).toMatchObject({
+      anticipatableCount: 2,
+      cancellable: { count: 3, amount: 10_000 },
+    });
+
+    await TestBed.inject(RefundsFacade).create(purchase.installments[2], {
+      description: 'Desconto',
+      amount: 1_000,
+      date: '2027-01-10',
+      notes: null,
+    });
+
+    expect(await facade.getById(purchase.id)).toMatchObject({
+      anticipatableCount: 1,
+      cancellable: { count: 3, amount: 9_000 },
+    });
   });
 
   it('holds the whole amount in the card limit', async () => {
@@ -155,6 +184,67 @@ describe('InstallmentPurchasesFacade', () => {
     await expect(transactions.setStatus(first.id, 'pending')).rejects.toBeInstanceOf(
       InstallmentNotEditableError,
     );
+  });
+
+  describe('anticipate', () => {
+    // Em 5x a partir de 10/11: 10/11 (fatura atual), 10/12, 10/01, 10/02 e 10/03.
+    const fiveTimes = { ...input, installmentCount: 5 };
+
+    it('moves the last installments to the current invoice, dated today', async () => {
+      const purchase = await facade.create(fiveTimes);
+
+      const anticipated = await facade.anticipate(purchase.id, 2);
+
+      expect(anticipated.installments.map((item) => [item.installmentNumber, item.date])).toEqual([
+        [1, '2026-11-10'],
+        [2, '2026-12-10'],
+        [3, '2027-01-10'],
+        [4, '2026-11-15'],
+        [5, '2026-11-15'],
+      ]);
+      expect(anticipated.anticipatableCount).toBe(2);
+    });
+
+    it('refuses more installments than possible, or none to anticipate', async () => {
+      const purchase = await facade.create(fiveTimes);
+      const short = await facade.create({ ...input, date: '2026-10-20', installmentCount: 2 });
+
+      await expect(facade.anticipate(purchase.id, 5)).rejects.toBeInstanceOf(
+        InvalidAnticipationCountError,
+      );
+      await expect(facade.anticipate(purchase.id, 0)).rejects.toBeInstanceOf(
+        InvalidAnticipationCountError,
+      );
+      await expect(facade.anticipate(short.id, 1)).rejects.toBeInstanceOf(NothingToAnticipateError);
+    });
+  });
+
+  describe('cancel', () => {
+    it('refunds what is left of the current and future installments', async () => {
+      // Em 5x a partir de 10/10: a 1ª parcela está na fatura de 11/2026, já fechada.
+      const purchase = await facade.create({ ...input, date: '2026-10-10', installmentCount: 5 });
+      await TestBed.inject(RefundsFacade).create(purchase.installments[2], {
+        description: 'Desconto',
+        amount: 500,
+        date: '2026-12-10',
+        notes: null,
+      });
+
+      const refunds = await facade.cancel(purchase.id);
+
+      expect(refunds.map(({ description, amount, date }) => [description, amount, date])).toEqual([
+        ['Cancelamento: Geladeira nova (2/5)', 2_000, '2026-11-15'],
+        ['Cancelamento: Geladeira nova (3/5)', 1_500, '2026-12-10'],
+        ['Cancelamento: Geladeira nova (4/5)', 2_000, '2027-01-10'],
+        ['Cancelamento: Geladeira nova (5/5)', 2_000, '2027-02-10'],
+      ]);
+      expect(refunds.every((refund) => refund.type === 'refund')).toBe(true);
+      expect(await facade.getById(purchase.id)).toMatchObject({
+        anticipatableCount: 0,
+        cancellable: { count: 0, amount: 0 },
+      });
+      await expect(facade.cancel(purchase.id)).rejects.toBeInstanceOf(NothingToCancelError);
+    });
   });
 
   it('does not find purchases of other users', async () => {

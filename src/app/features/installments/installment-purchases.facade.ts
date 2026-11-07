@@ -7,6 +7,7 @@ import { CreditCardRepository } from '../../data-access/repositories/credit-card
 import { InstallmentPurchaseRepository } from '../../data-access/repositories/installment-purchase.repository';
 import { TransactionSource } from '../../data-access/repositories/transaction-source';
 import { CreditCard } from '../../shared/models/credit-card';
+import { Transaction } from '../../shared/models/transaction';
 import { isInvoicePaidFor, PaidInvoiceError } from '../invoices/domain/invoice-rules';
 import { HasRefundsError } from '../refunds/domain/refund-rules';
 import {
@@ -20,6 +21,7 @@ import {
   InstallmentPurchaseChanges,
   InstallmentPurchaseInput,
   InstallmentPurchaseNotFoundError,
+  InvalidAnticipationCountError,
   isValidInstallmentCount,
 } from './domain/installment-rules';
 
@@ -126,6 +128,29 @@ export class InstallmentPurchasesFacade {
       );
     }
     await firstValueFrom(this.repository.delete(this.userId(), id));
+  }
+
+  /**
+   * Leva as últimas `count` parcelas que podem ser antecipadas para a fatura atual. As faturas de
+   * destino e de origem estão sempre abertas (a atual e as futuras), então não há trava de fatura
+   * paga a conferir aqui. Sem parcelas a antecipar → `NothingToAnticipateError`; mais do que as
+   * possíveis → `InvalidAnticipationCountError`.
+   */
+  async anticipate(id: string, count: number): Promise<InstallmentPurchase> {
+    await this.getOwned(id);
+    if (!Number.isInteger(count) || count < 1) {
+      throw new InvalidAnticipationCountError();
+    }
+    return firstValueFrom(this.repository.anticipate(this.userId(), id, count));
+  }
+
+  /**
+   * Estorna o que falta das parcelas da fatura atual e das futuras e devolve os estornos. Nada a
+   * cancelar → `NothingToCancelError`.
+   */
+  async cancel(id: string): Promise<Transaction[]> {
+    await this.getOwned(id);
+    return firstValueFrom(this.repository.cancel(this.userId(), id));
   }
 
   private async assertInvoicesOpen(card: CreditCard, dates: readonly string[]): Promise<void> {

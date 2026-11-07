@@ -585,6 +585,56 @@ describe('transaction pages', () => {
         expect(records()).toHaveLength(0);
       });
 
+      it('anticipates the chosen last installments to the current invoice', async () => {
+        // Parcelas em 10/11 (fatura atual, de dezembro), 10/12 e 10/01.
+        const purchase = await installmentPurchase();
+        await open(`/transactions/${purchase.installments[0].id}`);
+
+        await (
+          await loader.getHarness(MatButtonHarness.with({ text: /Antecipar parcelas/ }))
+        ).click();
+        const dialog = await TestbedHarnessEnvironment.documentRootLoader(
+          harness.fixture,
+        ).getHarness(MatDialogHarness);
+        expect(await dialog.getText()).toContain('fatura de dezembro de 2026');
+        const countSelect = await dialog.getHarness(MatSelectHarness);
+        expect(await countSelect.getValueText()).toBe('As últimas 2 parcelas');
+        await countSelect.open();
+        await countSelect.clickOptions({ text: 'A última parcela' });
+        await (await dialog.getHarness(MatButtonHarness.with({ text: 'Antecipar' }))).click();
+
+        await vi.waitFor(() =>
+          expect(records().map((record) => record.date)).toEqual([
+            '2026-11-10',
+            '2026-12-10',
+            '2026-11-15',
+          ]),
+        );
+      });
+
+      it('cancels the installments not charged yet after confirmation', async () => {
+        const purchase = await installmentPurchase();
+        await open(`/transactions/${purchase.installments[1].id}`);
+
+        await (
+          await loader.getHarness(MatButtonHarness.with({ text: /Cancelar parcelas/ }))
+        ).click();
+        await confirmDialog('Cancelar as parcelas');
+
+        await vi.waitFor(() =>
+          expect(
+            records()
+              .filter((record) => record.type === 'refund')
+              .map((record) => record.amount),
+          ).toEqual([10_000, 10_000, 10_000]),
+        );
+        await vi.waitFor(async () =>
+          expect(
+            await loader.getAllHarnesses(MatButtonHarness.with({ text: /Cancelar parcelas/ })),
+          ).toHaveLength(0),
+        );
+      });
+
       it('lists the installments with their number, without the delete action', async () => {
         await installmentPurchase();
         await open('/transactions');

@@ -448,6 +448,8 @@ describe('API repositories', () => {
       creditCardId: CARD_ID,
       categoryId: CATEGORY_ID,
       notes: null,
+      anticipatableCount: 1,
+      cancellable: { count: 2, amount: 10_000 },
       installments: [1, 2].map((installmentNumber) =>
         apiTransaction({
           id: `p${installmentNumber}`,
@@ -511,6 +513,40 @@ describe('API repositories', () => {
         .expectOne({ url: '/api/v1/installment-purchases/group', method: 'DELETE' })
         .flush(null, { status: 204, statusText: 'No Content' });
       await deleted;
+    });
+
+    it('anticipates with the count and cancels without a body, both with an Idempotency-Key', async () => {
+      const repository = TestBed.inject(ApiInstallmentPurchaseRepository);
+      const anticipated = firstValueFrom(repository.anticipate(USER_ID, 'group', 1));
+      const anticipation = http.expectOne({
+        url: '/api/v1/installment-purchases/group/anticipation',
+        method: 'POST',
+      });
+      expect(anticipation.request.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/);
+      expect(anticipation.request.body).toEqual({ count: 1 });
+      anticipation.flush({ ...apiPurchase, anticipatableCount: 0 });
+      expect(await anticipated).toMatchObject({ id: 'group', anticipatableCount: 0 });
+
+      const cancelled = firstValueFrom(repository.cancel(USER_ID, 'group'));
+      const cancellation = http.expectOne({
+        url: '/api/v1/installment-purchases/group/cancellation',
+        method: 'POST',
+      });
+      expect(cancellation.request.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/);
+      expect(cancellation.request.body).toBeNull();
+      cancellation.flush([
+        apiTransaction({
+          id: 'r2',
+          type: 'refund',
+          accountId: null,
+          creditCardId: CARD_ID,
+          categoryId: null,
+          refundedTransactionId: 'p2',
+        }),
+      ]);
+      expect(await cancelled).toEqual([
+        expect.objectContaining({ id: 'r2', userId: USER_ID, refundedTransactionId: 'p2' }),
+      ]);
     });
   });
 
