@@ -1,10 +1,14 @@
 import { Transaction } from '../../../shared/models/transaction';
 import { IsoDate } from '../../../shared/utils/date';
 import { Cents } from '../../../shared/utils/money';
+import { InstallmentActionsSummary } from './installment-actions';
 import { MAX_INSTALLMENTS, MIN_INSTALLMENTS } from './installment-plan';
 
-/** Compra parcelada no cartão: o resumo e as parcelas (compras comuns), da 1ª à última. */
-export interface InstallmentPurchase {
+/**
+ * Compra parcelada no cartão: o resumo, as parcelas (compras comuns), da 1ª à última, e o que dá
+ * para antecipar e cancelar hoje.
+ */
+export interface InstallmentPurchase extends InstallmentActionsSummary {
   /** O `installmentGroupId` das parcelas. */
   id: string;
   userId: string;
@@ -59,8 +63,11 @@ export function isValidInstallmentCount(count: number, amount: Cents): boolean {
   );
 }
 
-/** A compra parcelada a partir das parcelas (todas do mesmo grupo). */
-export function toInstallmentPurchase(installments: readonly Transaction[]): InstallmentPurchase {
+/** A compra parcelada a partir das parcelas (todas do mesmo grupo) e do resumo das ações. */
+export function toInstallmentPurchase(
+  installments: readonly Transaction[],
+  actions: InstallmentActionsSummary,
+): InstallmentPurchase {
   const sorted = [...installments].sort(
     (a, b) => (a.installmentNumber ?? 0) - (b.installmentNumber ?? 0),
   );
@@ -78,5 +85,6 @@ export function toInstallmentPurchase(installments: readonly Transaction[]): Ins
     categoryId: first.categoryId,
     notes: first.notes,
     installments: sorted,
+    ...actions,
   };
 }

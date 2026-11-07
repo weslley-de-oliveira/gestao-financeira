@@ -9,6 +9,7 @@ import { seedTransactions } from '../../../testing/transaction-fixtures';
 import { CreditCardsFacade } from '../credit-cards/credit-cards.facade';
 import { InvoicesFacade } from '../invoices/invoices.facade';
 import { PaidInvoiceError } from '../invoices/domain/invoice-rules';
+import { RefundsFacade } from '../refunds/refunds.facade';
 import { InvalidTransactionInputError } from '../transactions/domain/transaction-rules';
 import { TransactionsFacade } from '../transactions/transactions.facade';
 import { InstallmentNotEditableError, InstallmentPurchaseInput } from './domain/installment-rules';
@@ -70,6 +71,28 @@ describe('InstallmentPurchasesFacade', () => {
       [3, 3_333, '2027-01-10', 'card-1', null, 'completed'],
     ]);
     expect(records().every((record) => record.installmentGroupId === purchase.id)).toBe(true);
+  });
+
+  it('tells what can be anticipated and cancelled today, minus the refunds', async () => {
+    // Parcelas em 10/11 (fatura atual, de 12/2026), 10/12 e 10/01 (faturas futuras).
+    const purchase = await facade.create(input);
+
+    expect(purchase).toMatchObject({
+      anticipatableCount: 2,
+      cancellable: { count: 3, amount: 10_000 },
+    });
+
+    await TestBed.inject(RefundsFacade).create(purchase.installments[2], {
+      description: 'Desconto',
+      amount: 1_000,
+      date: '2027-01-10',
+      notes: null,
+    });
+
+    expect(await facade.getById(purchase.id)).toMatchObject({
+      anticipatableCount: 1,
+      cancellable: { count: 3, amount: 9_000 },
+    });
   });
 
   it('holds the whole amount in the card limit', async () => {

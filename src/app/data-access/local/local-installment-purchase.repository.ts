@@ -1,5 +1,10 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, defer, firstValueFrom } from 'rxjs';
+import { TODAY } from '../../core/services/today';
+import {
+  NO_INSTALLMENT_ACTIONS,
+  summarizeInstallmentActions,
+} from '../../features/installments/domain/installment-actions';
 import { planInstallments } from '../../features/installments/domain/installment-plan';
 import {
   InstallmentPurchase,
@@ -9,6 +14,7 @@ import {
   toInstallmentPurchase,
 } from '../../features/installments/domain/installment-rules';
 import { Transaction } from '../../shared/models/transaction';
+import { toIsoDate } from '../../shared/utils/date';
 import { CreditCardRepository } from '../repositories/credit-card.repository';
 import { InstallmentPurchaseRepository } from '../repositories/installment-purchase.repository';
 import { TransactionSource } from '../repositories/transaction-source';
@@ -23,6 +29,7 @@ export class LocalInstallmentPurchaseRepository extends InstallmentPurchaseRepos
   private readonly transactions = inject(TransactionRepository);
   private readonly source = inject(TransactionSource);
   private readonly creditCards = inject(CreditCardRepository);
+  private readonly today = inject(TODAY);
 
   create(userId: string, input: InstallmentPurchaseInput): Observable<InstallmentPurchase> {
     return defer(async () => {
@@ -56,14 +63,14 @@ export class LocalInstallmentPurchaseRepository extends InstallmentPurchaseRepos
           ),
         );
       }
-      return toInstallmentPurchase(installments);
+      return this.toPurchase(userId, installments);
     });
   }
 
   findById(userId: string, id: string): Observable<InstallmentPurchase | null> {
     return defer(async () => {
       const installments = await this.installments(userId, id);
-      return installments.length > 0 ? toInstallmentPurchase(installments) : null;
+      return installments.length > 0 ? this.toPurchase(userId, installments) : null;
     });
   }
 
@@ -82,7 +89,7 @@ export class LocalInstallmentPurchaseRepository extends InstallmentPurchaseRepos
           firstValueFrom(this.transactions.update(installment.id, changes)),
         ),
       );
-      return toInstallmentPurchase(updated);
+      return this.toPurchase(userId, updated);
     });
   }
 
@@ -96,6 +103,27 @@ export class LocalInstallmentPurchaseRepository extends InstallmentPurchaseRepos
         await firstValueFrom(this.transactions.delete(installment.id));
       }
     });
+  }
+
+  /** A compra com o resumo de antecipação e cancelamento de hoje, como a API calcula. */
+  private async toPurchase(
+    userId: string,
+    installments: readonly Transaction[],
+  ): Promise<InstallmentPurchase> {
+    const cardId = installments[0]?.creditCardId;
+    const [card, all] = await Promise.all([
+      cardId ? firstValueFrom(this.creditCards.findById(cardId)) : Promise.resolve(null),
+      firstValueFrom(this.source.listByUser(userId)),
+    ]);
+    const actions = card
+      ? summarizeInstallmentActions(
+          card,
+          installments,
+          all.filter((transaction) => transaction.type === 'refund'),
+          toIsoDate(this.today()),
+        )
+      : NO_INSTALLMENT_ACTIONS;
+    return toInstallmentPurchase(installments, actions);
   }
 
   private async installments(userId: string, id: string): Promise<Transaction[]> {
