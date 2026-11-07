@@ -53,6 +53,30 @@ export class InstallmentPurchaseNotFoundError extends Error {
   }
 }
 
+/** Nenhuma parcela de fatura futura sem estornos: não há o que antecipar. */
+export class NothingToAnticipateError extends Error {
+  constructor() {
+    super('No installments to anticipate');
+    this.name = 'NothingToAnticipateError';
+  }
+}
+
+/** Mais parcelas do que as que podem ser antecipadas (o resumo da tela ficou desatualizado). */
+export class InvalidAnticipationCountError extends Error {
+  constructor() {
+    super('Invalid anticipation count');
+    this.name = 'InvalidAnticipationCountError';
+  }
+}
+
+/** Nada a estornar na fatura atual nem nas futuras: não há o que cancelar. */
+export class NothingToCancelError extends Error {
+  constructor() {
+    super('No installments to cancel');
+    this.name = 'NothingToCancelError';
+  }
+}
+
 /** Número de parcelas aceito (2 a 24) e ao menos 1 centavo por parcela. */
 export function isValidInstallmentCount(count: number, amount: Cents): boolean {
   return (

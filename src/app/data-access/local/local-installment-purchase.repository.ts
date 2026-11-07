@@ -3,6 +3,10 @@ import { Observable, defer, firstValueFrom } from 'rxjs';
 import { TODAY } from '../../core/services/today';
 import {
   NO_INSTALLMENT_ACTIONS,
+  anticipatableInstallments,
+  cancellationDescription,
+  installmentStates,
+  plannedCancellations,
   summarizeInstallmentActions,
 } from '../../features/installments/domain/installment-actions';
 import { planInstallments } from '../../features/installments/domain/installment-plan';
@@ -11,6 +15,9 @@ import {
   InstallmentPurchaseChanges,
   InstallmentPurchaseInput,
   InstallmentPurchaseNotFoundError,
+  InvalidAnticipationCountError,
+  NothingToAnticipateError,
+  NothingToCancelError,
   toInstallmentPurchase,
 } from '../../features/installments/domain/installment-rules';
 import { Transaction } from '../../shared/models/transaction';
@@ -103,6 +110,82 @@ export class LocalInstallmentPurchaseRepository extends InstallmentPurchaseRepos
         await firstValueFrom(this.transactions.delete(installment.id));
       }
     });
+  }
+
+  anticipate(userId: string, id: string, count: number): Observable<InstallmentPurchase> {
+    return defer(async () => {
+      const { installments, card, refunds, today } = await this.context(userId, id);
+      const anticipatable = anticipatableInstallments(
+        card,
+        installmentStates(installments, refunds),
+        today,
+      );
+      if (anticipatable.length === 0) {
+        throw new NothingToAnticipateError();
+      }
+      if (count > anticipatable.length) {
+        throw new InvalidAnticipationCountError();
+      }
+      for (const installment of anticipatable.slice(0, count)) {
+        await firstValueFrom(this.transactions.update(installment.id, { date: today }));
+      }
+      return this.toPurchase(userId, await this.installments(userId, id));
+    });
+  }
+
+  cancel(userId: string, id: string): Observable<Transaction[]> {
+    return defer(async () => {
+      const { installments, card, refunds, today } = await this.context(userId, id);
+      const cancellations = plannedCancellations(
+        card,
+        installmentStates(installments, refunds),
+        today,
+      );
+      if (cancellations.length === 0) {
+        throw new NothingToCancelError();
+      }
+      const created: Transaction[] = [];
+      for (const { installmentId, amount, date } of cancellations) {
+        const installment = installments.find((item) => item.id === installmentId);
+        created.push(
+          await firstValueFrom(
+            this.transactions.create({
+              userId,
+              type: 'refund',
+              description: installment ? cancellationDescription(installment) : '',
+              amount,
+              date,
+              accountId: null,
+              creditCardId: card.id,
+              invoiceMonth: null,
+              destinationAccountId: null,
+              categoryId: null,
+              status: 'completed',
+              notes: null,
+              refundedTransactionId: installmentId,
+            }),
+          ),
+        );
+      }
+      return created;
+    });
+  }
+
+  /** As parcelas da compra, o cartão, os estornos do usuário e a data de hoje. */
+  private async context(userId: string, id: string) {
+    const installments = await this.installments(userId, id);
+    const cardId = installments[0]?.creditCardId;
+    const card = cardId ? await firstValueFrom(this.creditCards.findById(cardId)) : null;
+    if (!card) {
+      throw new InstallmentPurchaseNotFoundError();
+    }
+    const all = await firstValueFrom(this.source.listByUser(userId));
+    return {
+      installments,
+      card,
+      refunds: all.filter((transaction) => transaction.type === 'refund'),
+      today: toIsoDate(this.today()),
+    };
   }
 
   /** A compra com o resumo de antecipação e cancelamento de hoje, como a API calcula. */

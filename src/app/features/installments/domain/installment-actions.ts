@@ -1,5 +1,8 @@
 import { CreditCard } from '../../../shared/models/credit-card';
-import { Transaction } from '../../../shared/models/transaction';
+import {
+  TRANSACTION_DESCRIPTION_MAX_LENGTH,
+  Transaction,
+} from '../../../shared/models/transaction';
 import { IsoDate } from '../../../shared/utils/date';
 import { Cents } from '../../../shared/utils/money';
 import { invoiceCycleFor } from '../../credit-cards/domain/invoice-cycle';
@@ -74,6 +77,19 @@ export function plannedCancellations(
       amount: installment.amount - installment.refunded,
       date: installment.date < today ? today : installment.date,
     }));
+}
+
+/** "Cancelamento: Notebook (4/5)", como a API, sem passar do tamanho de uma descrição. */
+export function cancellationDescription(
+  installment: Pick<Transaction, 'description' | 'installmentNumber' | 'installmentCount'>,
+): string {
+  const suffix = ` (${installment.installmentNumber}/${installment.installmentCount})`;
+  return (
+    `Cancelamento: ${installment.description}`.slice(
+      0,
+      TRANSACTION_DESCRIPTION_MAX_LENGTH - suffix.length,
+    ) + suffix
+  );
 }
 
 /** As parcelas com a soma dos estornos de cada uma, a partir de todos os estornos do usuário. */

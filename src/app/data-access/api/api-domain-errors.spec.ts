@@ -16,7 +16,12 @@ import {
   InvoicePaymentError,
   PaidInvoiceError,
 } from '../../features/invoices/domain/invoice-rules';
-import { InstallmentNotEditableError } from '../../features/installments/domain/installment-rules';
+import {
+  InstallmentNotEditableError,
+  InvalidAnticipationCountError,
+  NothingToAnticipateError,
+  NothingToCancelError,
+} from '../../features/installments/domain/installment-rules';
 import {
   HasRefundsError,
   InvalidRefundInputError,
@@ -28,6 +33,7 @@ import { Transaction } from '../../shared/models/transaction';
 import { ApiBudgetRepository } from './api-budget.repository';
 import { ApiCreditCardRepository } from './api-credit-card.repository';
 import { ApiGoalRepository } from './api-goal.repository';
+import { ApiInstallmentPurchaseRepository } from './api-installment-purchase.repository';
 import { ApiRefundRepository } from './api-refund.repository';
 import { SessionUser } from './api-http';
 import { ApiTransactionRepository } from './api-transaction.repository';
@@ -85,6 +91,7 @@ describe('API refusals as domain errors', () => {
         ApiBudgetRepository,
         ApiGoalRepository,
         ApiRefundRepository,
+        ApiInstallmentPurchaseRepository,
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -213,6 +220,22 @@ describe('API refusals as domain errors', () => {
     const error = await paid.catch((reason: unknown) => reason);
     expect(error).toBeInstanceOf(InvoicePaymentError);
     expect(error).toMatchObject({ reason: 'not-payable' });
+  });
+
+  it('refuses anticipating or cancelling installments when there is nothing to do', async () => {
+    const repository = TestBed.inject(ApiInstallmentPurchaseRepository);
+
+    const anticipation = firstValueFrom(repository.anticipate(USER_ID, 'group', 1));
+    refuse(409);
+    await expect(anticipation).rejects.toBeInstanceOf(NothingToAnticipateError);
+
+    const tooMany = firstValueFrom(repository.anticipate(USER_ID, 'group', 9));
+    refuse(422, 'count');
+    await expect(tooMany).rejects.toBeInstanceOf(InvalidAnticipationCountError);
+
+    const cancellation = firstValueFrom(repository.cancel(USER_ID, 'group'));
+    refuse(409);
+    await expect(cancellation).rejects.toBeInstanceOf(NothingToCancelError);
   });
 
   it('marks an archived payment account of a card', async () => {
