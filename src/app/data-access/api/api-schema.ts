@@ -1852,6 +1852,170 @@ export interface paths {
     };
     trace?: never;
   };
+  '/v1/installment-purchases/{id}/anticipation': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Antecipa parcelas
+     * @description Leva as últimas `count` parcelas para a fatura atual (a que contém hoje): a data delas passa a ser hoje, sem mudar número nem valor. Só as parcelas de faturas seguintes e sem estornos podem ser antecipadas (`anticipatableCount`); pedir mais responde 422 no `count`, e não haver nenhuma responde 409. Desconto do banco é registrado como estorno da parcela antecipada. Com `Idempotency-Key`, repetir o pedido não antecipa outras parcelas.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: {
+          /** @description Chave única por operação (ex.: um UUID gerado ao abrir a confirmação). Repetir a requisição com a mesma chave em até 24 horas devolve a resposta da primeira, sem executar de novo. */
+          'idempotency-key'?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['AnticipateInstallmentsInput'];
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['InstallmentPurchase'];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/v1/installment-purchases/{id}/cancellation': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Cancela as parcelas restantes
+     * @description Estorna, por inteiro, o que falta estornar de cada parcela da fatura atual e das futuras (`cancellable`): cada estorno ("Cancelamento: …") fica na data da parcela, ou hoje se ela já passou, e zera a parcela na fatura dela. Parcelas de faturas fechadas já foram cobradas e não mudam. Não haver o que cancelar responde 409. Os estornos são comuns: para desfazer, exclua-os por `/v1/transactions/{id}`. Com `Idempotency-Key`, repetir o pedido devolve os mesmos estornos.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: {
+          /** @description Chave única por operação (ex.: um UUID gerado ao abrir a confirmação). Repetir a requisição com a mesma chave em até 24 horas devolve a resposta da primeira, sem executar de novo. */
+          'idempotency-key'?: string;
+        };
+        path: {
+          id: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description Default Response */
+        201: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['Transaction'][];
+          };
+        };
+        /** @description Default Response */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/v1/credit-cards': {
     parameters: {
       query?: never;
@@ -4158,6 +4322,10 @@ export interface components {
       categoryId?: string;
       notes?: string | null;
     };
+    AnticipateInstallmentsInput: {
+      /** @description Quantas parcelas antecipar, a partir da última. */
+      count: number;
+    };
     InstallmentPurchaseInput: {
       /**
        * Format: uuid
@@ -4174,6 +4342,14 @@ export interface components {
       categoryId: string;
       notes: string | null;
       installments: components['schemas']['TransactionInput'][];
+      /** @description Quantas parcelas podem ir para a fatura atual (a que contém hoje): as de faturas seguintes e sem estornos. */
+      anticipatableCount: number;
+      /** @description O que o cancelamento estornaria: o que falta estornar das parcelas da fatura atual e das futuras. */
+      cancellable: {
+        count: number;
+        /** @description Em centavos. */
+        amount: number;
+      };
     };
     ProblemDetails: {
       /**
@@ -4795,6 +4971,10 @@ export interface components {
       categoryId?: string;
       notes?: unknown;
     };
+    AnticipateInstallments: {
+      /** @description Quantas parcelas antecipar, a partir da última. */
+      count: number;
+    };
     InstallmentPurchase: {
       /**
        * Format: uuid
@@ -4811,6 +4991,14 @@ export interface components {
       categoryId: string;
       notes: string | null;
       installments: components['schemas']['Transaction'][];
+      /** @description Quantas parcelas podem ir para a fatura atual (a que contém hoje): as de faturas seguintes e sem estornos. */
+      anticipatableCount: number;
+      /** @description O que o cancelamento estornaria: o que falta estornar das parcelas da fatura atual e das futuras. */
+      cancellable: {
+        count: number;
+        /** @description Em centavos. */
+        amount: number;
+      };
     };
   };
   responses: never;
