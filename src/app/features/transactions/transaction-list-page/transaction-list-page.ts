@@ -28,6 +28,7 @@ import {
   TRANSACTION_STATUS_LABELS,
   TRANSACTION_TYPE_LABELS,
   Transaction,
+  isCardRefund,
 } from '../../../shared/models/transaction';
 import { IsoDatePipe } from '../../../shared/pipes/iso-date.pipe';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
@@ -266,6 +267,9 @@ export class TransactionListPage implements OnInit {
   }
 
   protected typeLabel(transaction: Transaction): string {
+    if (isCardRefund(transaction)) {
+      return 'Estorno · crédito na fatura';
+    }
     const installment = installmentLabel(transaction);
     return installment
       ? `${TRANSACTION_TYPE_LABELS[transaction.type]} · ${installment}`

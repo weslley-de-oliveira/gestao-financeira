@@ -201,6 +201,50 @@ describe('transaction pages', () => {
       expect(items.join(' ')).not.toMatch(/pendente/i);
     });
 
+    it('shows refunds as credits, filterable by type and linked to the refunded expense', async () => {
+      seedCreditCards(userId, { name: 'Roxinho' });
+      const [expense, purchase] = seedTransactions(
+        userId,
+        { description: 'Mercado', amount: 30_000 },
+        { description: 'Tênis', accountId: null, creditCardId: 'card-1', amount: 40_000 },
+      );
+      seedTransactions(
+        userId,
+        {
+          type: 'refund',
+          description: 'Estorno: Mercado',
+          amount: 10_000,
+          categoryId: null,
+          refundedTransactionId: expense.id,
+        },
+        {
+          type: 'refund',
+          description: 'Estorno: Tênis',
+          amount: 5_000,
+          accountId: null,
+          creditCardId: 'card-1',
+          categoryId: null,
+          refundedTransactionId: purchase.id,
+        },
+      );
+
+      await open('/transactions?tipo=refund');
+
+      expect(rowDescriptions()).toEqual(['Estorno: Tênis', 'Estorno: Mercado']);
+      expect(text()).toContain('Estorno · crédito na fatura');
+      expect(text()).toMatch(/\+R\$\s100,00/);
+      // Estornos são despesa negativa nos totais.
+      expect(text()).toMatch(/Despesas\s*\+R\$\s150,00/);
+
+      const menu = await loader.getHarness(
+        MatMenuHarness.with({ selector: '[aria-label="Ações da transação Estorno: Mercado"]' }),
+      );
+      await menu.open();
+      const items = await Promise.all((await menu.getItems()).map((item) => item.getText()));
+      expect(items.join(' ')).toContain('Ver despesa estornada');
+      expect(items.join(' ')).not.toMatch(/Editar|pendente/);
+    });
+
     it('shows invoice payments outside the totals and only allows deleting them', async () => {
       seedCreditCards(userId, { name: 'Roxinho' });
       seedTransactions(userId, {

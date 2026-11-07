@@ -52,7 +52,11 @@
               <h2 class="invoice__title">
                 Fatura {{ monthLabel(invoice.referenceMonth) }} · {{ card.name }}
               </h2>
-              <p class="invoice__total">{{ invoice.total | money }}</p>
+              @if (invoice.total < 0) {
+                <p class="invoice__total app-credit">Crédito de {{ invoice.total * -1 | money }}</p>
+              } @else {
+                <p class="invoice__total">{{ invoice.total | money }}</p>
+              }
             </div>
             <span class="invoice__status" [class]="'invoice__status--' + invoice.status">
               {{ statusLabels[invoice.status] }}
@@ -104,11 +108,18 @@
                 <mat-icon>payments</mat-icon>
                 Pagar {{ invoice.total | money }}
               </button>
+            } @else if (invoice.total < 0) {
+              <p class="invoice__hint">
+                Os estornos superam as compras: a fatura tem crédito e não há valor a pagar. O
+                crédito não passa para a fatura seguinte.
+              </p>
             } @else if (invoice.status === 'open') {
               <p class="invoice__hint">
                 A fatura está aberta e fecha em {{ invoice.closingDate | isoDate }}. O pagamento
                 fica disponível depois do fechamento.
               </p>
+            } @else if (invoice.refunds.length > 0) {
+              <p class="invoice__hint">Os estornos zeraram a fatura: não há valor a pagar.</p>
             } @else {
               <p class="invoice__hint">Fatura sem compras: não há valor a pagar.</p>
             }
@@ -118,8 +129,11 @@
         <section class="invoices__section" aria-labelledby="invoice-items-title">
           <h2 id="invoice-items-title" class="invoices__section-title">
             Compras ({{ invoice.purchases.length }})
+            @if (invoice.refunds.length > 0) {
+              e estornos ({{ invoice.refunds.length }})
+            }
           </h2>
-          @if (invoice.purchases.length === 0) {
+          @if (invoice.purchases.length === 0 && invoice.refunds.length === 0) {
             <div class="invoices__state">
               <mat-icon aria-hidden="true">shopping_bag</mat-icon>
               <p>Nenhuma compra nesta fatura.</p>
@@ -150,9 +164,29 @@
                     <span class="invoice__item-amount">{{ purchase.amount | money }}</span>
                   </li>
                 }
+                @for (refund of invoice.refunds; track refund.id) {
+                  <li class="invoice__item">
+                    <span class="invoice__item-date">{{ refund.date | isoDate }}</span>
+                    <a
+                      class="invoice__item-description"
+                      [routerLink]="['/transactions', refund.id]"
+                    >
+                      {{ refund.description }}
+                      <small class="invoice__item-installment">Estorno</small>
+                    </a>
+                    <span class="invoice__item-amount app-credit"
+                      >−{{ refund.amount | money }}</span
+                    >
+                  </li>
+                }
                 <li class="invoice__item invoice__item--total">
-                  <span class="invoice__item-description">Total</span>
-                  <span class="invoice__item-amount">{{ invoice.total | money }}</span>
+                  @if (invoice.total < 0) {
+                    <span class="invoice__item-description">Crédito</span>
+                    <span class="invoice__item-amount">{{ invoice.total * -1 | money }}</span>
+                  } @else {
+                    <span class="invoice__item-description">Total</span>
+                    <span class="invoice__item-amount">{{ invoice.total | money }}</span>
+                  }
                 </li>
               </ul>
             </mat-card>

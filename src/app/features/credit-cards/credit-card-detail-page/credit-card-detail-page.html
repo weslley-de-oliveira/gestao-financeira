@@ -134,7 +134,9 @@
                   >
                     {{ purchase.description }}
                   </a>
-                  <span class="card-detail__purchase-amount">−{{ purchase.amount | money }}</span>
+                  <span class="card-detail__purchase-amount"
+                    >{{ purchase.type === 'refund' ? '+' : '−' }}{{ purchase.amount | money }}</span
+                  >
                 </li>
               }
             </ul>

@@ -215,7 +215,8 @@
   white-space: nowrap;
 }
 
-.amount--income {
+.amount--income,
+.amount--refund {
   color: var(--app-income);
 }
 

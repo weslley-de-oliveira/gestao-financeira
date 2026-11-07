@@ -182,6 +182,11 @@ div.mat-mdc-autocomplete-panel {
   border-radius: var(--app-radius-field);
 }
 
+// Valores que entram (estornos e crédito na fatura): a cor reforça o texto, que já diz o que são.
+.app-credit {
+  color: var(--app-income);
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
