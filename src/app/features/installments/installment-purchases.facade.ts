@@ -8,6 +8,7 @@ import { InstallmentPurchaseRepository } from '../../data-access/repositories/in
 import { TransactionSource } from '../../data-access/repositories/transaction-source';
 import { CreditCard } from '../../shared/models/credit-card';
 import { isInvoicePaidFor, PaidInvoiceError } from '../invoices/domain/invoice-rules';
+import { HasRefundsError } from '../refunds/domain/refund-rules';
 import {
   InvalidTransactionInputError,
   assertValidReferences,
@@ -113,9 +114,10 @@ export class InstallmentPurchasesFacade {
     );
   }
 
-  /** Exclui todas as parcelas; recusado se alguma estiver numa fatura já paga. */
+  /** Exclui todas as parcelas; recusado se alguma estiver numa fatura já paga ou tiver estornos. */
   async delete(id: string): Promise<void> {
     const current = await this.getOwned(id);
+    await this.assertNoRefunds(current);
     const card = await firstValueFrom(this.creditCards.findById(current.creditCardId));
     if (card) {
       await this.assertInvoicesOpen(
@@ -133,6 +135,18 @@ export class InstallmentPurchasesFacade {
     const transactions = await firstValueFrom(this.source.listByUser(this.userId()));
     if (dates.some((date) => isInvoicePaidFor(card, transactions, date))) {
       throw new PaidInvoiceError();
+    }
+  }
+
+  /** Na demo e nos testes; na API, o servidor responde 409 (`HasRefundsError`). */
+  private async assertNoRefunds(purchase: InstallmentPurchase): Promise<void> {
+    if (!this.source) {
+      return;
+    }
+    const ids = new Set(purchase.installments.map((installment) => installment.id));
+    const transactions = await firstValueFrom(this.source.listByUser(this.userId()));
+    if (transactions.some((item) => ids.has(item.refundedTransactionId ?? ''))) {
+      throw new HasRefundsError();
     }
   }
 

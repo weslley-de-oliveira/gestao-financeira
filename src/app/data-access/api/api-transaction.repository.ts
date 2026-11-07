@@ -7,6 +7,7 @@ import {
   InvoicePaymentError,
   PaidInvoiceError,
 } from '../../features/invoices/domain/invoice-rules';
+import { HasRefundsError } from '../../features/refunds/domain/refund-rules';
 import {
   InvalidTransactionInputError,
   TransactionInput,
@@ -223,10 +224,14 @@ export const PAID_INVOICE_PROBLEM = '/problems/paid-invoice';
 /** Tipo do 409 de uma parcela alterada ou excluída sozinha. */
 export const INSTALLMENT_PROBLEM = '/problems/installment';
 
+/** Tipo do 409 de uma despesa com estornos excluída (ou com valor, data ou conta alterados). */
+export const HAS_REFUNDS_PROBLEM = '/problems/has-refunds';
+
 /**
  * Vínculo recusado (inexistente, arquivado ou incompatível): o formulário marca o campo. Compra
- * de fatura já paga vira `PaidInvoiceError`, e parcela alterada sozinha, `InstallmentNotEditableError`:
- * as telas explicam os dois.
+ * de fatura já paga vira `PaidInvoiceError`; parcela alterada sozinha,
+ * `InstallmentNotEditableError`; e despesa com estornos, `HasRefundsError`: as telas explicam os
+ * três.
  */
 export function transactionError(problem: ApiProblemError): Error | null {
   if (problem.status === 409 && problem.type === PAID_INVOICE_PROBLEM) {
@@ -234,6 +239,9 @@ export function transactionError(problem: ApiProblemError): Error | null {
   }
   if (problem.status === 409 && problem.type === INSTALLMENT_PROBLEM) {
     return new InstallmentNotEditableError();
+  }
+  if (problem.status === 409 && problem.type === HAS_REFUNDS_PROBLEM) {
+    return new HasRefundsError();
   }
   const field = LINKS.find((link) => link === problem.field);
   return problem.status === 422 && field

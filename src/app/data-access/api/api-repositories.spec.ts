@@ -12,6 +12,7 @@ import { ApiDashboardRepository } from './api-dashboard.repository';
 import { ApiGoalRepository } from './api-goal.repository';
 import { ApiInstallmentPurchaseRepository } from './api-installment-purchase.repository';
 import { ApiInvoiceRepository } from './api-invoice.repository';
+import { ApiRefundRepository } from './api-refund.repository';
 import { SessionUser } from './api-http';
 import { ApiTransactionRepository } from './api-transaction.repository';
 import { API_BASE_URL } from './api.config';
@@ -102,6 +103,7 @@ describe('API repositories', () => {
         ApiDashboardRepository,
         ApiInvoiceRepository,
         ApiInstallmentPurchaseRepository,
+        ApiRefundRepository,
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -509,6 +511,69 @@ describe('API repositories', () => {
         .expectOne({ url: '/api/v1/installment-purchases/group', method: 'DELETE' })
         .flush(null, { status: 204, statusText: 'No Content' });
       await deleted;
+    });
+  });
+
+  describe('refunds', () => {
+    const expense: Transaction = {
+      id: 'e1',
+      userId: USER_ID,
+      type: 'expense',
+      description: 'Mercado',
+      amount: 25_000,
+      date: '2026-11-05',
+      accountId: ACCOUNT_ID,
+      creditCardId: null,
+      invoiceMonth: null,
+      destinationAccountId: null,
+      categoryId: CATEGORY_ID,
+      status: 'completed',
+      notes: null,
+      createdAt: '2026-11-05T12:00:00.000Z',
+    };
+    const apiRefund = apiTransaction({
+      id: 'r1',
+      type: 'refund',
+      description: 'Estorno: Mercado',
+      amount: 5_000,
+      categoryId: null,
+      refundedTransactionId: 'e1',
+    });
+
+    it('creates with an Idempotency-Key, sending only the refund fields', async () => {
+      const created = firstValueFrom(
+        TestBed.inject(ApiRefundRepository).create(USER_ID, expense, {
+          description: 'Estorno: Mercado',
+          amount: 5_000,
+          date: '2026-11-06',
+          notes: null,
+        }),
+      );
+      const request = http.expectOne({ url: '/api/v1/transactions/e1/refunds', method: 'POST' });
+      expect(request.request.headers.get('Idempotency-Key')).toMatch(/^[0-9a-f-]{36}$/);
+      expect(request.request.body).toEqual({
+        description: 'Estorno: Mercado',
+        amount: 5_000,
+        date: '2026-11-06',
+        notes: null,
+      });
+      request.flush(apiRefund);
+
+      expect(await created).toMatchObject({
+        id: 'r1',
+        userId: USER_ID,
+        type: 'refund',
+        refundedTransactionId: 'e1',
+      });
+    });
+
+    it('lists the refunds of an expense', async () => {
+      const listed = firstValueFrom(
+        TestBed.inject(ApiRefundRepository).listByExpense(USER_ID, 'e1'),
+      );
+      http.expectOne({ url: '/api/v1/transactions/e1/refunds', method: 'GET' }).flush([apiRefund]);
+
+      expect((await listed).map((item) => [item.id, item.userId])).toEqual([['r1', USER_ID]]);
     });
   });
 
