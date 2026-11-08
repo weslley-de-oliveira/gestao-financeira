@@ -3275,7 +3275,7 @@ export interface paths {
     put?: never;
     /**
      * Registra um aporte ou uma retirada
-     * @description Movimentação manual da meta, com data de hoje ou anterior. Uma retirada maior que o valor acumulado responde 409. Devolve a meta atualizada.
+     * @description Movimentação da meta, com data de hoje ou anterior. Com `accountId`, o aporte sai da conta e a retirada volta para ela, como uma transferência (não conta como receita nem despesa). Conta inexistente responde 422; conta arquivada ou retirada maior que o valor acumulado, 409. Devolve a meta atualizada.
      */
     post: {
       parameters: {
@@ -3296,6 +3296,8 @@ export interface paths {
              * @example 123456
              */
             amount: number;
+            /** @description Conta ativa de onde o aporte sai ou para onde a retirada volta. O saldo dela muda, como numa transferência; sem conta, só registra na meta. */
+            accountId?: string | null;
             /**
              * Format: date
              * @description Data da movimentação: hoje ou antes.
@@ -3371,7 +3373,7 @@ export interface paths {
     post?: never;
     /**
      * Exclui um aporte ou uma retirada
-     * @description O acumulado é recalculado. Excluir um aporte que deixaria o acumulado negativo responde 409. Devolve a meta atualizada.
+     * @description O acumulado é recalculado e, se a movimentação tinha conta, o saldo da conta também. Excluir um aporte que deixaria o acumulado negativo responde 409. Devolve a meta atualizada.
      */
     delete: {
       parameters: {
@@ -3736,8 +3738,10 @@ export interface components {
       institution: string | null;
       /** @description Saldo inicial em centavos; pode ser negativo. */
       initialBalance: number;
-      /** @description Saldo atual em centavos: saldo inicial mais as transações realizadas (pendentes não contam). */
+      /** @description Saldo atual em centavos: saldo inicial mais as transações realizadas (pendentes não contam) e as movimentações de metas com a conta (o aporte sai dela, a retirada volta). */
       currentBalance: number;
+      /** @description Guardado em metas a partir da conta, em centavos: aportes que saíram dela menos retiradas que voltaram para ela. Pode ser negativo se voltou mais do que saiu. */
+      goalsTotal: number;
       /** @enum {string} */
       color:
         | '#1565c0'
@@ -3950,86 +3954,6 @@ export interface components {
       availableLimit: number;
       nextInvoice: components['schemas']['NextInvoiceInput'];
     };
-    GoalContributionInput: {
-      /** Format: uuid */
-      id: string;
-      /**
-       * @description `deposit` (aporte) ou `withdrawal` (retirada).
-       * @enum {string}
-       */
-      type: 'deposit' | 'withdrawal';
-      /** @description Centavos, sempre positivo: o tipo define se soma ou subtrai. */
-      amount: number;
-      /** Format: date */
-      date: string;
-      note: string | null;
-      /** Format: date-time */
-      createdAt: string;
-    };
-    GoalInput: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-      description: string | null;
-      /** @description Valor-alvo em centavos. */
-      targetAmount: number;
-      /** @description Valor já guardado quando a meta foi criada, em centavos. */
-      initialAmount: number;
-      /** @description Data-limite, se houver. */
-      deadline: string | null;
-      /** @enum {string} */
-      color:
-        | '#1565c0'
-        | '#2e7d32'
-        | '#6a1b9a'
-        | '#c62828'
-        | '#ef6c00'
-        | '#00838f'
-        | '#ad1457'
-        | '#546e7a';
-      /**
-       * @description Ícone do Material Symbols.
-       * @enum {string}
-       */
-      icon:
-        | 'savings'
-        | 'flight'
-        | 'home'
-        | 'directions_car'
-        | 'school'
-        | 'health_and_safety'
-        | 'devices'
-        | 'celebration';
-      /** @description Pausada: não fica atrasada enquanto pausada. */
-      isPaused: boolean;
-      isArchived: boolean;
-      /** Format: date-time */
-      createdAt: string;
-      /**
-       * Format: date-time
-       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
-       */
-      updatedAt: string;
-      /** @description Aportes e retiradas, dos mais recentes para os mais antigos. */
-      contributions: components['schemas']['GoalContributionInput'][];
-      /** @description Acumulado: inicial + aportes − retiradas. */
-      currentAmount: number;
-      /** @description Quanto falta para o alvo; zero se atingido. */
-      remainingAmount: number;
-      /** @description Quanto passou do alvo; zero se não atingido. */
-      excessAmount: number;
-      /** @description Percentual atingido, sem teto em 100. */
-      percent: number;
-      /**
-       * @description Pela regra concluída > pausada > atrasada > em andamento: `completed`, `paused`, `overdue` ou `in-progress`.
-       * @enum {string}
-       */
-      status: 'in-progress' | 'completed' | 'paused' | 'overdue';
-      /** @description Meses até o prazo, contando o atual; `null` sem prazo, concluída ou vencida. */
-      monthsLeft: number | null;
-      /** @description Aporte mensal para atingir o alvo no prazo, arredondado para cima; mesmo critério de `monthsLeft`. */
-      monthlyPace: number | null;
-    };
     TransactionInput: {
       /** Format: uuid */
       id: string;
@@ -4173,6 +4097,88 @@ export interface components {
        */
       date: string;
       notes?: string | null;
+    };
+    GoalContributionInput: {
+      /** Format: uuid */
+      id: string;
+      /**
+       * @description `deposit` (aporte) ou `withdrawal` (retirada).
+       * @enum {string}
+       */
+      type: 'deposit' | 'withdrawal';
+      /** @description Conta de onde o aporte saiu ou para onde a retirada voltou; `null` quando só registra na meta. */
+      accountId: string | null;
+      /** @description Centavos, sempre positivo: o tipo define se soma ou subtrai. */
+      amount: number;
+      /** Format: date */
+      date: string;
+      note: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    GoalInput: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      description: string | null;
+      /** @description Valor-alvo em centavos. */
+      targetAmount: number;
+      /** @description Valor já guardado quando a meta foi criada, em centavos. */
+      initialAmount: number;
+      /** @description Data-limite, se houver. */
+      deadline: string | null;
+      /** @enum {string} */
+      color:
+        | '#1565c0'
+        | '#2e7d32'
+        | '#6a1b9a'
+        | '#c62828'
+        | '#ef6c00'
+        | '#00838f'
+        | '#ad1457'
+        | '#546e7a';
+      /**
+       * @description Ícone do Material Symbols.
+       * @enum {string}
+       */
+      icon:
+        | 'savings'
+        | 'flight'
+        | 'home'
+        | 'directions_car'
+        | 'school'
+        | 'health_and_safety'
+        | 'devices'
+        | 'celebration';
+      /** @description Pausada: não fica atrasada enquanto pausada. */
+      isPaused: boolean;
+      isArchived: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
+       */
+      updatedAt: string;
+      /** @description Aportes e retiradas, dos mais recentes para os mais antigos. */
+      contributions: components['schemas']['GoalContributionInput'][];
+      /** @description Acumulado: inicial + aportes − retiradas. */
+      currentAmount: number;
+      /** @description Quanto falta para o alvo; zero se atingido. */
+      remainingAmount: number;
+      /** @description Quanto passou do alvo; zero se não atingido. */
+      excessAmount: number;
+      /** @description Percentual atingido, sem teto em 100. */
+      percent: number;
+      /**
+       * @description Pela regra concluída > pausada > atrasada > em andamento: `completed`, `paused`, `overdue` ou `in-progress`.
+       * @enum {string}
+       */
+      status: 'in-progress' | 'completed' | 'paused' | 'overdue';
+      /** @description Meses até o prazo, contando o atual; `null` sem prazo, concluída ou vencida. */
+      monthsLeft: number | null;
+      /** @description Aporte mensal para atingir o alvo no prazo, arredondado para cima; mesmo critério de `monthsLeft`. */
+      monthlyPace: number | null;
     };
     DashboardInput: {
       /**
@@ -4385,8 +4391,10 @@ export interface components {
       institution: string | null;
       /** @description Saldo inicial em centavos; pode ser negativo. */
       initialBalance: number;
-      /** @description Saldo atual em centavos: saldo inicial mais as transações realizadas (pendentes não contam). */
+      /** @description Saldo atual em centavos: saldo inicial mais as transações realizadas (pendentes não contam) e as movimentações de metas com a conta (o aporte sai dela, a retirada volta). */
       currentBalance: number;
+      /** @description Guardado em metas a partir da conta, em centavos: aportes que saíram dela menos retiradas que voltaram para ela. Pode ser negativo se voltou mais do que saiu. */
+      goalsTotal: number;
       /** @enum {string} */
       color:
         | '#1565c0'
@@ -4599,86 +4607,6 @@ export interface components {
       availableLimit: number;
       nextInvoice: components['schemas']['NextInvoice'];
     };
-    GoalContribution: {
-      /** Format: uuid */
-      id: string;
-      /**
-       * @description `deposit` (aporte) ou `withdrawal` (retirada).
-       * @enum {string}
-       */
-      type: 'deposit' | 'withdrawal';
-      /** @description Centavos, sempre positivo: o tipo define se soma ou subtrai. */
-      amount: number;
-      /** Format: date */
-      date: string;
-      note: string | null;
-      /** Format: date-time */
-      createdAt: string;
-    };
-    Goal: {
-      /** Format: uuid */
-      id: string;
-      name: string;
-      description: string | null;
-      /** @description Valor-alvo em centavos. */
-      targetAmount: number;
-      /** @description Valor já guardado quando a meta foi criada, em centavos. */
-      initialAmount: number;
-      /** @description Data-limite, se houver. */
-      deadline: string | null;
-      /** @enum {string} */
-      color:
-        | '#1565c0'
-        | '#2e7d32'
-        | '#6a1b9a'
-        | '#c62828'
-        | '#ef6c00'
-        | '#00838f'
-        | '#ad1457'
-        | '#546e7a';
-      /**
-       * @description Ícone do Material Symbols.
-       * @enum {string}
-       */
-      icon:
-        | 'savings'
-        | 'flight'
-        | 'home'
-        | 'directions_car'
-        | 'school'
-        | 'health_and_safety'
-        | 'devices'
-        | 'celebration';
-      /** @description Pausada: não fica atrasada enquanto pausada. */
-      isPaused: boolean;
-      isArchived: boolean;
-      /** Format: date-time */
-      createdAt: string;
-      /**
-       * Format: date-time
-       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
-       */
-      updatedAt: string;
-      /** @description Aportes e retiradas, dos mais recentes para os mais antigos. */
-      contributions: components['schemas']['GoalContribution'][];
-      /** @description Acumulado: inicial + aportes − retiradas. */
-      currentAmount: number;
-      /** @description Quanto falta para o alvo; zero se atingido. */
-      remainingAmount: number;
-      /** @description Quanto passou do alvo; zero se não atingido. */
-      excessAmount: number;
-      /** @description Percentual atingido, sem teto em 100. */
-      percent: number;
-      /**
-       * @description Pela regra concluída > pausada > atrasada > em andamento: `completed`, `paused`, `overdue` ou `in-progress`.
-       * @enum {string}
-       */
-      status: 'in-progress' | 'completed' | 'paused' | 'overdue';
-      /** @description Meses até o prazo, contando o atual; `null` sem prazo, concluída ou vencida. */
-      monthsLeft: number | null;
-      /** @description Aporte mensal para atingir o alvo no prazo, arredondado para cima; mesmo critério de `monthsLeft`. */
-      monthlyPace: number | null;
-    };
     Transaction: {
       /** Format: uuid */
       id: string;
@@ -4822,6 +4750,88 @@ export interface components {
        */
       date: string;
       notes: unknown;
+    };
+    GoalContribution: {
+      /** Format: uuid */
+      id: string;
+      /**
+       * @description `deposit` (aporte) ou `withdrawal` (retirada).
+       * @enum {string}
+       */
+      type: 'deposit' | 'withdrawal';
+      /** @description Conta de onde o aporte saiu ou para onde a retirada voltou; `null` quando só registra na meta. */
+      accountId: string | null;
+      /** @description Centavos, sempre positivo: o tipo define se soma ou subtrai. */
+      amount: number;
+      /** Format: date */
+      date: string;
+      note: string | null;
+      /** Format: date-time */
+      createdAt: string;
+    };
+    Goal: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      description: string | null;
+      /** @description Valor-alvo em centavos. */
+      targetAmount: number;
+      /** @description Valor já guardado quando a meta foi criada, em centavos. */
+      initialAmount: number;
+      /** @description Data-limite, se houver. */
+      deadline: string | null;
+      /** @enum {string} */
+      color:
+        | '#1565c0'
+        | '#2e7d32'
+        | '#6a1b9a'
+        | '#c62828'
+        | '#ef6c00'
+        | '#00838f'
+        | '#ad1457'
+        | '#546e7a';
+      /**
+       * @description Ícone do Material Symbols.
+       * @enum {string}
+       */
+      icon:
+        | 'savings'
+        | 'flight'
+        | 'home'
+        | 'directions_car'
+        | 'school'
+        | 'health_and_safety'
+        | 'devices'
+        | 'celebration';
+      /** @description Pausada: não fica atrasada enquanto pausada. */
+      isPaused: boolean;
+      isArchived: boolean;
+      /** Format: date-time */
+      createdAt: string;
+      /**
+       * Format: date-time
+       * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
+       */
+      updatedAt: string;
+      /** @description Aportes e retiradas, dos mais recentes para os mais antigos. */
+      contributions: components['schemas']['GoalContribution'][];
+      /** @description Acumulado: inicial + aportes − retiradas. */
+      currentAmount: number;
+      /** @description Quanto falta para o alvo; zero se atingido. */
+      remainingAmount: number;
+      /** @description Quanto passou do alvo; zero se não atingido. */
+      excessAmount: number;
+      /** @description Percentual atingido, sem teto em 100. */
+      percent: number;
+      /**
+       * @description Pela regra concluída > pausada > atrasada > em andamento: `completed`, `paused`, `overdue` ou `in-progress`.
+       * @enum {string}
+       */
+      status: 'in-progress' | 'completed' | 'paused' | 'overdue';
+      /** @description Meses até o prazo, contando o atual; `null` sem prazo, concluída ou vencida. */
+      monthsLeft: number | null;
+      /** @description Aporte mensal para atingir o alvo no prazo, arredondado para cima; mesmo critério de `monthsLeft`. */
+      monthlyPace: number | null;
     };
     Dashboard: {
       /**
