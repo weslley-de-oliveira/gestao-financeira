@@ -36,11 +36,18 @@ export interface Account {
    * calcula pelas transações.
    */
   currentBalance?: Cents;
+  /** Guardado em metas a partir da conta, já calculado pelo servidor (API); ausente na demo. */
+  goalsTotal?: Cents;
 }
 
-/** Conta com o saldo atual, calculado pela regra de domínio (não é persistido). */
+/**
+ * Conta com o saldo atual (transações e movimentações de metas) e o valor guardado em metas,
+ * calculados pelas regras de domínio (não são persistidos).
+ */
 export interface AccountWithBalance extends Account {
   currentBalance: Cents;
+  /** Aportes em metas que saíram da conta − retiradas que voltaram para ela. */
+  goalsTotal: Cents;
 }
 
 export const ACCOUNT_ICONS: readonly AppearanceOption[] = [

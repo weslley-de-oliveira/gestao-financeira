@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIcon } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBar } from '@angular/material/progress-bar';
+import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -24,6 +25,7 @@ import {
   GoalWithProgress,
 } from '../../../shared/models/goal';
 import { IsoDatePipe } from '../../../shared/pipes/iso-date.pipe';
+import { AccountsFacade } from '../../accounts/accounts.facade';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
 import {
   InsufficientGoalBalanceError,
@@ -52,6 +54,7 @@ type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
     MatIcon,
     MatInputModule,
     MatProgressBar,
+    MatSelectModule,
     IconAvatar,
     IsoDatePipe,
     MoneyMaskDirective,
@@ -63,6 +66,7 @@ type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 })
 export class GoalDetailPage implements OnInit {
   private readonly facade = inject(GoalsFacade);
+  private readonly accounts = inject(AccountsFacade);
   private readonly actions = inject(GoalActions);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
@@ -82,6 +86,24 @@ export class GoalDetailPage implements OnInit {
 
   private readonly contributionModel = signal(emptyContributionForm(this.today()));
   protected readonly contributionForm = form(this.contributionModel, contributionSchema);
+  /** Contas que podem receber ou ceder o valor de uma movimentação nova. */
+  protected readonly activeAccounts = computed(() =>
+    this.accounts.accounts().filter((account) => !account.isArchived),
+  );
+  /** Nome de cada conta (inclusive arquivadas), para o histórico. */
+  private readonly accountNames = computed(
+    () => new Map(this.accounts.accounts().map((account) => [account.id, account.name])),
+  );
+  /** Explica o efeito da movimentação no saldo, conforme o tipo e a conta escolhidos. */
+  protected readonly contributionHint = computed(() => {
+    const { type, accountId } = this.contributionModel();
+    if (accountId === null) {
+      return 'Sem conta: só registra na meta, sem alterar saldos.';
+    }
+    return type === 'deposit'
+      ? 'O valor sai da conta escolhida, sem contar como despesa.'
+      : 'O valor volta para a conta escolhida, sem contar como receita.';
+  });
 
   protected readonly statusLabels = GOAL_STATUS_LABELS;
   protected readonly statusIcons = GOAL_STATUS_ICONS;
@@ -90,6 +112,13 @@ export class GoalDetailPage implements OnInit {
 
   ngOnInit(): void {
     void this.load();
+    // Sem as contas, a meta ainda funciona: as movimentações só não podem escolher uma conta.
+    void this.accounts.load();
+  }
+
+  /** Nome da conta da movimentação, ou `null` se não tiver conta (ou ela não carregou). */
+  protected accountName(accountId: string | null): string | null {
+    return accountId === null ? null : (this.accountNames().get(accountId) ?? null);
   }
 
   protected async load(): Promise<void> {
@@ -132,6 +161,13 @@ export class GoalDetailPage implements OnInit {
             fieldTree: field.amount,
           };
         }
+        if (error instanceof InvalidGoalInputError && error.field === 'accountId') {
+          return {
+            kind: 'unavailableAccount',
+            message: 'Selecione uma conta ativa.',
+            fieldTree: field.accountId,
+          };
+        }
         if (error instanceof InvalidGoalInputError && error.field === 'date') {
           return {
             kind: 'futureDate',
@@ -149,7 +185,10 @@ export class GoalDetailPage implements OnInit {
     const confirmed = await firstValueFrom(
       openConfirmDialog(this.dialog, {
         title: `Excluir ${this.typeLabels[contribution.type].toLowerCase()}?`,
-        message: 'O valor acumulado da meta será recalculado.',
+        message:
+          contribution.accountId === null
+            ? 'O valor acumulado da meta será recalculado.'
+            : 'O valor acumulado da meta e o saldo da conta serão recalculados.',
         confirmLabel: 'Excluir',
       }),
     );

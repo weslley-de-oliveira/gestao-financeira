@@ -14,12 +14,14 @@ export const CONTRIBUTION_TYPE_LABELS: Readonly<Record<ContributionType, string>
 };
 
 /**
- * Movimentação manual de uma meta. Não está ligada a contas nem transações: a integração com
- * transações fica para uma etapa posterior.
+ * Movimentação de uma meta. Com conta, funciona como uma transferência entre a conta e a meta: o
+ * aporte sai da conta e a retirada volta para ela, sem contar como receita ou despesa.
  */
 export interface GoalContribution {
   id: string;
   type: ContributionType;
+  /** Conta de onde o aporte saiu ou para onde a retirada voltou; `null` só registra na meta. */
+  accountId: string | null;
   /** Sempre positivo; o tipo define se soma ou subtrai. */
   amount: Cents;
   date: IsoDate;

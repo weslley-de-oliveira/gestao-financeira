@@ -7,6 +7,7 @@ import { throwError } from 'rxjs';
 import { seedAccounts } from '../../../../testing/account-fixtures';
 import { signInTestUser } from '../../../../testing/auth-fixtures';
 import { FakeChartRenderer } from '../../../../testing/fake-chart-renderer';
+import { seedGoals } from '../../../../testing/goal-fixtures';
 import { InMemoryAccountRepository } from '../../../../testing/in-memory-account.repository';
 import { InMemoryTransactionRepository } from '../../../../testing/in-memory-transaction.repository';
 import { TEST_PROVIDERS } from '../../../../testing/test-providers';
@@ -97,6 +98,41 @@ describe('DashboardPage', () => {
     expect(text()).toMatch(/Receitas \+R\$ 5\.000,00/);
     expect(text()).toMatch(/Despesas −R\$ 250,90/);
     expect(text()).toMatch(/Resultado\s*R\$ 4\.749,10 1 pendente fora do cálculo/);
+  });
+
+  it('takes the money saved in goals out of the balance, without counting it as expense', async () => {
+    seedMonth();
+    const contribution = { note: null, createdAt: '2026-11-10T10:00:00.000Z' };
+    seedGoals(userId, {
+      contributions: [
+        {
+          ...contribution,
+          id: 'c1',
+          type: 'deposit',
+          amount: 80_000,
+          accountId: 'account-1',
+          date: '2026-11-10',
+        },
+        {
+          ...contribution,
+          id: 'c2',
+          type: 'withdrawal',
+          amount: 30_000,
+          accountId: 'account-2',
+          date: '2026-11-12',
+        },
+      ],
+    });
+
+    await open();
+
+    // 5.849,10 − 800,00 + 300,00
+    expect(text()).toMatch(/Saldo total R\$ 5\.349,10/);
+    expect(text()).toMatch(/Despesas −R\$ 250,90/);
+    const balance = charts()[1].series[0].values;
+    expect(balance[8]).toBe(584_910);
+    expect(balance[9]).toBe(504_910);
+    expect(balance.at(-1)).toBe(534_910);
   });
 
   it('feeds the charts from the same transactions as the cards', async () => {

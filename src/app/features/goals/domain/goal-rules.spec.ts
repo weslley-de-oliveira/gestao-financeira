@@ -37,6 +37,7 @@ function contribution(overrides: Partial<GoalContribution>): GoalContribution {
   return {
     id: crypto.randomUUID(),
     type: 'deposit',
+    accountId: null,
     amount: 10_000,
     date: '2026-11-01',
     note: null,
@@ -159,6 +160,7 @@ describe('goal rules', () => {
     const input: ContributionInput = {
       type: 'deposit',
       amount: 10_000,
+      accountId: null,
       date: TODAY,
       note: '  ',
     };

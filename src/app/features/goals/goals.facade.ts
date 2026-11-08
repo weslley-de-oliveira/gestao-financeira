@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../core/auth/auth.service';
 import { SessionCleanup } from '../../core/auth/session-cleanup';
 import { TODAY } from '../../core/services/today';
+import { AccountRepository } from '../../data-access/repositories/account.repository';
 import { GoalChanges, GoalRepository } from '../../data-access/repositories/goal.repository';
 import { Goal, GoalWithProgress } from '../../shared/models/goal';
 import { toIsoDate } from '../../shared/utils/date';
@@ -29,11 +30,13 @@ export class GoalNotFoundError extends Error {
 
 /**
  * Casos de uso das metas do usuário logado. Progresso, status e ritmo são calculados (não
- * persistidos); aportes e retiradas são manuais e não movimentam contas.
+ * persistidos). Aportes e retiradas podem indicar uma conta, cujo saldo muda como numa
+ * transferência entre a conta e a meta.
  */
 @Injectable({ providedIn: 'root' })
 export class GoalsFacade {
   private readonly repository = inject(GoalRepository);
+  private readonly accounts = inject(AccountRepository);
   private readonly auth = inject(AuthService);
   private readonly today = inject(TODAY);
   private readonly _goals = signal<Goal[]>([]);
@@ -108,10 +111,14 @@ export class GoalsFacade {
     return this.save(id, { isArchived });
   }
 
-  /** Retiradas não podem deixar o acumulado negativo. */
+  /**
+   * Retiradas não podem deixar o acumulado negativo. A conta, se houver, precisa ser da pessoa e
+   * estar ativa.
+   */
   async addContribution(id: string, input: ContributionInput): Promise<GoalWithProgress> {
     const normalized = normalizeContributionInput(input, this.todayIso());
     const goal = await this.getOwned(id);
+    await this.assertAccount(normalized.accountId);
     if (goalBalance({ ...goal, contributions: [...goal.contributions, normalized] }) < 0) {
       throw new InsufficientGoalBalanceError();
     }
@@ -131,6 +138,16 @@ export class GoalsFacade {
     return this.store(
       await firstValueFrom(this.repository.removeContribution(goal, contributionId)),
     );
+  }
+
+  private async assertAccount(accountId: string | null): Promise<void> {
+    if (accountId === null) {
+      return;
+    }
+    const account = await firstValueFrom(this.accounts.findById(accountId));
+    if (!account || account.userId !== this.userId() || account.isArchived) {
+      throw new InvalidGoalInputError('accountId');
+    }
   }
 
   private assertDeadline(deadline: string | null): void {

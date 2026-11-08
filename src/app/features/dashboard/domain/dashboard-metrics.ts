@@ -5,7 +5,7 @@ import { BalancePoint, IncomeExpensePoint } from '../../../shared/models/dashboa
 import { DateRange, isInRange } from '../../../shared/models/period';
 import { Transaction } from '../../../shared/models/transaction';
 import { parseIsoDate, toIsoDate } from '../../../shared/utils/date';
-import { movementEffect } from '../../accounts/domain/account-balance';
+import { BalanceMovement, movementEffect } from '../../accounts/domain/account-balance';
 import {
   defaultTransactionQuery,
   queryTransactions,
@@ -69,12 +69,12 @@ export function incomeVsExpense(
 
 /**
  * Saldo consolidado das contas ativas ao fim de cada dia do período: saldos iniciais + efeito
- * das transações até aquele dia, pela regra única do saldo (`movementEffect`; pendentes não
- * contam e transferências entre contas ativas se anulam).
+ * das transações (e das movimentações de metas com conta) até aquele dia, pela regra única do
+ * saldo (`movementEffect`; pendentes não contam e transferências entre contas ativas se anulam).
  */
 export function balanceEvolution(
   accounts: readonly Account[],
-  transactions: readonly Transaction[],
+  transactions: readonly (BalanceMovement & Pick<Transaction, 'date'>)[],
   range: DateRange,
 ): BalancePoint[] {
   const start = parseIsoDate(range.start);
@@ -83,7 +83,7 @@ export function balanceEvolution(
     return [];
   }
   const active = accounts.filter((account) => !account.isArchived);
-  const effect = (transaction: Transaction) =>
+  const effect = (transaction: BalanceMovement) =>
     active.reduce((total, account) => total + movementEffect(transaction, account.id), 0);
   const chronological = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
 

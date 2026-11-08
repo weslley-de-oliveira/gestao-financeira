@@ -10,6 +10,7 @@ function account(overrides: Partial<AccountWithBalance>): AccountWithBalance {
     institution: null,
     initialBalance: 0,
     currentBalance: 0,
+    goalsTotal: 0,
     color: '#1565c0',
     icon: 'account_balance',
     isArchived: false,

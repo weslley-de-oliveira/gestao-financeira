@@ -24,6 +24,8 @@ export type GoalInput = Pick<
 export interface ContributionInput {
   type: ContributionType;
   amount: Cents;
+  /** Conta ativa de onde o aporte sai ou para onde a retirada volta; `null` só registra na meta. */
+  accountId: string | null;
   date: IsoDate;
   note: string | null;
 }

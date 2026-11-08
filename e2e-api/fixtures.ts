@@ -33,3 +33,11 @@ export async function navigate(page: Page, label: string): Promise<void> {
     .getByRole('link', { name: label, exact: true })
     .click();
 }
+
+/**
+ * Hoje (`yyyy-MM-dd`) no fuso da API (`TIME_ZONE`, America/Sao_Paulo), e não no da máquina que roda
+ * os testes: na CI (UTC), entre 21h e meia-noite de Brasília, as duas datas são diferentes.
+ */
+export function apiToday(): string {
+  return new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
+}

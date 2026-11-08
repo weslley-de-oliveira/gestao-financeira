@@ -6,6 +6,7 @@ import { Title } from '@angular/platform-browser';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { seedAccounts } from '../../../../testing/account-fixtures';
 import { signInTestUser } from '../../../../testing/auth-fixtures';
+import { seedGoals } from '../../../../testing/goal-fixtures';
 import { TEST_PROVIDERS } from '../../../../testing/test-providers';
 import { seedTransactions } from '../../../../testing/transaction-fixtures';
 import { appConfig } from '../../../app.config';
@@ -43,7 +44,24 @@ describe('AccountDetailPage', () => {
     expect(text()).toMatch(/Conta corrente\s+·\s+Nu Pagamentos/);
     expect(text()).toMatch(/Saldo atual\s+-R\$\s25,00/);
     expect(text()).toContain('Nenhuma transação vinculada a esta conta.');
+    expect(text()).not.toContain('Guardado em metas');
     expect(TestBed.inject(Title).getTitle()).toBe('Detalhe da conta · Gestão Financeira');
+  });
+
+  it('shows how much of the account is saved in goals, already out of the balance', async () => {
+    const [account] = seedAccounts(userId, { name: 'Corrente', initialBalance: 100_000 });
+    const contribution = { date: '2026-11-01', note: null, createdAt: '2026-11-01T10:00:00.000Z' };
+    seedGoals(userId, {
+      contributions: [
+        { ...contribution, id: 'c1', type: 'deposit', amount: 30_000, accountId: account.id },
+        { ...contribution, id: 'c2', type: 'withdrawal', amount: 5_000, accountId: account.id },
+      ],
+    });
+
+    await open(`/accounts/${account.id}`);
+
+    expect(text()).toMatch(/Saldo atual\s+R\$\s750,00/);
+    expect(text()).toMatch(/Guardado em metas\s*R\$\s250,00/);
   });
 
   it('shows the balance with completed transactions and the recent linked ones', async () => {
