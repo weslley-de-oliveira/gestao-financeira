@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { throwError } from 'rxjs';
+import { seedGoals } from '../../../testing/goal-fixtures';
 import { InMemoryAccountRepository } from '../../../testing/in-memory-account.repository';
 import { TEST_PROVIDERS } from '../../../testing/test-providers';
 import { AuthService } from '../../core/auth/auth.service';
@@ -69,6 +70,33 @@ describe('AccountsFacade', () => {
 
     expect(facade.accounts()[0].currentBalance).toBe(98_765);
     expect(listTransactions).not.toHaveBeenCalled();
+  });
+
+  it('takes goal deposits out of the balance and puts withdrawals back', async () => {
+    const { id, userId } = await facade.create(input);
+    const contribution = { date: '2026-11-01', note: null, createdAt: '2026-11-01T10:00:00.000Z' };
+    seedGoals(userId, {
+      contributions: [
+        { ...contribution, id: 'c1', type: 'deposit', amount: 50_000, accountId: id },
+        { ...contribution, id: 'c2', type: 'withdrawal', amount: 10_000, accountId: id },
+        { ...contribution, id: 'c3', type: 'deposit', amount: 99_999, accountId: null },
+      ],
+    });
+
+    await facade.load();
+
+    // 150.075 − 50.000 + 10.000; o aporte sem conta só muda a meta.
+    expect(facade.accounts()[0]).toMatchObject({ currentBalance: 110_075, goalsTotal: 40_000 });
+    expect((await facade.getById(id))?.goalsTotal).toBe(40_000);
+  });
+
+  it('uses the amount saved in goals computed by the server', async () => {
+    await facade.create(input);
+    Object.assign(repository.records[0], { currentBalance: 98_765, goalsTotal: 1_234 });
+
+    await facade.load();
+
+    expect(facade.accounts()[0].goalsTotal).toBe(1_234);
   });
 
   it('rejects invalid or non-finite values before persisting', async () => {

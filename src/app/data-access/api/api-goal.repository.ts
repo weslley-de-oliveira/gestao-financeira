@@ -75,7 +75,7 @@ export class ApiGoalRepository extends GoalRepository {
     return this.http
       .post<ApiGoal>(
         `${this.goalUrl(goal.id)}/contributions`,
-        pick(contribution, ['type', 'amount', 'date', 'note']),
+        pick(contribution, ['type', 'amount', 'accountId', 'date', 'note']),
       )
       .pipe(
         map((item) => this.toGoal(item)),
@@ -103,15 +103,21 @@ export class ApiGoalRepository extends GoalRepository {
   }
 }
 
+/** Tipo do 409 de uma conta arquivada (a movimentação não pode usá-la). */
+const ARCHIVED_REFERENCE_PROBLEM = '/problems/archived-reference';
+
 /**
- * Acumulado que ficaria negativo (409), prazo no passado ou movimentação com data futura (422):
- * os mesmos erros das regras locais.
+ * Conta inexistente (422) ou arquivada (409), acumulado que ficaria negativo (409), prazo no
+ * passado ou movimentação com data futura (422): os mesmos erros das regras locais.
  */
 function goalProblem(problem: ApiProblemError): Error | null {
+  if (problem.status === 409 && problem.type === ARCHIVED_REFERENCE_PROBLEM) {
+    return new InvalidGoalInputError('accountId');
+  }
   if (problem.status === 409) {
     return new InsufficientGoalBalanceError();
   }
-  return problem.field === 'deadline' || problem.field === 'date'
+  return problem.field === 'deadline' || problem.field === 'date' || problem.field === 'accountId'
     ? new InvalidGoalInputError(problem.field)
     : null;
 }
@@ -125,14 +131,17 @@ export function toGoalModel(item: ApiGoal, userId: string): Goal {
     description: item.description,
     targetAmount: item.targetAmount,
     initialAmount: item.initialAmount,
-    contributions: item.contributions.map(({ id, type, amount, date, note, createdAt }) => ({
-      id,
-      type,
-      amount,
-      date,
-      note,
-      createdAt,
-    })),
+    contributions: item.contributions.map(
+      ({ id, type, accountId, amount, date, note, createdAt }) => ({
+        id,
+        type,
+        accountId,
+        amount,
+        date,
+        note,
+        createdAt,
+      }),
+    ),
     deadline: item.deadline,
     color: item.color,
     icon: item.icon,

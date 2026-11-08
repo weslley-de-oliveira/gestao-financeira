@@ -61,6 +61,7 @@ export class ApiAccountRepository extends AccountRepository {
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
       currentBalance: item.currentBalance,
+      goalsTotal: item.goalsTotal,
     };
   }
 }

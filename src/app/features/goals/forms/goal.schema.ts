@@ -122,6 +122,7 @@ export function toContributionInput(model: ContributionFormModel): ContributionI
   return {
     type: model.type,
     amount,
+    accountId: null,
     date: toIsoDate(model.date),
     note: model.note || null,
   };

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, defer, firstValueFrom } from 'rxjs';
 import { TODAY } from '../../core/services/today';
-import { calculateBalance } from '../../features/accounts/domain/account-balance';
+import { calculateBalance, goalMovements } from '../../features/accounts/domain/account-balance';
 import { budgetProgress } from '../../features/budgets/domain/budget-rules';
 import {
   balanceEvolution,
@@ -50,18 +50,20 @@ export class LocalDashboardRepository extends DashboardRepository {
       const active = accounts.filter((account) => !account.isArchived);
       const inPeriod = transactions.filter((transaction) => isInRange(transaction.date, range));
       const month = toIsoMonth(today);
+      // O aporte numa meta com conta sai dela e a retirada volta: mudam o saldo, não os totais.
+      const movements = [
+        ...transactions,
+        ...goalMovements(goals.flatMap((goal) => goal.contributions)),
+      ];
 
       return {
         summary: summarizeTransactions(inPeriod),
         balance: {
-          total: active.reduce(
-            (total, account) => total + calculateBalance(account, transactions),
-            0,
-          ),
+          total: active.reduce((total, account) => total + calculateBalance(account, movements), 0),
           activeAccounts: active.length,
         },
         incomeVsExpense: incomeVsExpense(inPeriod, range),
-        balanceEvolution: balanceEvolution(accounts, transactions, range),
+        balanceEvolution: balanceEvolution(accounts, movements, range),
         recentTransactions: recentTransactions(transactions, range, DASHBOARD_RECENT_LIMIT),
         budgetHighlights: budgets
           .map((budget) => budgetProgress(budget, transactions, month))

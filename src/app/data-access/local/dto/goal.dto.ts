@@ -11,6 +11,8 @@ export interface GoalDto {
   contributions: {
     id: string;
     type: ContributionType;
+    /** Ausente nos registros anteriores à ligação com as contas (e no seed). */
+    accountId?: string | null;
     amount: number;
     date: string;
     note: string | null;
@@ -34,6 +36,7 @@ export function toGoal(dto: GoalDto): Goal {
     initialAmount: dto.initialAmount ?? 0,
     contributions: (dto.contributions ?? []).map((item) => ({
       ...item,
+      accountId: item.accountId ?? null,
       note: item.note ?? null,
     })),
     deadline: dto.deadline ?? null,

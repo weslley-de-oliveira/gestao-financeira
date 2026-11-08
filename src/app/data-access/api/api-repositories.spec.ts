@@ -30,6 +30,7 @@ const apiAccount: ApiAccount = {
   institution: 'Banco Exemplo',
   initialBalance: 100_000,
   currentBalance: 125_000,
+  goalsTotal: 20_000,
   color: '#1565c0',
   icon: 'account_balance',
   isArchived: false,
@@ -813,6 +814,7 @@ describe('API repositories', () => {
       const contribution = {
         id: 'c1',
         type: 'deposit' as const,
+        accountId: ACCOUNT_ID,
         amount: 10_000,
         date: '2026-11-05',
         note: null,
@@ -823,6 +825,7 @@ describe('API repositories', () => {
         repository.addContribution(goal, {
           type: 'deposit',
           amount: 10_000,
+          accountId: ACCOUNT_ID,
           date: '2026-11-05',
           note: null,
         }),
@@ -834,6 +837,7 @@ describe('API repositories', () => {
       expect(addRequest.request.body).toEqual({
         type: 'deposit',
         amount: 10_000,
+        accountId: ACCOUNT_ID,
         date: '2026-11-05',
         note: null,
       });

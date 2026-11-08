@@ -263,7 +263,13 @@ describe('API refusals as domain errors', () => {
 
   it('refuses a withdrawal that leaves the goal negative and a contribution in the future', async () => {
     const repository = TestBed.inject(ApiGoalRepository);
-    const contribution = { type: 'withdrawal' as const, amount: 1, date: '2026-11-05', note: null };
+    const contribution = {
+      type: 'withdrawal' as const,
+      amount: 1,
+      accountId: null,
+      date: '2026-11-05',
+      note: null,
+    };
 
     const withdrawal = firstValueFrom(repository.addContribution(goal, contribution));
     refuse(409);
@@ -274,5 +280,36 @@ describe('API refusals as domain errors', () => {
     const error = await future.catch((reason: unknown) => reason);
     expect(error).toBeInstanceOf(InvalidGoalInputError);
     expect(error).toMatchObject({ field: 'date' });
+  });
+
+  it('marks the account of a contribution that does not exist or is archived', async () => {
+    const repository = TestBed.inject(ApiGoalRepository);
+    const contribution = {
+      type: 'deposit' as const,
+      amount: 1,
+      accountId: 'a1',
+      date: '2026-11-05',
+      note: null,
+    };
+
+    const missing = firstValueFrom(repository.addContribution(goal, contribution));
+    refuse(422, 'accountId');
+    await expect(missing).rejects.toMatchObject({ field: 'accountId' });
+
+    const archived = firstValueFrom(repository.addContribution(goal, contribution));
+    http
+      .match(() => true)[0]
+      .flush(
+        {
+          type: '/problems/archived-reference',
+          title: 'Conflito',
+          status: 409,
+          detail: 'A conta está arquivada.',
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+    const error = await archived.catch((reason: unknown) => reason);
+    expect(error).toBeInstanceOf(InvalidGoalInputError);
+    expect(error).toMatchObject({ field: 'accountId' });
   });
 });

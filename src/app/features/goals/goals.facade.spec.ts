@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { signInTestUser } from '../../../testing/auth-fixtures';
+import { seedAccounts } from '../../../testing/account-fixtures';
 import { seedGoals } from '../../../testing/goal-fixtures';
 import { InMemoryGoalRepository } from '../../../testing/in-memory-goal.repository';
 import { TEST_PROVIDERS } from '../../../testing/test-providers';
@@ -57,6 +58,7 @@ describe('GoalsFacade', () => {
 
     await facade.addContribution(id, {
       type: 'deposit',
+      accountId: null,
       amount: 900_000,
       date: '2026-11-10',
       note: 'Bônus',
@@ -70,6 +72,7 @@ describe('GoalsFacade', () => {
 
     const afterWithdrawal = await facade.addContribution(id, {
       type: 'withdrawal',
+      accountId: null,
       amount: 300_000,
       date: '2026-11-15',
       note: null,
@@ -82,6 +85,7 @@ describe('GoalsFacade', () => {
     const { id } = await facade.create({ ...input, initialAmount: 0 });
     const withDeposit = await facade.addContribution(id, {
       type: 'deposit',
+      accountId: null,
       amount: 50_000,
       date: '2026-11-01',
       note: null,
@@ -90,6 +94,7 @@ describe('GoalsFacade', () => {
     await expect(
       facade.addContribution(id, {
         type: 'withdrawal',
+        accountId: null,
         amount: 50_001,
         date: '2026-11-02',
         note: null,
@@ -98,6 +103,7 @@ describe('GoalsFacade', () => {
 
     await facade.addContribution(id, {
       type: 'withdrawal',
+      accountId: null,
       amount: 30_000,
       date: '2026-11-02',
       note: null,
@@ -106,6 +112,41 @@ describe('GoalsFacade', () => {
       facade.removeContribution(id, withDeposit.contributions[0].id),
     ).rejects.toBeInstanceOf(InsufficientGoalBalanceError);
     await expect(facade.update(id, { ...input, initialAmount: 0 })).resolves.toBeDefined();
+  });
+
+  it('moves money from and to an active account of the user', async () => {
+    const [account] = seedAccounts(userId, { id: 'checking' });
+    const { id } = await facade.create(input);
+
+    const updated = await facade.addContribution(id, {
+      type: 'deposit',
+      amount: 50_000,
+      accountId: account.id,
+      date: '2026-11-10',
+      note: null,
+    });
+
+    expect(updated.contributions).toEqual([expect.objectContaining({ accountId: 'checking' })]);
+    expect(updated.currentAmount).toBe(250_000);
+  });
+
+  it('refuses an account that is archived, missing or of someone else', async () => {
+    seedAccounts(userId, { id: 'archived', isArchived: true });
+    seedAccounts('someone-else', { id: 'alien' });
+    const { id } = await facade.create(input);
+
+    for (const accountId of ['archived', 'alien', 'missing']) {
+      await expect(
+        facade.addContribution(id, {
+          type: 'deposit',
+          amount: 1_000,
+          accountId,
+          date: '2026-11-10',
+          note: null,
+        }),
+      ).rejects.toMatchObject({ field: 'accountId' });
+    }
+    expect(repository.records[0].contributions).toEqual([]);
   });
 
   it('pauses, archives and isolates goals by user', async () => {
