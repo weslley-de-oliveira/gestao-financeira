@@ -1,4 +1,4 @@
-import { expect, registerNewUser, test } from './fixtures';
+import { apiToday, expect, registerNewUser, test } from './fixtures';
 
 test('refunds a card purchase through the API and shows the credit on the invoice', async ({
   page,
@@ -24,7 +24,7 @@ test('refunds a card purchase through the API and shows the credit on the invoic
     })
   ).json();
   const categories = await (await page.request.get('/api/v1/categories')).json();
-  const today = new Date().toLocaleDateString('sv-SE');
+  const today = apiToday();
   const purchase = await page.request.post('/api/v1/transactions', {
     data: {
       type: 'expense',

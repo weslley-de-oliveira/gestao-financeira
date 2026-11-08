@@ -1,4 +1,4 @@
-import { expect, registerNewUser, test } from './fixtures';
+import { apiToday, expect, registerNewUser, test } from './fixtures';
 
 test('records a card purchase in installments through the API and deletes it', async ({ page }) => {
   await registerNewUser(page);
@@ -72,7 +72,7 @@ test('anticipates and cancels installments through the API', async ({ page }) =>
     })
   ).json();
   const categories = await (await page.request.get('/api/v1/categories')).json();
-  const today = new Date().toLocaleDateString('sv-SE');
+  const today = apiToday();
   const created = await page.request.post('/api/v1/installment-purchases', {
     data: {
       description: 'Bicicleta E2E',
