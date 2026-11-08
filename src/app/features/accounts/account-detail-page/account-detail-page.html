@@ -61,6 +61,16 @@
           <span class="account-detail__label">Saldo inicial</span>
           <strong class="account-detail__amount">{{ account.initialBalance | money }}</strong>
         </mat-card>
+        @if (account.goalsTotal !== 0) {
+          <mat-card appearance="outlined" class="account-detail__balance">
+            <span class="account-detail__label">Guardado em metas</span>
+            <strong class="account-detail__amount">{{ account.goalsTotal | money }}</strong>
+            <span class="account-detail__hint">
+              Aportes em metas que saíram desta conta, menos as retiradas que voltaram. Já está
+              descontado do saldo atual.
+            </span>
+          </mat-card>
+        }
       </div>
 
       <section class="account-detail__section" aria-labelledby="account-transactions-title">
