@@ -161,6 +161,19 @@
             </mat-form-field>
 
             <mat-form-field appearance="outline">
+              <mat-label>Conta</mat-label>
+              <mat-select [formField]="contributionForm.accountId">
+                <mat-option [value]="null">Sem conta</mat-option>
+                @for (account of activeAccounts(); track account.id) {
+                  <mat-option [value]="account.id">{{ account.name }}</mat-option>
+                }
+              </mat-select>
+              @if (contributionForm.accountId().errors()[0]; as error) {
+                <mat-error>{{ error.message }}</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
               <mat-label>Observação (opcional)</mat-label>
               <input matInput autocomplete="off" [formField]="contributionForm.note" />
               @if (contributionForm.note().errors()[0]; as error) {
@@ -172,9 +185,7 @@
           <button matButton="filled" type="submit" [disabled]="contributionForm().submitting()">
             Registrar
           </button>
-          <p class="contribution-form__hint">
-            Movimentações manuais: não alteram o saldo das contas.
-          </p>
+          <p class="contribution-form__hint">{{ contributionHint() }}</p>
         </form>
 
         <mat-card appearance="outlined">
@@ -184,6 +195,11 @@
                 <span class="goal-detail__entry-date">{{ item.date | isoDate }}</span>
                 <span class="goal-detail__entry-main">
                   {{ typeLabels[item.type] }}
+                  @if (accountName(item.accountId); as account) {
+                    <span class="goal-detail__entry-note">
+                      · {{ item.type === 'deposit' ? 'de' : 'para' }} {{ account }}
+                    </span>
+                  }
                   @if (item.note) {
                     <span class="goal-detail__entry-note">· {{ item.note }}</span>
                   }

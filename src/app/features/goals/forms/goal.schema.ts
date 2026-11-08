@@ -102,6 +102,8 @@ export const goalSchema = schema<GoalFormModel>((p) => {
 export interface ContributionFormModel {
   type: ContributionType;
   amount: string;
+  /** Conta de onde o aporte sai ou para onde a retirada volta; `null` só registra na meta. */
+  accountId: string | null;
   date: Date | null;
   note: string;
 }
@@ -109,6 +111,7 @@ export interface ContributionFormModel {
 export const emptyContributionForm = (today: Date): ContributionFormModel => ({
   type: 'deposit',
   amount: '',
+  accountId: null,
   date: today,
   note: '',
 });
@@ -122,7 +125,7 @@ export function toContributionInput(model: ContributionFormModel): ContributionI
   return {
     type: model.type,
     amount,
-    accountId: null,
+    accountId: model.accountId,
     date: toIsoDate(model.date),
     note: model.note || null,
   };

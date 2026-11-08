@@ -177,6 +177,54 @@ describe('goal pages', () => {
       ]);
     });
 
+    it('takes a deposit out of the chosen account and shows it in the history', async () => {
+      seedAccounts(
+        userId,
+        { id: 'checking', name: 'Corrente' },
+        { name: 'Antiga', isArchived: true },
+      );
+      const [goal] = seedGoals(userId, { name: 'Viagem' });
+      await open(`/goals/${goal.id}`);
+
+      expect(text()).toContain('Sem conta: só registra na meta, sem alterar saldos.');
+      const account = await loader.getHarness(
+        MatSelectHarness.with({ ancestor: '.contribution-form' }),
+      );
+      await account.open();
+      expect(await Promise.all((await account.getOptions()).map((item) => item.getText()))).toEqual(
+        ['Sem conta', 'Corrente'],
+      );
+      await account.clickOptions({ text: 'Corrente' });
+      expect(text()).toContain('O valor sai da conta escolhida, sem contar como despesa.');
+      await typeMoney('Valor', '50000');
+      await click('Registrar');
+
+      await vi.waitFor(async () => {
+        await harness.fixture.whenStable();
+        expect(text()).toContain('Aporte · de Corrente');
+      });
+      expect(records()[0].contributions).toEqual([
+        expect.objectContaining({ type: 'deposit', amount: 50_000, accountId: 'checking' }),
+      ]);
+    });
+
+    it('marks an account archived after the page loaded', async () => {
+      const [checking] = seedAccounts(userId, { id: 'checking', name: 'Corrente' });
+      const [goal] = seedGoals(userId, {});
+      await open(`/goals/${goal.id}`);
+      const account = await loader.getHarness(
+        MatSelectHarness.with({ ancestor: '.contribution-form' }),
+      );
+      await account.open();
+      await account.clickOptions({ text: 'Corrente' });
+      checking.isArchived = true;
+      await typeMoney('Valor', '1000');
+      await click('Registrar');
+
+      expect(await (await field('Conta')).getTextErrors()).toEqual(['Selecione uma conta ativa.']);
+      expect(records()[0].contributions).toHaveLength(0);
+    });
+
     it('refuses a withdrawal larger than the accumulated amount', async () => {
       const [goal] = seedGoals(userId, { initialAmount: 10_000 });
       await open(`/goals/${goal.id}`);
