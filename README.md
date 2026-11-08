@@ -22,12 +22,12 @@ A [demo publicada](https://gestao-financeira-tau-five.vercel.app) (Vercel, atual
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Login e cadastro  | Sessão em cookie HttpOnly (API) ou criptografada no navegador (demo, PBKDF2), com os guards de rota                                                     |
 | Dashboard         | Resumo do período, receitas × despesas, evolução do saldo, transações recentes, orçamentos e metas                                                      |
-| Contas            | Busca e filtros, saldo atual calculado, arquivamento                                                                                                    |
+| Contas            | Busca e filtros, saldo atual calculado, valor guardado em metas, arquivamento                                                                           |
 | Transações        | Receitas, despesas e transferências, pendentes, compras no cartão, estornos, busca, filtros, ordenação e paginação no servidor                          |
 | Categorias        | Conjunto padrão, personalização, prevenção de duplicidade                                                                                               |
 | Cartões e faturas | Limite utilizado e disponível, ciclo de fatura, status, pagamento que não duplica despesas, compras parceladas (2 a 24x), antecipar e cancelar parcelas |
 | Orçamentos        | Limite mensal por categoria com vigências, alerta e consumo do mês                                                                                      |
-| Metas             | Progresso, status, ritmo mensal até o prazo e histórico de aportes                                                                                      |
+| Metas             | Progresso, status, ritmo mensal até o prazo, histórico de aportes e retiradas, com conta opcional                                                       |
 | Configurações     | Perfil, tema claro/escuro/sistema, cor de destaque (7 paletas) e densidade                                                                              |
 | Segurança         | Troca de senha, laboratório de criptografia (AES-256-GCM + PBKDF2) e exclusão da conta                                                                  |
 
