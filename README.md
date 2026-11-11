@@ -81,22 +81,23 @@ npm run start:demo
 
 ## Scripts
 
-| Script                  | Descrição                                                    |
-| ----------------------- | ------------------------------------------------------------ |
-| `npm start`             | Inicia o Angular, com o proxy para a API local               |
-| `npm run start:demo`    | Inicia a versão da demo (localStorage, sem API)              |
-| `npm run seed`          | Gera novamente o seed da demo (`db/db.seed.json`)            |
-| `npm run api:types`     | Gera os tipos do contrato a partir do OpenAPI da API         |
-| `npm run build`         | Gera o build de produção em `dist/`                          |
-| `npm run build:demo`    | Gera o build da demo com dados no navegador                  |
-| `npm test`              | Executa os testes unitários com Vitest                       |
-| `npm run test:coverage` | Executa os testes unitários e mede a cobertura (`coverage/`) |
-| `npm run e2e`           | Executa os testes E2E e de acessibilidade com Playwright     |
-| `npm run e2e:api`       | Executa os testes E2E contra a API real                      |
-| `npm run e2e:report`    | Abre o relatório da última execução do Playwright            |
-| `npm run lint`          | Executa o ESLint                                             |
-| `npm run format`        | Formata o código com Prettier                                |
-| `npm run format:check`  | Verifica a formatação sem alterar arquivos                   |
+| Script                  | Descrição                                                            |
+| ----------------------- | -------------------------------------------------------------------- |
+| `npm start`             | Inicia o Angular, com o proxy para a API local                       |
+| `npm run start:demo`    | Inicia a versão da demo (localStorage, sem API)                      |
+| `npm run seed`          | Gera novamente o seed da demo (`db/db.seed.json`)                    |
+| `npm run api:types`     | Gera os tipos do contrato a partir do OpenAPI da API                 |
+| `npm run build`         | Gera o build de produção em `dist/`                                  |
+| `npm run build:demo`    | Gera o build da demo com dados no navegador                          |
+| `npm test`              | Executa os testes unitários com Vitest                               |
+| `npm run test:coverage` | Executa os testes unitários e mede a cobertura (`coverage/`)         |
+| `npm run e2e`           | Executa os testes E2E e de acessibilidade com Playwright             |
+| `npm run e2e:api`       | Executa os testes E2E contra a API real                              |
+| `npm run e2e:report`    | Abre o relatório da última execução do Playwright                    |
+| `npm run screenshots`   | Gera as capturas de tela do README em `docs/images/` (build de demo) |
+| `npm run lint`          | Executa o ESLint                                                     |
+| `npm run format`        | Formata o código com Prettier                                        |
+| `npm run format:check`  | Verifica a formatação sem alterar arquivos                           |
 
 Antes da primeira execução dos testes E2E, instale o navegador: `npx playwright install chromium`.
 
