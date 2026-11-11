@@ -1,5 +1,8 @@
 # Gestão Financeira
 
+[![CI](https://github.com/weslley-de-oliveira/gestao-financeira/actions/workflows/ci.yml/badge.svg)](https://github.com/weslley-de-oliveira/gestao-financeira/actions/workflows/ci.yml)
+[![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
+
 Aplicação web de gestão financeira pessoal, desenvolvida como projeto de portfólio para demonstrar domínio de Angular, TypeScript, arquitetura front-end, integração com APIs, UX, qualidade de código e fundamentos de segurança.
 
 Organiza contas, receitas, despesas, transferências, cartões de crédito, faturas, orçamentos e metas financeiras, com dashboard, tema claro/escuro e uma demonstração de criptografia no navegador.
@@ -13,8 +16,28 @@ Organiza contas, receitas, despesas, transferências, cartões de crédito, fatu
 A [demo publicada](https://gestao-financeira-tau-five.vercel.app) (Vercel, atualizada a cada push na `main`, com preview em cada pull request) usa a [API própria](https://github.com/weslley-de-oliveira/gestao-financeira-api), no Render, com o banco no Neon. A Vercel encaminha `/api/*` para a API (`vercel.json`): o navegador fala só com a origem do front, e o cookie de sessão é dessa origem.
 
 - Entre com **Entrar com a conta de demonstração** (`demo@exemplo.com` / `demo1234`), com seis meses de dados fictícios, ou crie uma conta. A conta de demonstração é compartilhada por quem visita o projeto.
-- A API roda no plano gratuito e hiberna sem uso: a primeira visita depois disso pode levar até um minuto (a tela de carregamento explica a espera).
+- A API roda no plano gratuito e hiberna sem uso. Em dias úteis, das 8h às 20h (Brasília), o monitoramento a mantém acordada; fora desse horário, a primeira visita pode levar até um minuto (a tela de carregamento explica a espera).
 - A versão com os dados só no navegador (`localStorage`) continua disponível com `npm run start:demo` e é a usada nos testes E2E de demo; nela, **Restaurar dados iniciais** volta ao estado inicial.
+
+| Dashboard                                                   | Tema escuro                                                                                     |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| ![Dashboard no tema claro](docs/images/dashboard.png)       | ![Dashboard no tema escuro](docs/images/dashboard-escuro.png)                                   |
+| **Transações** (filtros, ordenação e paginação no servidor) | **Fatura com pagamento parcial**                                                                |
+| ![Lista de transações](docs/images/transacoes.png)          | ![Fatura com um pagamento parcial e o saldo restante](docs/images/fatura-pagamento-parcial.png) |
+
+<p align="center"><img src="docs/images/celular.png" alt="Dashboard num celular" width="280"></p>
+
+As imagens saem da build de demo, com dados fictícios, pelo `npm run screenshots`.
+
+## Destaques técnicos
+
+- **Angular atual:** zoneless, componentes standalone, estado em Signals e formulários com Signal Forms ([ADR 0001](docs/adr/0001-angular-zoneless-signals.md)).
+- **Arquitetura em camadas:** telas → facades → contratos de repositório, com duas implementações (API e `localStorage`) trocadas na build, sem mudar nenhuma tela ([diagramas](docs/arquitetura.md), [`data-access.providers.demo.ts`](src/app/data-access/data-access.providers.demo.ts)).
+- **Regras de domínio puras e testadas:** faturas com saldo anterior, pagamento parcial e travas em cadeia ([`invoice-rules.ts`](src/app/features/invoices/domain/invoice-rules.ts)), parcelas e estornos, com os mesmos casos de teste da API.
+- **Integração robusta com a API:** tipos gerados do OpenAPI, Problem Details convertidos em erros de domínio ([`problem-details.interceptor.ts`](src/app/core/interceptors/problem-details.interceptor.ts)), `If-Match` contra edições concorrentes e `Idempotency-Key` com nova tentativa nos pagamentos ([`api-transaction.repository.ts`](src/app/data-access/api/api-transaction.repository.ts)), paginação por cursor ([`transaction-list-store.ts`](src/app/features/transactions/transaction-list-page/transaction-list-store.ts)).
+- **Segurança:** sessão em cookie `HttpOnly` da mesma origem, pelo proxy `/api` da Vercel ([ADR 0003](docs/adr/0003-proxy-api-na-vercel.md)), e Content Security Policy aplicada, que os E2E também aplicam e conferem ([`vercel.json`](vercel.json), [`e2e/fixtures.ts`](e2e/fixtures.ts)).
+- **Qualidade:** testes unitários com cobertura medida no CI, E2E na demo e contra a API real, acessibilidade (axe-core, WCAG 2.1 AA) nos temas claro e escuro, e um celular nos testes de responsividade.
+- **Decisões registradas:** [`docs/adr/`](docs/adr/README.md) no front e no [repositório da API](https://github.com/weslley-de-oliveira/gestao-financeira-api/tree/main/docs/adr), com o contexto e as alternativas descartadas.
 
 ## Funcionalidades
 
@@ -104,6 +127,8 @@ Antes da primeira execução dos testes E2E, instale o navegador: `npx playwrigh
 O `npm run e2e:api` sobe uma instância própria da API (porta 3334) a partir do repositório [`gestao-financeira-api`](https://github.com/weslley-de-oliveira/gestao-financeira-api), clonado ao lado deste (ou na pasta de `API_DIR`), e usa o banco do `.env` dela, com as migrações aplicadas e a conta de demonstração criada (`npm run db:migrate` e `npm run db:seed` na API).
 
 ## Arquitetura
+
+Os diagramas de implantação e de camadas estão em [`docs/arquitetura.md`](docs/arquitetura.md), e as decisões, em [`docs/adr/`](docs/adr/README.md).
 
 A aplicação segue uma arquitetura orientada a funcionalidades (`core`, `shared`, `features` e `data-access`). As telas consomem facades, que usam contratos de repositório; as implementações ficam em `data-access`:
 
