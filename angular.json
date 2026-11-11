@@ -98,7 +98,17 @@
           "defaultConfiguration": "development"
         },
         "test": {
-          "builder": "@angular/build:unit-test"
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "coverageExclude": ["src/testing/**"],
+            "coverageReporters": ["text-summary", "json-summary", "html"],
+            "coverageThresholds": {
+              "statements": 85,
+              "branches": 79,
+              "functions": 81,
+              "lines": 85
+            }
+          }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",

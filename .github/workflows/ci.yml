@@ -41,8 +41,21 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Unit tests
-        run: npm test -- --watch=false
+      # Falha também se a cobertura cair abaixo dos limites do angular.json.
+      - name: Unit tests with coverage
+        run: npm run test:coverage
+
+      - name: Coverage summary
+        if: ${{ !cancelled() && hashFiles('coverage/gestao-financeira/coverage-summary.json') != '' }}
+        run: |
+          node -e "
+            const total = require('./coverage/gestao-financeira/coverage-summary.json').total;
+            const names = { statements: 'Instruções', branches: 'Ramos', functions: 'Funções', lines: 'Linhas' };
+            const rows = Object.entries(names).map(
+              ([key, name]) => '| ' + name + ' | ' + total[key].pct + '% | ' + total[key].covered + '/' + total[key].total + ' |',
+            );
+            console.log(['### Cobertura dos testes unitários', '', '| Métrica | % | Cobertos |', '| --- | ---: | ---: |', ...rows].join('\n'));
+          " >> "$GITHUB_STEP_SUMMARY"
 
       - name: Build
         run: npm run build

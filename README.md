@@ -81,21 +81,22 @@ npm run start:demo
 
 ## Scripts
 
-| Script                 | Descrição                                                |
-| ---------------------- | -------------------------------------------------------- |
-| `npm start`            | Inicia o Angular, com o proxy para a API local           |
-| `npm run start:demo`   | Inicia a versão da demo (localStorage, sem API)          |
-| `npm run seed`         | Gera novamente o seed da demo (`db/db.seed.json`)        |
-| `npm run api:types`    | Gera os tipos do contrato a partir do OpenAPI da API     |
-| `npm run build`        | Gera o build de produção em `dist/`                      |
-| `npm run build:demo`   | Gera o build da demo com dados no navegador              |
-| `npm test`             | Executa os testes unitários com Vitest                   |
-| `npm run e2e`          | Executa os testes E2E e de acessibilidade com Playwright |
-| `npm run e2e:api`      | Executa os testes E2E contra a API real                  |
-| `npm run e2e:report`   | Abre o relatório da última execução do Playwright        |
-| `npm run lint`         | Executa o ESLint                                         |
-| `npm run format`       | Formata o código com Prettier                            |
-| `npm run format:check` | Verifica a formatação sem alterar arquivos               |
+| Script                  | Descrição                                                    |
+| ----------------------- | ------------------------------------------------------------ |
+| `npm start`             | Inicia o Angular, com o proxy para a API local               |
+| `npm run start:demo`    | Inicia a versão da demo (localStorage, sem API)              |
+| `npm run seed`          | Gera novamente o seed da demo (`db/db.seed.json`)            |
+| `npm run api:types`     | Gera os tipos do contrato a partir do OpenAPI da API         |
+| `npm run build`         | Gera o build de produção em `dist/`                          |
+| `npm run build:demo`    | Gera o build da demo com dados no navegador                  |
+| `npm test`              | Executa os testes unitários com Vitest                       |
+| `npm run test:coverage` | Executa os testes unitários e mede a cobertura (`coverage/`) |
+| `npm run e2e`           | Executa os testes E2E e de acessibilidade com Playwright     |
+| `npm run e2e:api`       | Executa os testes E2E contra a API real                      |
+| `npm run e2e:report`    | Abre o relatório da última execução do Playwright            |
+| `npm run lint`          | Executa o ESLint                                             |
+| `npm run format`        | Formata o código com Prettier                                |
+| `npm run format:check`  | Verifica a formatação sem alterar arquivos                   |
 
 Antes da primeira execução dos testes E2E, instale o navegador: `npx playwright install chromium`.
 
@@ -132,12 +133,12 @@ vercel.json      # Build publicada, rewrite de /api para a API, fallback da SPA 
 
 ## Qualidade
 
-- **Testes unitários e de componentes** (Vitest + harnesses do Material): regras de domínio, facades, repositórios, formulários e telas, inclusive a validação do seed contra as regras do app.
+- **Testes unitários e de componentes** (Vitest + harnesses do Material): regras de domínio, facades, repositórios, formulários e telas, inclusive a validação do seed contra as regras do app. `npm run test:coverage` mede a cobertura (V8); na etapa 17: 91% das linhas, 84% dos ramos e 87% das funções. A execução falha se a cobertura cair abaixo dos limites do `angular.json` (5 pontos abaixo do medido).
 - **E2E** (Playwright, contra a build de demo): login, cadastro, navegação, lançamento de transação, pagamento de fatura em duas partes (e desfazer), compra parcelada (prévia, faturas e exclusão), estorno de uma compra no cartão (detalhe e crédito na fatura), antecipação e cancelamento de parcelas, filtros de Transações na URL, persistência e restauração dos dados. O relógio do navegador é fixado na data de referência do seed para resultados determinísticos, e todas as páginas rodam com a Content Security Policy do `vercel.json` valendo: qualquer violação falha o teste.
 - **E2E contra a API real** (`npm run e2e:api`): sessão em cookie (restauração, expiração e saída), saldo calculado pelo servidor, dashboard numa chamada só, listagem de transações paginada, ordenada e totalizada no servidor (sem baixar a lista completa), compra parcelada registrada e excluída pela API, estorno de compra no cartão (fatura, limite e 409 ao excluir a despesa), antecipação e cancelamento de parcelas (fatura zerada e limite liberado), pagamento de fatura em duas partes (o valor acima do saldo é recusado), troca de senha e exclusão da conta com senha. Na CI, com Postgres e o seed da API.
 - **Acessibilidade**: axe-core (WCAG 2.0/2.1 A e AA) em todas as telas principais, nos temas claro e escuro.
 - **Responsividade**: navegação pelo menu recolhido e ausência de rolagem horizontal num celular (Pixel 7).
-- **CI**: cada push na `main` e cada pull request passam por formatação, lint, testes unitários, build e E2E (demo e API real).
+- **CI**: cada push na `main` e cada pull request passam por formatação, lint, testes unitários com cobertura (o resumo aparece na página da execução), build e E2E (demo e API real).
 
 ## Padrão de commits
 
