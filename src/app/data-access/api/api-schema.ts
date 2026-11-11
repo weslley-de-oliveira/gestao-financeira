@@ -2483,8 +2483,8 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Paga a fatura
-     * @description Paga o valor total da fatura, com a data de hoje, debitando a conta de pagamento do cartão (cria a transação `invoice-payment`). Só fatura fechada ou vencida, com compras e ainda sem pagamento; senão, ou com a conta de pagamento arquivada, responde 409. Devolve a fatura paga. Com `Idempotency-Key`, repetir o pedido (ex.: depois de uma falha de rede) devolve o mesmo pagamento em vez de 409: a chave reaproveitada em outra requisição responde 422, e enquanto a primeira ainda roda, 409.
+     * Paga a fatura (inteira ou em parte)
+     * @description Paga `amount` (até o saldo da fatura; acima, 422) ou, sem corpo, o saldo inteiro, com a data de hoje, debitando a conta de pagamento do cartão (cria uma transação `invoice-payment`; a parcial leva " (parcial)" na descrição). Uma fatura aceita vários pagamentos: o que faltar passa para a fatura seguinte no fechamento dela. Só fatura fechada ou vencida com saldo a pagar; senão (aberta, quitada ou com o saldo já transferido), ou com a conta de pagamento arquivada, responde 409. Devolve a fatura. Com `Idempotency-Key`, repetir o pedido (ex.: depois de uma falha de rede) devolve o mesmo pagamento em vez de pagar de novo: a chave reaproveitada em outra requisição (ou com outro valor) responde 422, e enquanto a primeira ainda roda, 409.
      */
     post: {
       parameters: {
@@ -2500,7 +2500,11 @@ export interface paths {
         };
         cookie?: never;
       };
-      requestBody?: never;
+      requestBody?: {
+        content: {
+          'application/json': components['schemas']['PayInvoiceInput'];
+        };
+      };
       responses: {
         /** @description Default Response */
         201: {
@@ -2550,8 +2554,8 @@ export interface paths {
       };
     };
     /**
-     * Desfaz o pagamento da fatura
-     * @description Apaga a transação `invoice-payment`: o valor volta para a conta, as compras voltam a ocupar o limite e a fatura volta ao status pelas datas. Fatura sem pagamento responde 409. Devolve a fatura.
+     * Desfaz o último pagamento da fatura
+     * @description Apaga o pagamento mais recente da fatura (transação `invoice-payment`): o valor volta para a conta e para o limite, e a fatura volta ao status pelas datas e pelo saldo. Fatura sem pagamento responde 409; com pagamento numa fatura posterior do cartão, 409 `/problems/later-invoice-payment` (desfaça antes os das faturas seguintes). Devolve a fatura.
      */
     delete: {
       parameters: {
@@ -3706,7 +3710,7 @@ export interface components {
   schemas: {
     ProblemDetailsInput: {
       /**
-       * @description Tipo do problema: `/problems/validation-error` (422 com `errors`), `/problems/paid-invoice` (409: compra de fatura já paga), `/problems/archived-reference` (409: conta, cartão ou categoria arquivada), `/problems/installment` (409: parcela alterada sozinha; use a compra parcelada), `/problems/has-refunds` (409: despesa com estornos); `about:blank` quando o status já basta.
+       * @description Tipo do problema: `/problems/validation-error` (422 com `errors`), `/problems/paid-invoice` (409: compra de fatura já paga, ou de uma anterior a ela), `/problems/later-invoice-payment` (409: desfazer pagamento com uma fatura posterior paga), `/problems/archived-reference` (409: conta, cartão ou categoria arquivada), `/problems/installment` (409: parcela alterada sozinha; use a compra parcelada), `/problems/has-refunds` (409: despesa com estornos); `about:blank` quando o status já basta.
        * @example about:blank
        */
       type: string;
@@ -4254,14 +4258,22 @@ export interface components {
       dueDate: string;
       /** Format: uuid */
       creditCardId: string;
-      /** @description Soma das compras do ciclo, em centavos. */
+      /** @description Compras − estornos do ciclo, em centavos (negativo: os estornos superam as compras). */
       total: number;
+      /** @description Saldo da fatura anterior, trazido no fechamento desta (zero enquanto aberta): positivo é o que faltou pagar; negativo, crédito. */
+      previousBalance: number;
+      /** @description Total a pagar: saldo anterior + total do ciclo. */
+      amountDue: number;
+      /** @description Soma dos pagamentos da fatura. */
+      paidAmount: number;
+      /** @description Total a pagar − pago: positivo é o que falta pagar; negativo, crédito. Passa para a fatura seguinte no fechamento dela. */
+      balance: number;
       /**
-       * @description `open` (aberta, até a véspera do fechamento), `closed` (fechada, até o vencimento), `overdue` (vencida, sem pagamento) ou `paid` (paga).
+       * @description `open` (aberta, até a véspera do fechamento), `paid` (fechada sem saldo a pagar), `closed` (fechada com saldo, até o vencimento), `overdue` (vencida com saldo, até o fechamento da seguinte) ou `carried-over` (o saldo passou para a fatura seguinte).
        * @enum {string}
        */
-      status: 'open' | 'closed' | 'paid' | 'overdue';
-      /** @description A transação `invoice-payment` da fatura, se paga. */
+      status: 'open' | 'closed' | 'paid' | 'overdue' | 'carried-over';
+      /** @description O pagamento (`invoice-payment`) mais recente da fatura, se houver. */
       payment: components['schemas']['TransactionInput'] | null;
       purchaseCount: number;
     };
@@ -4287,18 +4299,35 @@ export interface components {
       dueDate: string;
       /** Format: uuid */
       creditCardId: string;
-      /** @description Soma das compras do ciclo, em centavos. */
+      /** @description Compras − estornos do ciclo, em centavos (negativo: os estornos superam as compras). */
       total: number;
+      /** @description Saldo da fatura anterior, trazido no fechamento desta (zero enquanto aberta): positivo é o que faltou pagar; negativo, crédito. */
+      previousBalance: number;
+      /** @description Total a pagar: saldo anterior + total do ciclo. */
+      amountDue: number;
+      /** @description Soma dos pagamentos da fatura. */
+      paidAmount: number;
+      /** @description Total a pagar − pago: positivo é o que falta pagar; negativo, crédito. Passa para a fatura seguinte no fechamento dela. */
+      balance: number;
       /**
-       * @description `open` (aberta, até a véspera do fechamento), `closed` (fechada, até o vencimento), `overdue` (vencida, sem pagamento) ou `paid` (paga).
+       * @description `open` (aberta, até a véspera do fechamento), `paid` (fechada sem saldo a pagar), `closed` (fechada com saldo, até o vencimento), `overdue` (vencida com saldo, até o fechamento da seguinte) ou `carried-over` (o saldo passou para a fatura seguinte).
        * @enum {string}
        */
-      status: 'open' | 'closed' | 'paid' | 'overdue';
-      /** @description A transação `invoice-payment` da fatura, se paga. */
+      status: 'open' | 'closed' | 'paid' | 'overdue' | 'carried-over';
+      /** @description O pagamento (`invoice-payment`) mais recente da fatura, se houver. */
       payment: components['schemas']['TransactionInput'] | null;
       purchases: components['schemas']['TransactionInput'][];
       /** @description Estornos lançados no ciclo. */
       refunds: components['schemas']['TransactionInput'][];
+      /** @description Pagamentos da fatura, do mais recente para o mais antigo. */
+      payments: components['schemas']['TransactionInput'][];
+    };
+    PayInvoiceInput: {
+      /**
+       * @description Valor do pagamento, em centavos, até o saldo da fatura. Sem ele, paga o saldo inteiro.
+       * @example 50000
+       */
+      amount?: number;
     };
     CreateInstallmentPurchaseInput: {
       /** @example Mercado do mês */
@@ -4359,7 +4388,7 @@ export interface components {
     };
     ProblemDetails: {
       /**
-       * @description Tipo do problema: `/problems/validation-error` (422 com `errors`), `/problems/paid-invoice` (409: compra de fatura já paga), `/problems/archived-reference` (409: conta, cartão ou categoria arquivada), `/problems/installment` (409: parcela alterada sozinha; use a compra parcelada), `/problems/has-refunds` (409: despesa com estornos); `about:blank` quando o status já basta.
+       * @description Tipo do problema: `/problems/validation-error` (422 com `errors`), `/problems/paid-invoice` (409: compra de fatura já paga, ou de uma anterior a ela), `/problems/later-invoice-payment` (409: desfazer pagamento com uma fatura posterior paga), `/problems/archived-reference` (409: conta, cartão ou categoria arquivada), `/problems/installment` (409: parcela alterada sozinha; use a compra parcelada), `/problems/has-refunds` (409: despesa com estornos); `about:blank` quando o status já basta.
        * @example about:blank
        */
       type: string;
@@ -4907,14 +4936,22 @@ export interface components {
       dueDate: string;
       /** Format: uuid */
       creditCardId: string;
-      /** @description Soma das compras do ciclo, em centavos. */
+      /** @description Compras − estornos do ciclo, em centavos (negativo: os estornos superam as compras). */
       total: number;
+      /** @description Saldo da fatura anterior, trazido no fechamento desta (zero enquanto aberta): positivo é o que faltou pagar; negativo, crédito. */
+      previousBalance: number;
+      /** @description Total a pagar: saldo anterior + total do ciclo. */
+      amountDue: number;
+      /** @description Soma dos pagamentos da fatura. */
+      paidAmount: number;
+      /** @description Total a pagar − pago: positivo é o que falta pagar; negativo, crédito. Passa para a fatura seguinte no fechamento dela. */
+      balance: number;
       /**
-       * @description `open` (aberta, até a véspera do fechamento), `closed` (fechada, até o vencimento), `overdue` (vencida, sem pagamento) ou `paid` (paga).
+       * @description `open` (aberta, até a véspera do fechamento), `paid` (fechada sem saldo a pagar), `closed` (fechada com saldo, até o vencimento), `overdue` (vencida com saldo, até o fechamento da seguinte) ou `carried-over` (o saldo passou para a fatura seguinte).
        * @enum {string}
        */
-      status: 'open' | 'closed' | 'paid' | 'overdue';
-      /** @description A transação `invoice-payment` da fatura, se paga. */
+      status: 'open' | 'closed' | 'paid' | 'overdue' | 'carried-over';
+      /** @description O pagamento (`invoice-payment`) mais recente da fatura, se houver. */
       payment: components['schemas']['Transaction'] | null;
       purchaseCount: number;
     };
@@ -4940,18 +4977,35 @@ export interface components {
       dueDate: string;
       /** Format: uuid */
       creditCardId: string;
-      /** @description Soma das compras do ciclo, em centavos. */
+      /** @description Compras − estornos do ciclo, em centavos (negativo: os estornos superam as compras). */
       total: number;
+      /** @description Saldo da fatura anterior, trazido no fechamento desta (zero enquanto aberta): positivo é o que faltou pagar; negativo, crédito. */
+      previousBalance: number;
+      /** @description Total a pagar: saldo anterior + total do ciclo. */
+      amountDue: number;
+      /** @description Soma dos pagamentos da fatura. */
+      paidAmount: number;
+      /** @description Total a pagar − pago: positivo é o que falta pagar; negativo, crédito. Passa para a fatura seguinte no fechamento dela. */
+      balance: number;
       /**
-       * @description `open` (aberta, até a véspera do fechamento), `closed` (fechada, até o vencimento), `overdue` (vencida, sem pagamento) ou `paid` (paga).
+       * @description `open` (aberta, até a véspera do fechamento), `paid` (fechada sem saldo a pagar), `closed` (fechada com saldo, até o vencimento), `overdue` (vencida com saldo, até o fechamento da seguinte) ou `carried-over` (o saldo passou para a fatura seguinte).
        * @enum {string}
        */
-      status: 'open' | 'closed' | 'paid' | 'overdue';
-      /** @description A transação `invoice-payment` da fatura, se paga. */
+      status: 'open' | 'closed' | 'paid' | 'overdue' | 'carried-over';
+      /** @description O pagamento (`invoice-payment`) mais recente da fatura, se houver. */
       payment: components['schemas']['Transaction'] | null;
       purchases: components['schemas']['Transaction'][];
       /** @description Estornos lançados no ciclo. */
       refunds: components['schemas']['Transaction'][];
+      /** @description Pagamentos da fatura, do mais recente para o mais antigo. */
+      payments: components['schemas']['Transaction'][];
+    };
+    PayInvoice: {
+      /**
+       * @description Valor do pagamento, em centavos, até o saldo da fatura. Sem ele, paga o saldo inteiro.
+       * @example 50000
+       */
+      amount?: number;
     };
     CreateInstallmentPurchase: {
       /** @example Mercado do mês */

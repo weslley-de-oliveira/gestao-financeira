@@ -10,7 +10,7 @@ import { IsoDate } from '../../../shared/utils/date';
 import { Cents } from '../../../shared/utils/money';
 import { invoiceCycleFor, invoiceCycleForMonth } from '../../credit-cards/domain/invoice-cycle';
 
-export const INVOICE_STATUSES = ['open', 'closed', 'paid', 'overdue'] as const;
+export const INVOICE_STATUSES = ['open', 'closed', 'paid', 'overdue', 'carried-over'] as const;
 
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 
@@ -19,6 +19,7 @@ export const INVOICE_STATUS_LABELS: Readonly<Record<InvoiceStatus, string>> = {
   closed: 'Fechada',
   paid: 'Paga',
   overdue: 'Vencida',
+  'carried-over': 'Transferida',
 };
 
 type CardDays = Pick<CreditCard, 'id' | 'closingDay' | 'dueDay'>;
