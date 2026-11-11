@@ -248,3 +248,8 @@
   display: block;
   color: var(--mat-sys-on-surface-variant);
 }
+
+// Pagamentos da fatura, do mais recente para o mais antigo.
+.invoice__payments {
+  margin-top: 1rem;
+}
