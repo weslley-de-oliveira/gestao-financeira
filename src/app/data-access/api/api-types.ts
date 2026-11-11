@@ -17,6 +17,7 @@ export type ApiCreateTransfer = Schemas['CreateTransferInput'];
 export type ApiCreditCard = Schemas['CreditCard'];
 export type ApiInvoice = Schemas['Invoice'];
 export type ApiInvoiceSummary = Schemas['InvoiceSummary'];
+export type ApiPayInvoice = Schemas['PayInvoiceInput'];
 export type ApiInstallmentPurchase = Schemas['InstallmentPurchase'];
 export type ApiCreateInstallmentPurchase = Schemas['CreateInstallmentPurchase'];
 export type ApiUpdateInstallmentPurchase = Schemas['UpdateInstallmentPurchase'];

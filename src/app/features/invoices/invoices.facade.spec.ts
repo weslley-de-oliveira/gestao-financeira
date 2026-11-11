@@ -117,6 +117,67 @@ describe('InvoicesFacade', () => {
     expect(records().filter((t) => t.type === 'invoice-payment')).toHaveLength(1);
   });
 
+  it('pays part of the balance and leaves the rest to pay', async () => {
+    await facade.select('card-1', '2026-11');
+
+    const payment = await facade.pay('card-1', '2026-11', 5_000);
+
+    expect(payment).toMatchObject({
+      description: 'Fatura Roxinho 11/2026 (parcial)',
+      amount: 5_000,
+    });
+    expect(facade.invoice()).toMatchObject({
+      status: 'overdue',
+      paidAmount: 5_000,
+      balance: 15_000,
+    });
+    const rest = await facade.pay('card-1', '2026-11');
+    expect(rest).toMatchObject({ description: 'Fatura Roxinho 11/2026', amount: 15_000 });
+    expect(facade.invoice()?.status).toBe('paid');
+    expect(facade.invoice()?.payments.map((item) => item.amount)).toEqual([15_000, 5_000]);
+  });
+
+  it('refuses an amount above the balance, zero or with fractions of a cent', async () => {
+    for (const amount of [20_001, 0, -1, 10.5]) {
+      await expect(facade.pay('card-1', '2026-11', amount)).rejects.toMatchObject({
+        reason: 'amount',
+      });
+    }
+    expect(records().some((t) => t.type === 'invoice-payment')).toBe(false);
+  });
+
+  it('undoes only the latest payment of the invoice', async () => {
+    await facade.pay('card-1', '2026-11', 5_000);
+    await facade.pay('card-1', '2026-11', 3_000);
+
+    await facade.undoPayment('card-1', '2026-11');
+
+    expect(
+      records()
+        .filter((t) => t.type === 'invoice-payment')
+        .map((t) => t.amount),
+    ).toEqual([5_000]);
+  });
+
+  it('refuses to undo a payment while a later invoice has a payment', async () => {
+    await facade.pay('card-1', '2026-11');
+    seedTransactions(userId, {
+      description: 'Fatura Roxinho 12/2026',
+      type: 'invoice-payment',
+      amount: 9_990,
+      date: '2026-12-10',
+      accountId: 'account-1',
+      creditCardId: 'card-1',
+      invoiceMonth: '2026-12',
+      categoryId: null,
+    });
+
+    await expect(facade.undoPayment('card-1', '2026-11')).rejects.toMatchObject({
+      reason: 'later-payment',
+    });
+    expect(records().filter((t) => t.type === 'invoice-payment')).toHaveLength(2);
+  });
+
   it('refuses an archived payment account', async () => {
     TestBed.inject(InMemoryAccountRepository).records[0].isArchived = true;
 
@@ -137,6 +198,21 @@ describe('InvoicesFacade', () => {
         description: 'Atrasada',
         amount: 1_000,
         date: '2026-10-25',
+        accountId: null,
+        creditCardId: 'card-1',
+        destinationAccountId: null,
+        categoryId: 'category-1',
+        status: 'completed',
+        notes: null,
+      }),
+    ).rejects.toBeInstanceOf(PaidInvoiceError);
+    // A fatura de 10/2026 é anterior à paga: o saldo dela entraria na de 11/2026.
+    await expect(
+      transactions.create({
+        type: 'expense',
+        description: 'Antes da paga',
+        amount: 1_000,
+        date: '2026-09-20',
         accountId: null,
         creditCardId: 'card-1',
         destinationAccountId: null,

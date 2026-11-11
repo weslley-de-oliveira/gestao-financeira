@@ -21,10 +21,13 @@ import { firstValueFrom } from 'rxjs';
 import { openConfirmDialog } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { IsoDatePipe } from '../../../shared/pipes/iso-date.pipe';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
+import { shiftMonth } from '../../../shared/utils/month';
 import { AccountsFacade } from '../../accounts/accounts.facade';
 import { CreditCardsFacade } from '../../credit-cards/credit-cards.facade';
+import { invoiceCycleForMonth } from '../../credit-cards/domain/invoice-cycle';
 import { INVOICE_STATUS_LABELS, Invoice, canPayInvoice } from '../domain/invoice-rules';
 import { InvoicePaymentError, InvoicesFacade, monthLabel } from '../invoices.facade';
+import { openPaymentDialog } from '../payment-dialog/payment-dialog';
 import { installmentLabel } from '../../transactions/transaction-display';
 
 /** Mensagens das recusas de pagamento. */
@@ -32,6 +35,9 @@ const PAYMENT_ERRORS: Readonly<Record<string, string>> = {
   'payment-account':
     'A conta de pagamento do cartão está arquivada ou foi removida. Reative-a ou altere a conta no cadastro do cartão.',
   'not-payable': 'Esta fatura não pode ser paga agora. Atualize a página e tente novamente.',
+  amount: 'O valor passa do saldo da fatura. Atualize a página e tente novamente.',
+  'later-payment':
+    'Uma fatura seguinte já tem pagamento. Desfaça antes os pagamentos das faturas seguintes.',
 };
 
 /**
@@ -102,6 +108,11 @@ export class InvoicesPage implements OnInit {
     const invoice = this.invoice();
     return !!invoice && canPayInvoice(invoice);
   });
+  /** A fatura seguinte: para onde vai o saldo no fechamento dela. */
+  protected readonly nextMonth = computed(() => {
+    const invoice = this.invoice();
+    return invoice && shiftMonth(invoice.referenceMonth, 1);
+  });
   protected readonly paymentAccountName = computed(() => {
     const id = this.invoice()?.payment?.accountId ?? this.card()?.paymentAccountId;
     return this.accountsFacade.accounts().find((account) => account.id === id)?.name ?? '—';
@@ -144,26 +155,37 @@ export class InvoicesPage implements OnInit {
   }
 
   protected async pay(invoice: Invoice): Promise<void> {
-    const confirmed = await firstValueFrom(
-      openConfirmDialog(this.dialog, {
-        title: `Pagar a fatura ${monthLabel(invoice.referenceMonth)}?`,
-        message: `${this.money.transform(invoice.total)} sairão hoje da conta ${this.paymentAccountName()}. O pagamento não entra como despesa: as compras já foram contadas.`,
-        confirmLabel: 'Pagar',
+    const card = this.card();
+    const nextMonth = this.nextMonth();
+    if (!card || !nextMonth) {
+      return;
+    }
+    const amount = await firstValueFrom(
+      openPaymentDialog(this.dialog, {
+        referenceMonth: invoice.referenceMonth,
+        balance: invoice.balance,
+        accountName: this.paymentAccountName(),
+        nextMonth,
+        nextClosingDate: invoiceCycleForMonth(card, nextMonth).closingDate,
       }),
     );
-    if (confirmed) {
+    if (amount !== undefined) {
       await this.run(
-        () => this.invoicesFacade.pay(invoice.creditCardId, invoice.referenceMonth),
-        'Pagamento registrado.',
+        () => this.invoicesFacade.pay(invoice.creditCardId, invoice.referenceMonth, amount),
+        amount < invoice.balance ? 'Pagamento parcial registrado.' : 'Pagamento registrado.',
       );
     }
   }
 
   protected async undoPayment(invoice: Invoice): Promise<void> {
+    const payment = invoice.payment;
+    if (!payment) {
+      return;
+    }
     const confirmed = await firstValueFrom(
       openConfirmDialog(this.dialog, {
-        title: `Desfazer o pagamento da fatura ${monthLabel(invoice.referenceMonth)}?`,
-        message: 'O valor volta para a conta e a fatura volta ao status pelas datas.',
+        title: `Desfazer o último pagamento da fatura ${monthLabel(invoice.referenceMonth)}?`,
+        message: `${this.money.transform(payment.amount)} voltam para a conta, e a fatura volta ao status pelas datas e pelo saldo.`,
         confirmLabel: 'Desfazer',
       }),
     );

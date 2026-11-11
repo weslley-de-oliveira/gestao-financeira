@@ -52,10 +52,12 @@
               <h2 class="invoice__title">
                 Fatura {{ monthLabel(invoice.referenceMonth) }} · {{ card.name }}
               </h2>
-              @if (invoice.total < 0) {
-                <p class="invoice__total app-credit">Crédito de {{ invoice.total * -1 | money }}</p>
+              @if (invoice.amountDue < 0) {
+                <p class="invoice__total app-credit">
+                  Crédito de {{ invoice.amountDue * -1 | money }}
+                </p>
               } @else {
-                <p class="invoice__total">{{ invoice.total | money }}</p>
+                <p class="invoice__total">{{ invoice.amountDue | money }}</p>
               }
             </div>
             <span class="invoice__status" [class]="'invoice__status--' + invoice.status">
@@ -80,22 +82,38 @@
               <dt>Conta de pagamento</dt>
               <dd>{{ paymentAccountName() }}</dd>
             </div>
+            @if (invoice.previousBalance !== 0) {
+              <div>
+                <dt>{{ invoice.previousBalance < 0 ? 'Crédito anterior' : 'Saldo anterior' }}</dt>
+                <dd>
+                  {{ (invoice.previousBalance < 0 ? -1 : 1) * invoice.previousBalance | money }}
+                </dd>
+              </div>
+              <div>
+                <dt>Compras e estornos</dt>
+                <dd>{{ invoice.total | money }}</dd>
+              </div>
+            }
+            @if (invoice.paidAmount > 0) {
+              <div>
+                <dt>Pago</dt>
+                <dd>{{ invoice.paidAmount | money }}</dd>
+              </div>
+              <div>
+                <dt>Saldo</dt>
+                <dd>{{ invoice.balance | money }}</dd>
+              </div>
+            }
           </dl>
 
           <div class="invoice__payment" aria-live="polite">
-            @if (invoice.payment; as payment) {
-              <p>
-                <mat-icon aria-hidden="true">task_alt</mat-icon>
-                Paga em {{ payment.date | isoDate }}: {{ payment.amount | money }} da conta
-                {{ paymentAccountName() }}.
+            @if (invoice.status === 'carried-over') {
+              <p class="invoice__hint">
+                {{ invoice.balance | money }} passou para a fatura {{ monthLabel(nextMonth()!) }},
+                no fechamento dela.
               </p>
-              <button
-                matButton="outlined"
-                type="button"
-                [disabled]="busy()"
-                (click)="undoPayment(invoice)"
-              >
-                Desfazer pagamento
+              <button matButton="outlined" type="button" (click)="selectMonth(nextMonth()!)">
+                Ver a fatura {{ monthLabel(nextMonth()!) }}
               </button>
             } @else if (canPay()) {
               @if (invoice.status === 'overdue') {
@@ -104,19 +122,30 @@
                   Venceu em {{ invoice.dueDate | isoDate }}.
                 </p>
               }
+              @if (invoice.paidAmount > 0) {
+                <p>Falta pagar {{ invoice.balance | money }}.</p>
+              }
               <button matButton="filled" type="button" [disabled]="busy()" (click)="pay(invoice)">
                 <mat-icon>payments</mat-icon>
-                Pagar {{ invoice.total | money }}
+                Pagar fatura
               </button>
-            } @else if (invoice.total < 0) {
-              <p class="invoice__hint">
-                Os estornos superam as compras: a fatura tem crédito e não há valor a pagar. O
-                crédito não passa para a fatura seguinte.
-              </p>
             } @else if (invoice.status === 'open') {
               <p class="invoice__hint">
                 A fatura está aberta e fecha em {{ invoice.closingDate | isoDate }}. O pagamento
                 fica disponível depois do fechamento.
+                @if (invoice.amountDue < 0) {
+                  Os estornos superam as compras: o crédito passa para a fatura seguinte.
+                }
+              </p>
+            } @else if (invoice.balance < 0) {
+              <p class="invoice__hint">
+                A fatura tem crédito de {{ invoice.balance * -1 | money }}, que passa para a fatura
+                {{ monthLabel(nextMonth()!) }} no fechamento dela.
+              </p>
+            } @else if (invoice.paidAmount > 0) {
+              <p>
+                <mat-icon aria-hidden="true">task_alt</mat-icon>
+                Fatura quitada.
               </p>
             } @else if (invoice.refunds.length > 0) {
               <p class="invoice__hint">Os estornos zeraram a fatura: não há valor a pagar.</p>
@@ -124,6 +153,29 @@
               <p class="invoice__hint">Fatura sem compras: não há valor a pagar.</p>
             }
           </div>
+
+          @if (invoice.payments.length > 0) {
+            <div class="invoice__payments">
+              <h3 class="invoices__section-title">Pagamentos</h3>
+              <ul class="invoice__items">
+                @for (payment of invoice.payments; track payment.id) {
+                  <li class="invoice__item">
+                    <span class="invoice__item-date">{{ payment.date | isoDate }}</span>
+                    <span class="invoice__item-description">{{ payment.description }}</span>
+                    <span class="invoice__item-amount">{{ payment.amount | money }}</span>
+                  </li>
+                }
+              </ul>
+              <button
+                matButton="outlined"
+                type="button"
+                [disabled]="busy()"
+                (click)="undoPayment(invoice)"
+              >
+                Desfazer último pagamento
+              </button>
+            </div>
+          }
         </mat-card>
 
         <section class="invoices__section" aria-labelledby="invoice-items-title">
@@ -215,7 +267,14 @@
                     <span class="invoice__status" [class]="'invoice__status--' + item.status">
                       {{ statusLabels[item.status] }}
                     </span>
-                    <span class="invoice__history-total">{{ item.total | money }}</span>
+                    <span class="invoice__history-total">
+                      {{ item.amountDue | money }}
+                      @if (item.paidAmount > 0 && item.balance > 0) {
+                        <small class="invoice__item-installment"
+                          >falta {{ item.balance | money }}</small
+                        >
+                      }
+                    </span>
                   </button>
                 </li>
               }

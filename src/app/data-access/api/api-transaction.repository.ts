@@ -28,6 +28,7 @@ import type {
   ApiCreateEntry,
   ApiCreateTransfer,
   ApiInvoice,
+  ApiPayInvoice,
   ApiTransaction,
   ApiTransactionPage,
   ApiTransactionSummary,
@@ -123,26 +124,30 @@ export class ApiTransactionRepository extends TransactionRepository {
   }
 
   /**
-   * Uma `Idempotency-Key` por pagamento: se a resposta se perder (rede, proxy), a nova tentativa
-   * usa a mesma chave, e a API devolve o pagamento já feito em vez de pagar de novo.
+   * Paga o valor escolhido na tela (a API calcula a descrição e a data). Uma `Idempotency-Key` por
+   * pagamento: se a resposta se perder (rede, proxy), a nova tentativa usa a mesma chave, e a API
+   * devolve o pagamento já feito em vez de pagar de novo.
    */
   override payInvoice(payment: NewRecord<Transaction>): Observable<Transaction> {
     const headers = { 'Idempotency-Key': crypto.randomUUID() };
-    return this.http.post<ApiInvoice>(this.paymentUrl(payment), null, { headers }).pipe(
+    const body: ApiPayInvoice = { amount: payment.amount };
+    return this.http.post<ApiInvoice>(this.paymentUrl(payment), body, { headers }).pipe(
       retry({
         count: 1,
         delay: (error: unknown) =>
           isTransient(error) ? timer(PAYMENT_RETRY_DELAY_MS) : throwError(() => error),
       }),
+      // O pagamento mais recente da fatura é o que acabou de ser feito.
       map((invoice) => this.toTransaction(invoicePayment(invoice))),
-      toDomainError(notPayable),
+      toDomainError(invoicePaymentError),
     );
   }
 
+  /** Desfaz o pagamento mais recente da fatura. */
   override undoInvoicePayment(payment: Transaction): Observable<void> {
     return this.http.delete<ApiInvoice>(this.paymentUrl(payment)).pipe(
       map(() => undefined),
-      toDomainError(notPayable),
+      toDomainError(invoicePaymentError),
     );
   }
 
@@ -249,8 +254,21 @@ export function transactionError(problem: ApiProblemError): Error | null {
     : null;
 }
 
-/** Fatura que mudou de situação desde que a tela carregou (já paga, sem compras, aberta). */
-function notPayable(problem: ApiProblemError): Error | null {
+/** Tipo do 409 de desfazer o pagamento com uma fatura posterior paga. */
+export const LATER_INVOICE_PAYMENT_PROBLEM = '/problems/later-invoice-payment';
+
+/**
+ * Pagamento recusado: desfeito com uma fatura posterior paga; valor acima do saldo (422 no
+ * `amount`); ou fatura que mudou de situação desde que a tela carregou (quitada, aberta,
+ * transferida).
+ */
+function invoicePaymentError(problem: ApiProblemError): Error | null {
+  if (problem.status === 409 && problem.type === LATER_INVOICE_PAYMENT_PROBLEM) {
+    return new InvoicePaymentError('later-payment');
+  }
+  if (problem.status === 422 && problem.field === 'amount') {
+    return new InvoicePaymentError('amount');
+  }
   return problem.status === 409 ? new InvoicePaymentError('not-payable') : null;
 }
 
