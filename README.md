@@ -1,5 +1,8 @@
 # Gestão Financeira
 
+[![CI](https://github.com/weslley-de-oliveira/gestao-financeira/actions/workflows/ci.yml/badge.svg)](https://github.com/weslley-de-oliveira/gestao-financeira/actions/workflows/ci.yml)
+[![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
+
 Aplicação web de gestão financeira pessoal, desenvolvida como projeto de portfólio para demonstrar domínio de Angular, TypeScript, arquitetura front-end, integração com APIs, UX, qualidade de código e fundamentos de segurança.
 
 Organiza contas, receitas, despesas, transferências, cartões de crédito, faturas, orçamentos e metas financeiras, com dashboard, tema claro/escuro e uma demonstração de criptografia no navegador.
@@ -13,8 +16,28 @@ Organiza contas, receitas, despesas, transferências, cartões de crédito, fatu
 A [demo publicada](https://gestao-financeira-tau-five.vercel.app) (Vercel, atualizada a cada push na `main`, com preview em cada pull request) usa a [API própria](https://github.com/weslley-de-oliveira/gestao-financeira-api), no Render, com o banco no Neon. A Vercel encaminha `/api/*` para a API (`vercel.json`): o navegador fala só com a origem do front, e o cookie de sessão é dessa origem.
 
 - Entre com **Entrar com a conta de demonstração** (`demo@exemplo.com` / `demo1234`), com seis meses de dados fictícios, ou crie uma conta. A conta de demonstração é compartilhada por quem visita o projeto.
-- A API roda no plano gratuito e hiberna sem uso: a primeira visita depois disso pode levar até um minuto (a tela de carregamento explica a espera).
+- A API roda no plano gratuito e hiberna sem uso. Em dias úteis, das 8h às 20h (Brasília), o monitoramento a mantém acordada; fora desse horário, a primeira visita pode levar até um minuto (a tela de carregamento explica a espera).
 - A versão com os dados só no navegador (`localStorage`) continua disponível com `npm run start:demo` e é a usada nos testes E2E de demo; nela, **Restaurar dados iniciais** volta ao estado inicial.
+
+| Dashboard                                                   | Tema escuro                                                                                     |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| ![Dashboard no tema claro](docs/images/dashboard.png)       | ![Dashboard no tema escuro](docs/images/dashboard-escuro.png)                                   |
+| **Transações** (filtros, ordenação e paginação no servidor) | **Fatura com pagamento parcial**                                                                |
+| ![Lista de transações](docs/images/transacoes.png)          | ![Fatura com um pagamento parcial e o saldo restante](docs/images/fatura-pagamento-parcial.png) |
+
+<p align="center"><img src="docs/images/celular.png" alt="Dashboard num celular" width="280"></p>
+
+As imagens saem da build de demo, com dados fictícios, pelo `npm run screenshots`.
+
+## Destaques técnicos
+
+- **Angular atual:** zoneless, componentes standalone, estado em Signals e formulários com Signal Forms ([ADR 0001](docs/adr/0001-angular-zoneless-signals.md)).
+- **Arquitetura em camadas:** telas → facades → contratos de repositório, com duas implementações (API e `localStorage`) trocadas na build, sem mudar nenhuma tela ([diagramas](docs/arquitetura.md), [`data-access.providers.demo.ts`](src/app/data-access/data-access.providers.demo.ts)).
+- **Regras de domínio puras e testadas:** faturas com saldo anterior, pagamento parcial e travas em cadeia ([`invoice-rules.ts`](src/app/features/invoices/domain/invoice-rules.ts)), parcelas e estornos, com os mesmos casos de teste da API.
+- **Integração robusta com a API:** tipos gerados do OpenAPI, Problem Details convertidos em erros de domínio ([`problem-details.interceptor.ts`](src/app/core/interceptors/problem-details.interceptor.ts)), `If-Match` contra edições concorrentes e `Idempotency-Key` com nova tentativa nos pagamentos ([`api-transaction.repository.ts`](src/app/data-access/api/api-transaction.repository.ts)), paginação por cursor ([`transaction-list-store.ts`](src/app/features/transactions/transaction-list-page/transaction-list-store.ts)).
+- **Segurança:** sessão em cookie `HttpOnly` da mesma origem, pelo proxy `/api` da Vercel ([ADR 0003](docs/adr/0003-proxy-api-na-vercel.md)), e Content Security Policy aplicada, que os E2E também aplicam e conferem ([`vercel.json`](vercel.json), [`e2e/fixtures.ts`](e2e/fixtures.ts)).
+- **Qualidade:** testes unitários com cobertura medida no CI, E2E na demo e contra a API real, acessibilidade (axe-core, WCAG 2.1 AA) nos temas claro e escuro, e um celular nos testes de responsividade.
+- **Decisões registradas:** [`docs/adr/`](docs/adr/README.md) no front e no [repositório da API](https://github.com/weslley-de-oliveira/gestao-financeira-api/tree/main/docs/adr), com o contexto e as alternativas descartadas.
 
 ## Funcionalidades
 
@@ -81,27 +104,31 @@ npm run start:demo
 
 ## Scripts
 
-| Script                 | Descrição                                                |
-| ---------------------- | -------------------------------------------------------- |
-| `npm start`            | Inicia o Angular, com o proxy para a API local           |
-| `npm run start:demo`   | Inicia a versão da demo (localStorage, sem API)          |
-| `npm run seed`         | Gera novamente o seed da demo (`db/db.seed.json`)        |
-| `npm run api:types`    | Gera os tipos do contrato a partir do OpenAPI da API     |
-| `npm run build`        | Gera o build de produção em `dist/`                      |
-| `npm run build:demo`   | Gera o build da demo com dados no navegador              |
-| `npm test`             | Executa os testes unitários com Vitest                   |
-| `npm run e2e`          | Executa os testes E2E e de acessibilidade com Playwright |
-| `npm run e2e:api`      | Executa os testes E2E contra a API real                  |
-| `npm run e2e:report`   | Abre o relatório da última execução do Playwright        |
-| `npm run lint`         | Executa o ESLint                                         |
-| `npm run format`       | Formata o código com Prettier                            |
-| `npm run format:check` | Verifica a formatação sem alterar arquivos               |
+| Script                  | Descrição                                                            |
+| ----------------------- | -------------------------------------------------------------------- |
+| `npm start`             | Inicia o Angular, com o proxy para a API local                       |
+| `npm run start:demo`    | Inicia a versão da demo (localStorage, sem API)                      |
+| `npm run seed`          | Gera novamente o seed da demo (`db/db.seed.json`)                    |
+| `npm run api:types`     | Gera os tipos do contrato a partir do OpenAPI da API                 |
+| `npm run build`         | Gera o build de produção em `dist/`                                  |
+| `npm run build:demo`    | Gera o build da demo com dados no navegador                          |
+| `npm test`              | Executa os testes unitários com Vitest                               |
+| `npm run test:coverage` | Executa os testes unitários e mede a cobertura (`coverage/`)         |
+| `npm run e2e`           | Executa os testes E2E e de acessibilidade com Playwright             |
+| `npm run e2e:api`       | Executa os testes E2E contra a API real                              |
+| `npm run e2e:report`    | Abre o relatório da última execução do Playwright                    |
+| `npm run screenshots`   | Gera as capturas de tela do README em `docs/images/` (build de demo) |
+| `npm run lint`          | Executa o ESLint                                                     |
+| `npm run format`        | Formata o código com Prettier                                        |
+| `npm run format:check`  | Verifica a formatação sem alterar arquivos                           |
 
 Antes da primeira execução dos testes E2E, instale o navegador: `npx playwright install chromium`.
 
 O `npm run e2e:api` sobe uma instância própria da API (porta 3334) a partir do repositório [`gestao-financeira-api`](https://github.com/weslley-de-oliveira/gestao-financeira-api), clonado ao lado deste (ou na pasta de `API_DIR`), e usa o banco do `.env` dela, com as migrações aplicadas e a conta de demonstração criada (`npm run db:migrate` e `npm run db:seed` na API).
 
 ## Arquitetura
+
+Os diagramas de implantação e de camadas estão em [`docs/arquitetura.md`](docs/arquitetura.md), e as decisões, em [`docs/adr/`](docs/adr/README.md).
 
 A aplicação segue uma arquitetura orientada a funcionalidades (`core`, `shared`, `features` e `data-access`). As telas consomem facades, que usam contratos de repositório; as implementações ficam em `data-access`:
 
@@ -132,12 +159,12 @@ vercel.json      # Build publicada, rewrite de /api para a API, fallback da SPA 
 
 ## Qualidade
 
-- **Testes unitários e de componentes** (Vitest + harnesses do Material): regras de domínio, facades, repositórios, formulários e telas, inclusive a validação do seed contra as regras do app.
+- **Testes unitários e de componentes** (Vitest + harnesses do Material): regras de domínio, facades, repositórios, formulários e telas, inclusive a validação do seed contra as regras do app. `npm run test:coverage` mede a cobertura (V8); na etapa 17: 91% das linhas, 84% dos ramos e 87% das funções. A execução falha se a cobertura cair abaixo dos limites do `angular.json` (5 pontos abaixo do medido).
 - **E2E** (Playwright, contra a build de demo): login, cadastro, navegação, lançamento de transação, pagamento de fatura em duas partes (e desfazer), compra parcelada (prévia, faturas e exclusão), estorno de uma compra no cartão (detalhe e crédito na fatura), antecipação e cancelamento de parcelas, filtros de Transações na URL, persistência e restauração dos dados. O relógio do navegador é fixado na data de referência do seed para resultados determinísticos, e todas as páginas rodam com a Content Security Policy do `vercel.json` valendo: qualquer violação falha o teste.
 - **E2E contra a API real** (`npm run e2e:api`): sessão em cookie (restauração, expiração e saída), saldo calculado pelo servidor, dashboard numa chamada só, listagem de transações paginada, ordenada e totalizada no servidor (sem baixar a lista completa), compra parcelada registrada e excluída pela API, estorno de compra no cartão (fatura, limite e 409 ao excluir a despesa), antecipação e cancelamento de parcelas (fatura zerada e limite liberado), pagamento de fatura em duas partes (o valor acima do saldo é recusado), troca de senha e exclusão da conta com senha. Na CI, com Postgres e o seed da API.
 - **Acessibilidade**: axe-core (WCAG 2.0/2.1 A e AA) em todas as telas principais, nos temas claro e escuro.
 - **Responsividade**: navegação pelo menu recolhido e ausência de rolagem horizontal num celular (Pixel 7).
-- **CI**: cada push na `main` e cada pull request passam por formatação, lint, testes unitários, build e E2E (demo e API real).
+- **CI**: cada push na `main` e cada pull request passam por formatação, lint, testes unitários com cobertura (o resumo aparece na página da execução), build e E2E (demo e API real).
 
 ## Padrão de commits
 

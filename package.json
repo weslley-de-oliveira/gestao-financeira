@@ -1,6 +1,7 @@
 {
   "name": "gestao-financeira",
   "version": "0.0.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "ng": "ng",
@@ -10,9 +11,11 @@
     "build:demo": "ng build -c demo",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:coverage": "ng test --watch=false --coverage",
     "e2e": "playwright test",
     "e2e:api": "playwright test -c playwright.api.config.ts",
     "e2e:report": "playwright show-report",
+    "screenshots": "playwright test -c playwright.screenshots.config.ts",
     "lint": "ng lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -47,6 +50,7 @@
     "@eslint/js": "^10.0.1",
     "@faker-js/faker": "^10.6.0",
     "@playwright/test": "^1.64.1",
+    "@vitest/coverage-v8": "^5.1.0",
     "angular-eslint": "22.6.0",
     "eslint": "^10.12.0",
     "husky": "^9.1.7",
