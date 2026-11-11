@@ -145,6 +145,21 @@ describe('InvoicesFacade', () => {
         notes: null,
       }),
     ).rejects.toBeInstanceOf(PaidInvoiceError);
+    // A fatura de 10/2026 é anterior à paga: o saldo dela entraria na de 11/2026.
+    await expect(
+      transactions.create({
+        type: 'expense',
+        description: 'Antes da paga',
+        amount: 1_000,
+        date: '2026-09-20',
+        accountId: null,
+        creditCardId: 'card-1',
+        destinationAccountId: null,
+        categoryId: 'category-1',
+        status: 'completed',
+        notes: null,
+      }),
+    ).rejects.toBeInstanceOf(PaidInvoiceError);
 
     await facade.undoPayment('card-1', '2026-11');
 

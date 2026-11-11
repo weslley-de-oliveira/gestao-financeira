@@ -118,7 +118,7 @@ export class InvoicesFacade {
       userId: this.userId(),
       type: 'invoice-payment',
       description: `Fatura ${card.name} ${monthLabel(referenceMonth)}`,
-      amount: invoice.total,
+      amount: invoice.balance,
       date: toIsoDate(this.today()),
       accountId: account.id,
       creditCardId: card.id,

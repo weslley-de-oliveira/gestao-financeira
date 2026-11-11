@@ -109,7 +109,7 @@ describe('refund effects', () => {
     ]);
     expect(invoices[0].refunds.map((item) => item.amount)).toEqual([2_000, 15_000]);
     expect(invoices[0].purchases.map((item) => item.id)).toEqual([november.id]);
-    expect(canPayInvoice({ status: 'closed', total: invoices[0].total })).toBe(false);
+    expect(canPayInvoice({ status: 'closed', balance: invoices[0].balance })).toBe(false);
   });
 
   it('lists the invoice of a refund even without purchases in it', () => {
