@@ -11,6 +11,7 @@ import { TransactionRepository } from '../../data-access/repositories/transactio
 import { CreditCard } from '../../shared/models/credit-card';
 import { Transaction } from '../../shared/models/transaction';
 import { toIsoDate } from '../../shared/utils/date';
+import { Cents } from '../../shared/utils/money';
 import {
   Invoice,
   InvoicePaymentError,
@@ -24,8 +25,8 @@ export type LoadStatus = 'loading' | 'ready' | 'error';
 
 /**
  * Faturas de um cartão e pagamento demonstrativo. As faturas vêm calculadas do repositório (na
- * API, pelo servidor); pagar cria a transação `invoice-payment` (valor total, data de hoje, conta
- * de pagamento do cartão) e desfazer a exclui.
+ * API, pelo servidor); pagar cria uma transação `invoice-payment` (o saldo ou parte dele, data de
+ * hoje, conta de pagamento do cartão) e desfazer exclui a mais recente.
  */
 @Injectable({ providedIn: 'root' })
 export class InvoicesFacade {
@@ -103,10 +104,18 @@ export class InvoicesFacade {
     }
   }
 
-  async pay(creditCardId: string, referenceMonth: string): Promise<Transaction> {
+  /**
+   * Paga `amount` (de 1 centavo até o saldo; fora disso, `InvoicePaymentError('amount')`) ou, sem
+   * ele, o saldo inteiro. O que faltar passa para a fatura seguinte no fechamento dela.
+   */
+  async pay(creditCardId: string, referenceMonth: string, amount?: Cents): Promise<Transaction> {
     const { card, invoice } = await this.loadInvoice(creditCardId, referenceMonth);
     if (!canPayInvoice(invoice)) {
       throw new InvoicePaymentError('not-payable');
+    }
+    const paid = amount ?? invoice.balance;
+    if (!Number.isInteger(paid) || paid <= 0 || paid > invoice.balance) {
+      throw new InvoicePaymentError('amount');
     }
     const accounts = await firstValueFrom(this.accounts.listByUser(this.userId()));
     const account = accounts.find((item) => item.id === card.paymentAccountId);
@@ -117,8 +126,8 @@ export class InvoicesFacade {
     const payment: NewRecord<Transaction> = {
       userId: this.userId(),
       type: 'invoice-payment',
-      description: `Fatura ${card.name} ${monthLabel(referenceMonth)}`,
-      amount: invoice.balance,
+      description: paymentDescription(card.name, referenceMonth, paid < invoice.balance),
+      amount: paid,
       date: toIsoDate(this.today()),
       accountId: account.id,
       creditCardId: card.id,
@@ -133,11 +142,21 @@ export class InvoicesFacade {
     return created;
   }
 
-  /** Exclui o pagamento: o valor volta para a conta e a fatura volta ao status pelas datas. */
+  /**
+   * Exclui o pagamento mais recente: o valor volta para a conta e a fatura volta ao status pelas
+   * datas e pelo saldo. Com pagamento numa fatura posterior, `InvoicePaymentError('later-payment')`:
+   * o saldo desta entra na seguinte, então é preciso desfazer antes os das faturas seguintes.
+   */
   async undoPayment(creditCardId: string, referenceMonth: string): Promise<void> {
     const { invoice } = await this.loadInvoice(creditCardId, referenceMonth);
     if (!invoice.payment) {
       throw new InvoicePaymentError('not-payable');
+    }
+    const invoices = await firstValueFrom(
+      this.invoicesRepository.listByCard(this.userId(), creditCardId),
+    );
+    if (invoices.some((item) => item.referenceMonth > referenceMonth && item.payment)) {
+      throw new InvoicePaymentError('later-payment');
     }
     await firstValueFrom(this.transactions.undoInvoicePayment(invoice.payment));
     await this.refresh();
@@ -166,6 +185,11 @@ export class InvoicesFacade {
     }
     return user.id;
   }
+}
+
+/** "Fatura Roxinho 11/2026", com " (parcial)" quando o pagamento não quita o saldo (como na API). */
+export function paymentDescription(cardName: string, referenceMonth: string, partial: boolean) {
+  return `Fatura ${cardName} ${monthLabel(referenceMonth)}${partial ? ' (parcial)' : ''}`;
 }
 
 /** "2026-12" → "12/2026". */

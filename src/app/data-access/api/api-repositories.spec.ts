@@ -366,7 +366,7 @@ describe('API repositories', () => {
         }),
       );
       const payRequest = http.expectOne({ url, method: 'POST' });
-      expect(payRequest.request.body).toBeNull();
+      expect(payRequest.request.body).toEqual({ amount: 25_000 });
       payRequest.flush({ payment } as Partial<ApiInvoice>);
       expect((await paid).type).toBe('invoice-payment');
 

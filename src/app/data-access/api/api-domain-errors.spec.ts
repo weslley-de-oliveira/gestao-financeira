@@ -222,6 +222,34 @@ describe('API refusals as domain errors', () => {
     expect(error).toMatchObject({ reason: 'not-payable' });
   });
 
+  it('refuses a payment above the balance and an undo with a later payment', async () => {
+    const repository = TestBed.inject(ApiTransactionRepository);
+    const payment = {
+      ...transaction,
+      type: 'invoice-payment' as const,
+      creditCardId: 'k1',
+      invoiceMonth: '2026-11',
+    };
+
+    const tooLarge = firstValueFrom(repository.payInvoice(payment));
+    refuse(422, 'amount');
+    await expect(tooLarge).rejects.toMatchObject({ reason: 'amount' });
+
+    const undone = firstValueFrom(repository.undoInvoicePayment(payment));
+    http
+      .match(() => true)[0]
+      .flush(
+        {
+          type: '/problems/later-invoice-payment',
+          title: 'Conflito',
+          status: 409,
+          detail: 'A fatura de 12/2026 já tem pagamento.',
+        },
+        { status: 409, statusText: 'Conflict' },
+      );
+    await expect(undone).rejects.toMatchObject({ reason: 'later-payment' });
+  });
+
   it('refuses anticipating or cancelling installments when there is nothing to do', async () => {
     const repository = TestBed.inject(ApiInstallmentPurchaseRepository);
 
