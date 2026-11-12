@@ -3704,6 +3704,65 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/v1/client-errors': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Registra um erro do front
+     * @description Grava o erro nos logs da API, com o `User-Agent` e, se houver sessão, o id do usuário. Não exige sessão; limitado a 10 relatos por minuto por IP.
+     */
+    post: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['ClientErrorInput'];
+        };
+      };
+      responses: {
+        /** @description Default Response */
+        204: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content?: never;
+        };
+        /** @description Default Response */
+        422: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+        /** @description Default Response */
+        429: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/json': components['schemas']['ProblemDetails'];
+          };
+        };
+      };
+    };
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3890,6 +3949,21 @@ export interface components {
        * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
        */
       updatedAt: string;
+    };
+    ClientErrorInput: {
+      /**
+       * @description `error`: erro de JavaScript não tratado; `network`: requisição sem resposta da API (rede, proxy, API hibernando).
+       * @enum {string}
+       */
+      kind: 'error' | 'network';
+      message: string;
+      /** @description Tipo do erro (`TypeError`). */
+      name?: string;
+      stack?: string;
+      /** @description Página em que o erro ocorreu; a query string é descartada. */
+      path: string;
+      /** @description O `x-request-id` da requisição que falhou, se houver. */
+      requestId?: string;
     };
     /** @description A fatura aberta hoje. */
     NextInvoiceInput: {
@@ -4568,6 +4642,21 @@ export interface components {
        * @description Versão do registro: a ETag é derivada dela (use a ETag no `If-Match`).
        */
       updatedAt: string;
+    };
+    ClientError: {
+      /**
+       * @description `error`: erro de JavaScript não tratado; `network`: requisição sem resposta da API (rede, proxy, API hibernando).
+       * @enum {string}
+       */
+      kind: 'error' | 'network';
+      message: string;
+      /** @description Tipo do erro (`TypeError`). */
+      name?: string;
+      stack?: string;
+      /** @description Página em que o erro ocorreu; a query string é descartada. */
+      path: string;
+      /** @description O `x-request-id` da requisição que falhou, se houver. */
+      requestId?: string;
     };
     /** @description A fatura aberta hoje. */
     NextInvoice: {
