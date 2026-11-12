@@ -56,6 +56,7 @@ import { firstValueFrom } from 'rxjs';
 import { canRefund, refundedTotal, remainingToRefund } from '../../refunds/domain/refund-rules';
 import { openRefundDialog } from '../../refunds/refund-dialog/refund-dialog';
 import { RefundsFacade } from '../../refunds/refunds.facade';
+import { unexpectedErrorMessage } from '../../../core/errors/unexpected-error-message';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
@@ -194,8 +195,13 @@ export class TransactionDetailPage {
     let siblings: Transaction[];
     try {
       siblings = await this.refundsFacade.listFor(expense.id);
-    } catch {
-      this.notify('Não foi possível carregar os estornos da despesa. Tente novamente.');
+    } catch (error) {
+      this.notify(
+        unexpectedErrorMessage(
+          'Não foi possível carregar os estornos da despesa. Tente novamente.',
+          error,
+        ),
+      );
       return;
     }
     const saved = await firstValueFrom(
@@ -320,7 +326,10 @@ export class TransactionDetailPage {
                 ? 'As parcelas que podem ser antecipadas mudaram. Confira a compra e tente de novo.'
                 : error instanceof NothingToCancelError
                   ? 'Não há mais parcelas a cancelar: as restantes já estão em faturas fechadas ou foram estornadas.'
-                  : 'Não foi possível concluir a operação. Tente novamente.',
+                  : unexpectedErrorMessage(
+                      'Não foi possível concluir a operação. Tente novamente.',
+                      error,
+                    ),
       );
     } finally {
       this.busy.set(false);

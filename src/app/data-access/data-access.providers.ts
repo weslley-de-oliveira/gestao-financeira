@@ -7,6 +7,7 @@ import { ApiBudgetRepository } from './api/api-budget.repository';
 import { ApiCategoryRepository } from './api/api-category.repository';
 import { ApiCreditCardRepository } from './api/api-credit-card.repository';
 import { ApiDashboardRepository } from './api/api-dashboard.repository';
+import { ApiErrorReportRepository } from './api/api-error-report.repository';
 import { ApiGoalRepository } from './api/api-goal.repository';
 import { ApiInstallmentPurchaseRepository } from './api/api-installment-purchase.repository';
 import { ApiInvoiceRepository } from './api/api-invoice.repository';
@@ -18,6 +19,7 @@ import { BudgetRepository } from './repositories/budget.repository';
 import { CategoryRepository } from './repositories/category.repository';
 import { CreditCardRepository } from './repositories/credit-card.repository';
 import { DashboardRepository } from './repositories/dashboard.repository';
+import { ErrorReportRepository } from './repositories/error-report.repository';
 import { GoalRepository } from './repositories/goal.repository';
 import { InstallmentPurchaseRepository } from './repositories/installment-purchase.repository';
 import { InvoiceRepository } from './repositories/invoice.repository';
@@ -44,5 +46,6 @@ export function provideDataAccess(): Provider[] {
     { provide: BudgetProgressRepository, useClass: ApiBudgetProgressRepository },
     { provide: GoalRepository, useClass: ApiGoalRepository },
     { provide: DashboardRepository, useClass: ApiDashboardRepository },
+    { provide: ErrorReportRepository, useClass: ApiErrorReportRepository },
   ];
 }

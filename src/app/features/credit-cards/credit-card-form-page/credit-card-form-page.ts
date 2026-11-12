@@ -27,6 +27,7 @@ import {
   toCreditCardFormModel,
   toCreditCardInput,
 } from '../forms/credit-card.schema';
+import { unexpectedErrorMessage } from '../../../core/errors/unexpected-error-message';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
@@ -114,7 +115,12 @@ export class CreditCardFormPage implements OnInit {
             fieldTree: field.paymentAccountId,
           };
         }
-        this.errorMessage.set('Não foi possível salvar o cartão. Tente novamente em instantes.');
+        this.errorMessage.set(
+          unexpectedErrorMessage(
+            'Não foi possível salvar o cartão. Tente novamente em instantes.',
+            error,
+          ),
+        );
       }
       return undefined;
     });

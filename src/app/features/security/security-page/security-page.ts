@@ -24,6 +24,7 @@ import {
   DemoCipher,
   EncryptedPayload,
 } from '../../../core/security/demo-cipher';
+import { unexpectedErrorMessage } from '../../../core/errors/unexpected-error-message';
 
 export const PASSPHRASE_MIN_LENGTH = 8;
 export const DEMO_TEXT_MAX_LENGTH = 500;
@@ -146,7 +147,12 @@ export class SecurityPage {
             fieldTree: field.currentPassword,
           };
         }
-        this.passwordError.set('Não foi possível trocar a senha. Tente novamente em instantes.');
+        this.passwordError.set(
+          unexpectedErrorMessage(
+            'Não foi possível trocar a senha. Tente novamente em instantes.',
+            error,
+          ),
+        );
         return undefined;
       }
       // As senhas não ficam no formulário depois de usadas.
@@ -222,9 +228,13 @@ export class SecurityPage {
         this.confirmation.update((value) => ({ ...value, password: '' }));
         return;
       }
-      this.snackBar.open('Não foi possível excluir os dados. Tente novamente.', 'Fechar', {
-        duration: 5000,
-      });
+      this.snackBar.open(
+        unexpectedErrorMessage('Não foi possível excluir os dados. Tente novamente.', error),
+        'Fechar',
+        {
+          duration: 5000,
+        },
+      );
     } finally {
       this.deleting.set(false);
     }

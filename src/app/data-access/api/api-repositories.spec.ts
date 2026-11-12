@@ -9,6 +9,7 @@ import { ApiBudgetProgressRepository } from './api-budget-progress.repository';
 import { ApiBudgetRepository } from './api-budget.repository';
 import { ApiCategoryRepository } from './api-category.repository';
 import { ApiDashboardRepository } from './api-dashboard.repository';
+import { ApiErrorReportRepository } from './api-error-report.repository';
 import { ApiGoalRepository } from './api-goal.repository';
 import { ApiInstallmentPurchaseRepository } from './api-installment-purchase.repository';
 import { ApiInvoiceRepository } from './api-invoice.repository';
@@ -105,6 +106,7 @@ describe('API repositories', () => {
         ApiInvoiceRepository,
         ApiInstallmentPurchaseRepository,
         ApiRefundRepository,
+        ApiErrorReportRepository,
       ],
     });
     http = TestBed.inject(HttpTestingController);
@@ -112,6 +114,23 @@ describe('API repositories', () => {
 
   afterEach(() => {
     http.verify();
+  });
+
+  describe('error reports', () => {
+    it('posts the report to the API log', async () => {
+      const report = {
+        kind: 'error' as const,
+        message: 'x is undefined',
+        name: 'TypeError',
+        path: '/dashboard',
+      };
+      const sent = firstValueFrom(TestBed.inject(ApiErrorReportRepository).report(report));
+      const request = http.expectOne({ url: '/api/v1/client-errors', method: 'POST' });
+      request.flush(null, { status: 204, statusText: 'No Content' });
+
+      await sent;
+      expect(request.request.body).toEqual(report);
+    });
   });
 
   describe('accounts', () => {

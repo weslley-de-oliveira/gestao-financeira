@@ -19,6 +19,7 @@ import { GOAL_ICONS } from '../../../shared/models/goal';
 import { InsufficientGoalBalanceError, InvalidGoalInputError } from '../domain/goal-rules';
 import { goalSchema, emptyGoalForm, toGoalFormModel, toGoalInput } from '../forms/goal.schema';
 import { GoalsFacade } from '../goals.facade';
+import { unexpectedErrorMessage } from '../../../core/errors/unexpected-error-message';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
@@ -107,7 +108,12 @@ export class GoalFormPage implements OnInit {
             fieldTree: field.initialAmount,
           };
         }
-        this.errorMessage.set('Não foi possível salvar a meta. Tente novamente em instantes.');
+        this.errorMessage.set(
+          unexpectedErrorMessage(
+            'Não foi possível salvar a meta. Tente novamente em instantes.',
+            error,
+          ),
+        );
       }
       return undefined;
     });

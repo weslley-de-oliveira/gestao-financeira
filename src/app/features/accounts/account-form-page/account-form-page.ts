@@ -24,6 +24,7 @@ import {
   toAccountFormModel,
   toAccountInput,
 } from '../forms/account.schema';
+import { unexpectedErrorMessage } from '../../../core/errors/unexpected-error-message';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
@@ -100,7 +101,12 @@ export class AccountFormPage implements OnInit {
           this.errorMessage.set(STALE_RECORD_MESSAGE);
           return undefined;
         }
-        this.errorMessage.set('Não foi possível salvar a conta. Tente novamente em instantes.');
+        this.errorMessage.set(
+          unexpectedErrorMessage(
+            'Não foi possível salvar a conta. Tente novamente em instantes.',
+            error,
+          ),
+        );
       }
       return undefined;
     });

@@ -10,6 +10,7 @@ import {
   isInvoicePayment,
   isRefund,
 } from '../../shared/models/transaction';
+import { normalizeForSearch } from '../../shared/utils/text';
 
 /** Ícone de cada tipo, exibido junto ao texto (o tipo nunca é indicado só por cor). */
 export const TRANSACTION_TYPE_ICONS: Readonly<Record<TransactionType, string>> = {
@@ -45,7 +46,8 @@ export function byId<T extends { id: string }>(items: readonly T[]): ReadonlyMap
 
 /**
  * "Corrente"; em transferências, "Corrente → Poupança"; em compras e estornos no cartão, "Cartão
- * Nubank"; em pagamentos de fatura, "Corrente → Fatura Nubank".
+ * Nubank" (ou só o nome, se ele já começa com "Cartão"); em pagamentos de fatura, "Corrente →
+ * Fatura Nubank".
  */
 export function accountLabel(transaction: Transaction, lookups: TransactionLookups): string {
   const account = (id: string | null) => (id && lookups.accounts.get(id)?.name) || 'Conta removida';
@@ -53,7 +55,7 @@ export function accountLabel(transaction: Transaction, lookups: TransactionLooku
 
   if (isCardPurchase(transaction) || isCardRefund(transaction)) {
     const name = card(transaction.creditCardId);
-    return name ? `Cartão ${name}` : 'Cartão de crédito';
+    return name ? cardLabel(name) : 'Cartão de crédito';
   }
   if (isInvoicePayment(transaction)) {
     const name = card(transaction.creditCardId);
@@ -62,6 +64,11 @@ export function accountLabel(transaction: Transaction, lookups: TransactionLooku
   return transaction.type === 'transfer'
     ? `${account(transaction.accountId)} → ${account(transaction.destinationAccountId)}`
     : account(transaction.accountId);
+}
+
+/** "Cartão Nubank"; um cartão chamado "Cartão principal" fica só com o nome, sem repetir "Cartão". */
+function cardLabel(name: string): string {
+  return normalizeForSearch(name).startsWith('cartao') ? name : `Cartão ${name}`;
 }
 
 /**

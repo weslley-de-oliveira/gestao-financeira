@@ -22,6 +22,7 @@ import { formatMonth, isIsoMonth, shiftMonth, toIsoMonth } from '../../../shared
 import { CategoriesFacade } from '../../categories/categories.facade';
 import { BudgetsFacade } from '../budgets.facade';
 import { progressBarValue, summarizeBudgets } from '../domain/budget-rules';
+import { unexpectedErrorMessage } from '../../../core/errors/unexpected-error-message';
 
 /** Orçamentos do mês escolhido (`/budgets?month=yyyy-MM`; sem parâmetro, o mês atual). */
 @Component({
@@ -139,8 +140,10 @@ export class BudgetListPage implements OnInit {
     try {
       await this.facade.delete(progress.budget.id);
       this.notify('Orçamento excluído.');
-    } catch {
-      this.notify('Não foi possível excluir o orçamento. Tente novamente.');
+    } catch (error) {
+      this.notify(
+        unexpectedErrorMessage('Não foi possível excluir o orçamento. Tente novamente.', error),
+      );
     }
   }
 

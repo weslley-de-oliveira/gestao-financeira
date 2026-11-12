@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { openConfirmDialog } from '../../shared/components/confirm-dialog/confirm-dialog';
 import { Account, AccountWithBalance } from '../../shared/models/account';
 import { AccountsFacade } from './accounts.facade';
+import { unexpectedErrorMessage } from '../../core/errors/unexpected-error-message';
 
 /** Fluxo de arquivar/reativar com confirmação, compartilhado pela listagem e pelo detalhe. */
 @Injectable({ providedIn: 'root' })
@@ -43,10 +44,14 @@ export class AccountArchiveAction {
         duration: 4000,
       });
       return updated;
-    } catch {
-      this.snackBar.open('Não foi possível atualizar a conta. Tente novamente.', 'Fechar', {
-        duration: 5000,
-      });
+    } catch (error) {
+      this.snackBar.open(
+        unexpectedErrorMessage('Não foi possível atualizar a conta. Tente novamente.', error),
+        'Fechar',
+        {
+          duration: 5000,
+        },
+      );
       return null;
     }
   }

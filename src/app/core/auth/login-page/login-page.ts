@@ -14,6 +14,7 @@ import { InvalidCredentialsError } from '../auth.errors';
 import { AuthService } from '../auth.service';
 import { emptyLogin, loginSchema } from '../forms/login.schema';
 import { safeReturnUrl } from '../return-url';
+import { unexpectedErrorMessage } from '../../errors/unexpected-error-message';
 
 @Component({
   imports: [FormField, RouterLink, MatButtonModule, MatFormFieldModule, MatIcon, MatInputModule],
@@ -64,7 +65,10 @@ export class LoginPage {
         this.errorMessage.set(
           error instanceof InvalidCredentialsError
             ? 'E-mail ou senha inválidos.'
-            : 'Não foi possível entrar agora. Tente novamente em instantes.',
+            : unexpectedErrorMessage(
+                'Não foi possível entrar agora. Tente novamente em instantes.',
+                error,
+              ),
         );
       }
       return undefined;

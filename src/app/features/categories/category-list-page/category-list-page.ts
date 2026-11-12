@@ -18,6 +18,7 @@ import { IconAvatar } from '../../../shared/components/icon-avatar/icon-avatar';
 import { CATEGORY_TYPES, Category, CategoryType } from '../../../shared/models/category';
 import { CategoriesFacade } from '../categories.facade';
 import { defaultCategoryQuery, queryCategories } from '../domain/category-rules';
+import { unexpectedErrorMessage } from '../../../core/errors/unexpected-error-message';
 
 @Component({
   imports: [
@@ -101,10 +102,14 @@ export class CategoryListPage implements OnInit {
       this.snackBar.open(archive ? 'Categoria arquivada.' : 'Categoria reativada.', 'Fechar', {
         duration: 4000,
       });
-    } catch {
-      this.snackBar.open('Não foi possível atualizar a categoria. Tente novamente.', 'Fechar', {
-        duration: 5000,
-      });
+    } catch (error) {
+      this.snackBar.open(
+        unexpectedErrorMessage('Não foi possível atualizar a categoria. Tente novamente.', error),
+        'Fechar',
+        {
+          duration: 5000,
+        },
+      );
     }
   }
 }

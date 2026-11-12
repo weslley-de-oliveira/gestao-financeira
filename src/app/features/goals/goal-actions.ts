@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { openConfirmDialog } from '../../shared/components/confirm-dialog/confirm-dialog';
 import { Goal, GoalWithProgress } from '../../shared/models/goal';
 import { GoalsFacade } from './goals.facade';
+import { unexpectedErrorMessage } from '../../core/errors/unexpected-error-message';
 
 /** Pausar/retomar e arquivar/reativar com feedback, compartilhados pela listagem e pelo detalhe. */
 @Injectable({ providedIn: 'root' })
@@ -20,8 +21,10 @@ export class GoalActions {
       const updated = await this.facade.setPaused(goal.id, pause);
       this.notify(pause ? 'Meta pausada.' : 'Meta retomada.');
       return updated;
-    } catch {
-      this.notify('Não foi possível atualizar a meta. Tente novamente.');
+    } catch (error) {
+      this.notify(
+        unexpectedErrorMessage('Não foi possível atualizar a meta. Tente novamente.', error),
+      );
       return null;
     }
   }
@@ -53,8 +56,10 @@ export class GoalActions {
       const updated = await this.facade.setArchived(goal.id, archive);
       this.notify(archive ? 'Meta arquivada.' : 'Meta reativada.');
       return updated;
-    } catch {
-      this.notify('Não foi possível atualizar a meta. Tente novamente.');
+    } catch (error) {
+      this.notify(
+        unexpectedErrorMessage('Não foi possível atualizar a meta. Tente novamente.', error),
+      );
       return null;
     }
   }
