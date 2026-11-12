@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { openConfirmDialog } from '../../shared/components/confirm-dialog/confirm-dialog';
 import { Transaction, isInvoicePayment } from '../../shared/models/transaction';
 import { HasRefundsError, PaidInvoiceError, TransactionsFacade } from './transactions.facade';
+import { unexpectedErrorMessage } from '../../core/errors/unexpected-error-message';
 
 export const PAID_INVOICE_MESSAGE =
   'A fatura desta compra já foi paga. Desfaça o pagamento na tela de Faturas para alterá-la.';
@@ -34,7 +35,10 @@ export class TransactionActions {
       this.notify(
         error instanceof HasRefundsError
           ? HAS_REFUNDS_MESSAGE
-          : 'Não foi possível atualizar a transação. Tente novamente.',
+          : unexpectedErrorMessage(
+              'Não foi possível atualizar a transação. Tente novamente.',
+              error,
+            ),
       );
       return null;
     }
@@ -68,7 +72,10 @@ export class TransactionActions {
           ? PAID_INVOICE_MESSAGE
           : error instanceof HasRefundsError
             ? HAS_REFUNDS_MESSAGE
-            : 'Não foi possível excluir a transação. Tente novamente.',
+            : unexpectedErrorMessage(
+                'Não foi possível excluir a transação. Tente novamente.',
+                error,
+              ),
       );
       return false;
     }

@@ -29,6 +29,7 @@ import { INVOICE_STATUS_LABELS, Invoice, canPayInvoice } from '../domain/invoice
 import { InvoicePaymentError, InvoicesFacade, monthLabel } from '../invoices.facade';
 import { openPaymentDialog } from '../payment-dialog/payment-dialog';
 import { installmentLabel } from '../../transactions/transaction-display';
+import { unexpectedErrorMessage } from '../../../core/errors/unexpected-error-message';
 
 /** Mensagens das recusas de pagamento. */
 const PAYMENT_ERRORS: Readonly<Record<string, string>> = {
@@ -207,7 +208,7 @@ export class InvoicesPage implements OnInit {
     } catch (error) {
       this.notify(
         (error instanceof InvoicePaymentError && PAYMENT_ERRORS[error.reason]) ||
-          'Não foi possível concluir a operação. Tente novamente.',
+          unexpectedErrorMessage('Não foi possível concluir a operação. Tente novamente.', error),
       );
     } finally {
       this.busy.set(false);

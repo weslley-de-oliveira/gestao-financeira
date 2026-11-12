@@ -21,6 +21,7 @@ import {
 import { DemoData } from '../../../data-access/repositories/demo-data';
 import { USER_NAME_MAX_LENGTH } from '../../../shared/models/user';
 import { MoneyPipe } from '../../../shared/pipes/money.pipe';
+import { unexpectedErrorMessage } from '../../../core/errors/unexpected-error-message';
 
 interface ProfileFormModel {
   name: string;
@@ -84,8 +85,13 @@ export class SettingsPage {
         const user = await this.auth.updateName(field.name().value());
         this.profile.set({ name: user.name });
         this.notify('Perfil atualizado.');
-      } catch {
-        this.profileError.set('Não foi possível salvar o perfil. Tente novamente em instantes.');
+      } catch (error) {
+        this.profileError.set(
+          unexpectedErrorMessage(
+            'Não foi possível salvar o perfil. Tente novamente em instantes.',
+            error,
+          ),
+        );
       }
       return undefined;
     });

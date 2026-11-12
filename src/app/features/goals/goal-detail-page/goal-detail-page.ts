@@ -39,6 +39,7 @@ import {
 } from '../forms/goal.schema';
 import { GoalActions } from '../goal-actions';
 import { GoalsFacade } from '../goals.facade';
+import { unexpectedErrorMessage } from '../../../core/errors/unexpected-error-message';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
@@ -175,7 +176,12 @@ export class GoalDetailPage implements OnInit {
             fieldTree: field.date,
           };
         }
-        this.notify('Não foi possível registrar a movimentação. Tente novamente.');
+        this.notify(
+          unexpectedErrorMessage(
+            'Não foi possível registrar a movimentação. Tente novamente.',
+            error,
+          ),
+        );
       }
       return undefined;
     });
@@ -202,7 +208,10 @@ export class GoalDetailPage implements OnInit {
       this.notify(
         error instanceof InsufficientGoalBalanceError
           ? 'Sem este aporte, as retiradas deixariam o acumulado negativo.'
-          : 'Não foi possível excluir a movimentação. Tente novamente.',
+          : unexpectedErrorMessage(
+              'Não foi possível excluir a movimentação. Tente novamente.',
+              error,
+            ),
       );
     }
   }

@@ -46,6 +46,7 @@ import {
 } from '../forms/transaction.schema';
 import { HAS_REFUNDS_MESSAGE, PAID_INVOICE_MESSAGE } from '../transaction-actions';
 import { HasRefundsError, PaidInvoiceError, TransactionsFacade } from '../transactions.facade';
+import { unexpectedErrorMessage } from '../../../core/errors/unexpected-error-message';
 
 /** `not-editable`: pagamentos de fatura só são criados e desfeitos pela tela de Faturas. */
 type LoadState =
@@ -248,7 +249,10 @@ export class TransactionFormPage implements OnInit {
             ? PAID_INVOICE_MESSAGE
             : error instanceof HasRefundsError
               ? `${HAS_REFUNDS_MESSAGE} Descrição, categoria e observações podem mudar.`
-              : 'Não foi possível salvar a transação. Tente novamente em instantes.',
+              : unexpectedErrorMessage(
+                  'Não foi possível salvar a transação. Tente novamente em instantes.',
+                  error,
+                ),
         );
       }
       return undefined;

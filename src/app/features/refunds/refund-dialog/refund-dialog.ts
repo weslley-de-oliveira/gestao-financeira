@@ -35,6 +35,7 @@ import {
   defaultRefundDescription,
 } from '../domain/refund-rules';
 import { RefundsFacade } from '../refunds.facade';
+import { unexpectedErrorMessage } from '../../../core/errors/unexpected-error-message';
 
 export interface RefundDialogData {
   expense: Transaction;
@@ -257,7 +258,9 @@ export class RefundDialog {
             fieldTree: field.date,
           };
         }
-        this.failure.set('Não foi possível salvar o estorno. Tente novamente.');
+        this.failure.set(
+          unexpectedErrorMessage('Não foi possível salvar o estorno. Tente novamente.', error),
+        );
       }
       return undefined;
     });

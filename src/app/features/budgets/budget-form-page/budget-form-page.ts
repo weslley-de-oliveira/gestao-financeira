@@ -25,6 +25,7 @@ import {
   toBudgetFormModel,
   toBudgetInput,
 } from '../forms/budget.schema';
+import { unexpectedErrorMessage } from '../../../core/errors/unexpected-error-message';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
@@ -121,7 +122,12 @@ export class BudgetFormPage implements OnInit {
             fieldTree: field.categoryId,
           };
         }
-        this.errorMessage.set('Não foi possível salvar o orçamento. Tente novamente em instantes.');
+        this.errorMessage.set(
+          unexpectedErrorMessage(
+            'Não foi possível salvar o orçamento. Tente novamente em instantes.',
+            error,
+          ),
+        );
       }
       return undefined;
     });

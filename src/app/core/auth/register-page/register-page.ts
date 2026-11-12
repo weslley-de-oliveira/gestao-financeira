@@ -8,6 +8,7 @@ import { Router, RouterLink } from '@angular/router';
 import { EmailAlreadyRegisteredError } from '../auth.errors';
 import { AuthService } from '../auth.service';
 import { PASSWORD_MIN_LENGTH, emptyRegister, registerSchema } from '../forms/register.schema';
+import { unexpectedErrorMessage } from '../../errors/unexpected-error-message';
 
 @Component({
   imports: [FormField, RouterLink, MatButtonModule, MatFormFieldModule, MatInputModule],
@@ -41,7 +42,10 @@ export class RegisterPage {
           };
         }
         this.errorMessage.set(
-          'Não foi possível criar a conta agora. Tente novamente em instantes.',
+          unexpectedErrorMessage(
+            'Não foi possível criar a conta agora. Tente novamente em instantes.',
+            error,
+          ),
         );
         return undefined;
       }

@@ -23,6 +23,7 @@ import {
 import { CategoriesFacade } from '../categories.facade';
 import { DuplicateCategoryNameError } from '../domain/category-rules';
 import { categorySchema, emptyCategoryForm, toCategoryFormModel } from '../forms/category.schema';
+import { unexpectedErrorMessage } from '../../../core/errors/unexpected-error-message';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 
@@ -103,7 +104,12 @@ export class CategoryFormPage implements OnInit {
             fieldTree: field.name,
           };
         }
-        this.errorMessage.set('Não foi possível salvar a categoria. Tente novamente em instantes.');
+        this.errorMessage.set(
+          unexpectedErrorMessage(
+            'Não foi possível salvar a categoria. Tente novamente em instantes.',
+            error,
+          ),
+        );
       }
       return undefined;
     });

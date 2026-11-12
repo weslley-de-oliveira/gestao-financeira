@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { openConfirmDialog } from '../../shared/components/confirm-dialog/confirm-dialog';
 import { CreditCard, CreditCardWithUsage } from '../../shared/models/credit-card';
 import { CreditCardsFacade } from './credit-cards.facade';
+import { unexpectedErrorMessage } from '../../core/errors/unexpected-error-message';
 
 /** Fluxo de arquivar/reativar com confirmação, compartilhado pela listagem e pelo detalhe. */
 @Injectable({ providedIn: 'root' })
@@ -43,10 +44,14 @@ export class CreditCardArchiveAction {
         duration: 4000,
       });
       return updated;
-    } catch {
-      this.snackBar.open('Não foi possível atualizar o cartão. Tente novamente.', 'Fechar', {
-        duration: 5000,
-      });
+    } catch (error) {
+      this.snackBar.open(
+        unexpectedErrorMessage('Não foi possível atualizar o cartão. Tente novamente.', error),
+        'Fechar',
+        {
+          duration: 5000,
+        },
+      );
       return null;
     }
   }
