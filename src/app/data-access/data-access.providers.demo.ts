@@ -7,6 +7,7 @@ import { LocalBudgetRepository } from './local/local-budget.repository';
 import { LocalCategoryRepository } from './local/local-category.repository';
 import { LocalCreditCardRepository } from './local/local-credit-card.repository';
 import { LocalDashboardRepository } from './local/local-dashboard.repository';
+import { LocalErrorReportRepository } from './local/local-error-report.repository';
 import { LocalDatabase } from './local/local-database';
 import { LocalGoalRepository } from './local/local-goal.repository';
 import { LocalInstallmentPurchaseRepository } from './local/local-installment-purchase.repository';
@@ -22,6 +23,7 @@ import { CategoryRepository } from './repositories/category.repository';
 import { CreditCardRepository } from './repositories/credit-card.repository';
 import { DashboardRepository } from './repositories/dashboard.repository';
 import { DemoData } from './repositories/demo-data';
+import { ErrorReportRepository } from './repositories/error-report.repository';
 import { GoalRepository } from './repositories/goal.repository';
 import { InstallmentPurchaseRepository } from './repositories/installment-purchase.repository';
 import { InvoiceRepository } from './repositories/invoice.repository';
@@ -56,5 +58,6 @@ export function provideDataAccess(): Provider[] {
     { provide: BudgetProgressRepository, useClass: LocalBudgetProgressRepository },
     { provide: GoalRepository, useClass: LocalGoalRepository },
     { provide: DashboardRepository, useClass: LocalDashboardRepository },
+    { provide: ErrorReportRepository, useClass: LocalErrorReportRepository },
   ];
 }

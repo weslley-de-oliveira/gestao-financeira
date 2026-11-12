@@ -26,3 +26,4 @@ export type ApiGoal = Schemas['Goal'];
 export type ApiGoalContribution = Schemas['GoalContribution'];
 export type ApiDashboard = Schemas['Dashboard'];
 export type ApiProblemDetails = Schemas['ProblemDetails'];
+export type ApiClientError = Schemas['ClientErrorInput'];

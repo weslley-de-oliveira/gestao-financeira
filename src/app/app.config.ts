@@ -4,6 +4,7 @@ import localePt from '@angular/common/locales/pt';
 import {
   ApplicationConfig,
   DEFAULT_CURRENCY_CODE,
+  ErrorHandler,
   LOCALE_ID,
   inject,
   provideAppInitializer,
@@ -13,6 +14,7 @@ import { MAT_ICON_DEFAULT_OPTIONS } from '@angular/material/icon';
 import { provideRouter, TitleStrategy, withComponentInputBinding } from '@angular/router';
 import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
+import { ReportingErrorHandler } from './core/errors/reporting-error-handler';
 import { PreferencesService } from './core/preferences/preferences.service';
 import { problemDetailsInterceptor } from './core/interceptors/problem-details.interceptor';
 import { requestIdInterceptor } from './core/interceptors/request-id.interceptor';
@@ -24,6 +26,8 @@ registerLocaleData(localePt, 'pt-BR');
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    // Além do console, relata à API os erros que nenhuma tela trata.
+    { provide: ErrorHandler, useClass: ReportingErrorHandler },
     provideRouter(routes, withComponentInputBinding()),
     provideHttpClient(
       withFetch(),
