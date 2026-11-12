@@ -12,3 +12,4 @@ Os registros foram escritos em novembro de 2026, depois das decisões, a partir 
 | [0004](0004-csp-aplicada.md)              | Content Security Policy aplicada, com hash do script inline        | 06/11/2026 |
 | [0005](0005-angular-material-scss.md)     | Angular Material com SCSS                                          | 04/11/2026 |
 | [0006](0006-regras-repetidas-no-front.md) | Regras de domínio repetidas no front, com os casos de teste da API | 05/11/2026 |
+| [0007](0007-codigo-do-erro-e-relato.md)   | Código do erro na tela e relato de erros à API                     | 11/11/2026 |
