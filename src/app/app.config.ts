@@ -15,6 +15,7 @@ import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
 import { PreferencesService } from './core/preferences/preferences.service';
 import { problemDetailsInterceptor } from './core/interceptors/problem-details.interceptor';
+import { requestIdInterceptor } from './core/interceptors/request-id.interceptor';
 import { AppTitleStrategy } from './core/layout/app-title-strategy';
 import { provideDataAccess } from './data-access/data-access.providers';
 
@@ -24,7 +25,10 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes, withComponentInputBinding()),
-    provideHttpClient(withFetch(), withInterceptors([problemDetailsInterceptor])),
+    provideHttpClient(
+      withFetch(),
+      withInterceptors([requestIdInterceptor, problemDetailsInterceptor]),
+    ),
     // Restaura a sessão antes da primeira navegação, para os guards já conhecerem o usuário.
     provideAppInitializer(() => inject(AuthService).restoreSession()),
     // Aplica tema e densidade salvos antes da primeira renderização.
